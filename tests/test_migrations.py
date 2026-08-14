@@ -110,9 +110,12 @@ def test_make_session_factory_does_not_create_the_schema(tmp_path):
     assert not db_path.exists(), "make_session_factory ha creato il file del database"
 
     session = session_factory()
-    with pytest.raises(OperationalError, match="no such table"):
-        session.execute(text("SELECT 1 FROM agent_actions"))
-    session.close()
+    try:
+        with pytest.raises(OperationalError, match="no such table"):
+            session.execute(text("SELECT 1 FROM agent_actions"))
+    finally:
+        session.close()
+        session_factory.kw["bind"].dispose()
 
 
 # --------------------------------------------------------- i due percorsi di §3.0
@@ -348,10 +351,13 @@ def test_the_api_refuses_to_start_on_an_unmigrated_database(tmp_path, monkeypatc
     factory = make_session_factory(str(db_path))
     monkeypatch.setattr(api_module, "get_session_factory", lambda: factory)
 
-    # la forma `with` e' quella che esegue il lifespan; quella semplice no
-    with pytest.raises(SchemaVersionError):
-        with TestClient(api_module.app):
-            pass
+    try:
+        # la forma `with` e' quella che esegue il lifespan; quella semplice no
+        with pytest.raises(SchemaVersionError):
+            with TestClient(api_module.app):
+                pass
+    finally:
+        factory.kw["bind"].dispose()
 
 
 def test_the_api_starts_when_the_schema_is_at_head(tmp_path, monkeypatch):
@@ -366,5 +372,8 @@ def test_the_api_starts_when_the_schema_is_at_head(tmp_path, monkeypatch):
     factory = make_session_factory(str(db_path))
     monkeypatch.setattr(api_module, "get_session_factory", lambda: factory)
 
-    with TestClient(api_module.app) as client:
-        assert client.get("/api/agents").status_code == 200
+    try:
+        with TestClient(api_module.app) as client:
+            assert client.get("/api/agents").status_code == 200
+    finally:
+        factory.kw["bind"].dispose()

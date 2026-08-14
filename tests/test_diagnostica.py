@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -17,7 +18,9 @@ ORA = datetime(2026, 8, 12, 12, 0, tzinfo=timezone.utc)
 
 
 def _inserisci_azione(path: Path, timestamp="2026-08-12 10:00:00"):
-    with sqlite3.connect(path) as conn:
+    # `closing(...)` chiude, `conn` governa la transazione: il solo
+    # `with sqlite3.connect(...)` fa commit ma NON chiude.
+    with closing(sqlite3.connect(path)) as conn, conn:
         conn.execute(
             "INSERT INTO agent_actions"
             "(project, action, model_used, tokens_used, timestamp, session_id, message_id) "

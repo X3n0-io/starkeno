@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timezone, tzinfo
 from pathlib import Path
@@ -87,7 +88,7 @@ def test_database_esistente_senza_schema_non_viene_inizializzato(tmp_path):
     with pytest.raises(OperationalError):
         genera_report(database, tmp_path / "conto.html", fuso=timezone.utc, now=ORA)
 
-    with sqlite3.connect(database) as connessione:
+    with closing(sqlite3.connect(database)) as connessione:
         tabelle = connessione.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         ).fetchall()

@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from starkeno.migrazioni import configurazione_alembic, revisione_head, upgrade_head
@@ -18,7 +19,9 @@ def test_runtime_upgrade_builds_head_schema(tmp_path):
 
     upgrade_head(percorso, silenzioso=True)
 
-    with sqlite3.connect(percorso) as conn:
+    # `closing` e non il solo `with sqlite3.connect(...)`: quello governa la transazione,
+    # non la risorsa, e lascerebbe la connessione aperta.
+    with closing(sqlite3.connect(percorso)) as conn:
         assert conn.execute(
             "SELECT version_num FROM alembic_version"
         ).fetchone()[0] == revisione_head()

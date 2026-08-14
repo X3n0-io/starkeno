@@ -86,9 +86,12 @@ def test_wal_journal_mode_is_enabled(tmp_path):
     """Senza WAL i lettori bloccano gli scrittori: la dashboard blocca il logging."""
     SessionLocal = make_session_factory(str(tmp_path / "t.db"))
     session = SessionLocal()
-    mode = session.execute(text("PRAGMA journal_mode")).scalar()
-    assert mode.lower() == "wal"
-    session.close()
+    try:
+        mode = session.execute(text("PRAGMA journal_mode")).scalar()
+        assert mode.lower() == "wal"
+    finally:
+        session.close()
+        SessionLocal.kw["bind"].dispose()
 
 
 def test_busy_timeout_is_configured(tmp_path):
@@ -101,10 +104,13 @@ def test_busy_timeout_is_configured(tmp_path):
 
     SessionLocal = make_session_factory(str(tmp_path / "t.db"))
     session = SessionLocal()
-    timeout_ms = session.execute(text("PRAGMA busy_timeout")).scalar()
-    assert timeout_ms == int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)
-    assert timeout_ms > 5000, "e' rimasto il default di sqlite3, non e' stato configurato"
-    session.close()
+    try:
+        timeout_ms = session.execute(text("PRAGMA busy_timeout")).scalar()
+        assert timeout_ms == int(SQLITE_BUSY_TIMEOUT_SECONDS * 1000)
+        assert timeout_ms > 5000, "e' rimasto il default di sqlite3, non e' stato configurato"
+    finally:
+        session.close()
+        SessionLocal.kw["bind"].dispose()
 
 
 # --------------------------------------------------- nessun effetto all'import

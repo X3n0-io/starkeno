@@ -52,6 +52,21 @@ usa il versionamento semantico.
   soltanto i `ValueError` diventano conflitti di patch.
 - `scripts/verifica_pubblicazione.py` funziona anche eseguito come file: l'import fra
   script risolveva soltanto con `python -m`.
+- L'hook di fine turno chiude la connessione al database invece di lasciarla viva fino
+  alla fine del processo: `session.close()` la restituisce al pool, solo
+  `engine.dispose()` la chiude. Costo misurato sul percorso caldo: 0,9 ms mediani.
+- Una connessione non entra più in stato orfano quando i PRAGMA di apertura falliscono
+  su un database occupato da un altro processo: era il percorso dell'hook su database
+  bloccato, che perdeva una connessione e il suo lock a ogni turno.
+- Il recupero non fallisce più su Windows con `PermissionError` per una connessione
+  lasciata aperta sulla destinazione.
+
+### Changed
+
+- La suite fallisce il test che lascia aperta una connessione SQLite, con l'attribuzione
+  al test colpevole. Da Python 3.13 una connessione raccolta dal GC senza `close()`
+  emette `ResourceWarning`, che sotto `-W error` uccideva un test a caso: la CI era rossa
+  su 3.13 e 3.14 su tutti e tre i sistemi.
 
 ## [0.2.0] - 2026-08-12
 

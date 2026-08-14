@@ -6,6 +6,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+from contextlib import closing
 from pathlib import Path
 
 from starkeno import hook_avvia_ingestione
@@ -60,7 +61,7 @@ def test_launcher_restituisce_subito_e_ingestione_prosegue_in_background(tmp_pat
     while time.monotonic() < scadenza:
         if database.exists():
             try:
-                with sqlite3.connect(database) as conn:
+                with closing(sqlite3.connect(database)) as conn:
                     righe = conn.execute(
                         "SELECT COUNT(*) FROM agent_actions"
                     ).fetchone()[0]

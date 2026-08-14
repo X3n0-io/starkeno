@@ -107,6 +107,11 @@ def ingerisci(payload: dict) -> int:
         return db.scrivi_chiamate(sessione, chiamate)
     finally:
         sessione.close()
+        # `sessione.close()` restituisce la connessione al POOL, non la chiude: senza
+        # `dispose()` l'hook lascia una connessione viva fino alla fine del processo, e
+        # con essa il lock e i sidecar `-wal`/`-shm`. E' lo stesso pattern gia' usato da
+        # `hook_inizio_sessione` e `report_conto`.
+        fabbrica.kw["bind"].dispose()
 
 
 def main() -> int:

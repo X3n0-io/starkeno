@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,7 +22,11 @@ def _crea_database(path: Path, revisione="0003", righe=1) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     command.upgrade(configurazione_alembic(path), revisione)
     colonna = "agent_name" if revisione <= "0003" else "project"
-    with sqlite3.connect(path) as conn:
+    # `closing(...)` chiude la connessione, `conn` come secondo context manager governa la
+    # TRANSAZIONE: il solo `with sqlite3.connect(...)` fa commit e lascia la connessione
+    # aperta. Su Windows quella connessione tiene il lock, e `recupera_database` moriva su
+    # `os.replace` con PermissionError.
+    with closing(sqlite3.connect(path)) as conn, conn:
         for indice in range(righe):
             conn.execute(
                 "INSERT INTO agent_actions"
@@ -48,7 +53,7 @@ def test_inventory_only_checks_known_starkeno_paths(tmp_path):
 
 def test_recovery_copies_migrates_and_preserves_the_source(tmp_path):
     sorgente = _crea_database(tmp_path / "storico.db", righe=3)
-    with sqlite3.connect(sorgente) as conn:
+    with closing(sqlite3.connect(sorgente)) as conn, conn:
         assert conn.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
     assert not sorgente.with_name(sorgente.name + "-wal").exists()
     assert not sorgente.with_name(sorgente.name + "-shm").exists()

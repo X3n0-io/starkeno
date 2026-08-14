@@ -279,10 +279,27 @@ def make_session_factory(db_path: str, busy_timeout: float | None = None) -> ses
 
     @event.listens_for(engine, "connect")
     def _set_pragmas(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.close()
+        try:
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA synchronous=NORMAL")
+            finally:
+                cursor.close()
+        except BaseException:
+            # **Se questo listener solleva, la connessione resta orfana.** E' gia' stata
+            # creata ma non entra nel pool, quindi `engine.dispose()` non la raggiunge e
+            # `session.close()` non l'ha mai avuta: nessuno la chiude piu'. Da Python 3.13
+            # il GC che la finalizza emette `ResourceWarning: unclosed database`.
+            #
+            # Non e' un caso di laboratorio: su un database occupato da un altro processo
+            # il PRAGMA fallisce con "database is locked", ed e' il percorso dell'hook di
+            # fine turno — una connessione persa a ogni turno, con il suo lock.
+            #
+            # Si richiude e si rilancia: l'errore deve restare visibile, l'hook deve
+            # continuare a rinunciare subito invece di far aspettare l'utente.
+            dbapi_connection.close()
+            raise
 
     # NIENTE create_all(): Alembic e' l'unica autorita' sullo schema.
     #

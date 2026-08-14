@@ -72,6 +72,12 @@ ambienti isolati.
     `Stop` resta asincrono.
 13. Ogni test deve avere una regressione concreta che lo renda rosso; evitare controlli
     testuali soddisfatti da commenti o assert sul posto sbagliato.
+14. Ogni connessione SQLite va chiusa da chi l'ha aperta. `session.close()` restituisce
+    la connessione al pool ma **non** la chiude: serve anche `engine.dispose()`. Allo
+    stesso modo `with sqlite3.connect(...)` governa la transazione, non la risorsa. Da
+    Python 3.13 una connessione raccolta dal GC senza `close()` emette `ResourceWarning`,
+    e sotto `-W error` fa fallire un test a caso; la fixture `nessuna_connessione_lasciata_aperta`
+    di `tests/conftest.py` lo verifica in modo deterministico anche su 3.12.
 
 ## Regole per modifiche e pubblicazione
 

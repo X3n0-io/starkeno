@@ -85,10 +85,16 @@ def test_the_heartbeat_is_written_even_when_the_round_fails(session_factory, mon
     run_forever(CONF, session_factory=session_factory, sleep=lambda _: None,
                 max_iterations=3, now_fn=Orologio())
 
-    battito = get_heartbeat(session_factory())
-    assert battito is not None, "nessun heartbeat dopo tre giri falliti"
-    assert battito.consecutive_errors == 3
-    assert "divisione per zero" in battito.last_error
+    # La sessione va chiusa: quella di `session_factory()` tiene una connessione PRELEVATA
+    # dal pool, e `dispose()` chiude solo quelle che nel pool sono rientrate.
+    sessione = session_factory()
+    try:
+        battito = get_heartbeat(sessione)
+        assert battito is not None, "nessun heartbeat dopo tre giri falliti"
+        assert battito.consecutive_errors == 3
+        assert "divisione per zero" in battito.last_error
+    finally:
+        sessione.close()
 
 
 def test_a_clean_round_resets_the_error_streak(session_factory, monkeypatch):
@@ -107,10 +113,14 @@ def test_a_clean_round_resets_the_error_streak(session_factory, monkeypatch):
     run_forever(CONF, session_factory=session_factory, sleep=lambda _: None,
                 max_iterations=3, now_fn=Orologio())
 
-    battito = get_heartbeat(session_factory())
-    assert battito.consecutive_errors == 0
-    assert battito.last_error is None
-    assert battito.agents_evaluated == 1
+    sessione = session_factory()
+    try:
+        battito = get_heartbeat(sessione)
+        assert battito.consecutive_errors == 0
+        assert battito.last_error is None
+        assert battito.agents_evaluated == 1
+    finally:
+        sessione.close()
 
 
 def test_the_heartbeat_records_how_long_the_round_took(session_factory, monkeypatch):
@@ -122,10 +132,14 @@ def test_the_heartbeat_records_how_long_the_round_took(session_factory, monkeypa
     run_forever(CONF, session_factory=session_factory, sleep=lambda _: None,
                 max_iterations=1, now_fn=Orologio())
 
-    battito = get_heartbeat(session_factory())
-    assert battito.last_run_ms >= 0
-    assert battito.agents_evaluated == 2
-    assert battito.last_run_at.tzinfo is not None
+    sessione = session_factory()
+    try:
+        battito = get_heartbeat(sessione)
+        assert battito.last_run_ms >= 0
+        assert battito.agents_evaluated == 2
+        assert battito.last_run_at.tzinfo is not None
+    finally:
+        sessione.close()
 
 
 def test_each_round_gets_a_fresh_session(session_factory, monkeypatch):
