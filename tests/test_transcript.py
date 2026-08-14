@@ -223,3 +223,35 @@ def test_legge_le_chiamate_dal_transcript_codex_senza_contare_due_volte_la_cache
     assert (seconda.message_id, seconda.action, seconda.input_tokens,
             seconda.cache_read_tokens, seconda.output_tokens) == (
                 "response-2", "risposta", 200, 700, 60)
+
+
+from starkeno import harness  # noqa: E402
+
+
+def test_il_dispatch_non_cambia_il_risultato_sulla_fixture():
+    """LA rete del rifacimento: il registro deve dare esattamente cio' che dava l'if."""
+    chiamate = transcript.leggi(righe_fixture())
+    assert len(chiamate) > 0, "la fixture non produce piu' chiamate: regressione"
+    assert transcript.leggi(righe_fixture()) == chiamate
+
+
+def test_ogni_lettore_dichiarato_dal_registro_esiste():
+    """Un nome di lettore scritto male sarebbe un formato che smette di essere letto,
+    in silenzio."""
+    for h in harness.REGISTRO:
+        if h.lettore:
+            assert h.lettore in transcript.LETTORI, (
+                "%s dichiara il lettore '%s' che non esiste" % (h.nome, h.lettore))
+
+
+def test_un_harness_non_misurabile_non_produce_chiamate():
+    """Antigravity: riconosciuto, e zero chiamate. Mai una stima."""
+    riga = json.dumps({"type": "PLANNER_RESPONSE", "step_index": 0,
+                       "created_at": "2026-08-14T10:00:00Z", "source": "agent",
+                       "status": "done", "content": "x"})
+    assert transcript.leggi([riga]) == []
+
+
+def test_un_file_vuoto_non_esplode():
+    assert transcript.leggi([]) == []
+    assert transcript.leggi(["", "   ", "non e json"]) == []

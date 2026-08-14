@@ -108,7 +108,7 @@ def _esito_codex(output) -> tuple[int, int]:
     return 1, 1 if fallita else 0
 
 
-def _leggi_codex(voci) -> list[Chiamata]:
+def _leggi_codex_da_voci(voci) -> list[Chiamata]:
     sessione = ""
     cwd_sessione = ""
     turno_corrente = ""
@@ -214,36 +214,19 @@ def _leggi_codex(voci) -> list[Chiamata]:
     return chiamate
 
 
-def leggi(righe) -> list[Chiamata]:
-    """Le chiamate API contenute in queste righe di transcript, in ordine di comparsa.
+def _leggi_codex(righe) -> list[Chiamata]:
+    def voci():
+        for riga in righe:
+            try:
+                voce = json.loads(riga.strip()) if isinstance(riga, str) else None
+            except Exception:
+                continue
+            if isinstance(voce, dict):
+                yield voce
+    return _leggi_codex_da_voci(voci())
 
-    Le righe malformate si saltano: questo codice gira a casa d'altri, e una riga rotta
-    non deve costare un turno all'utente.
-    """
-    iteratore = iter(righe)
-    prefisso = []
-    prima_voce = None
-    for riga in iteratore:
-        prefisso.append(riga)
-        try:
-            voce = json.loads(riga.strip()) if isinstance(riga, str) else None
-        except Exception:
-            continue
-        if isinstance(voce, dict):
-            prima_voce = voce
-            break
-    righe = chain(prefisso, iteratore)
-    if prima_voce and prima_voce.get("type") in {"session_meta", "turn_context"}:
-        def voci_codex():
-            for riga in righe:
-                try:
-                    voce = json.loads(riga.strip()) if isinstance(riga, str) else None
-                except Exception:
-                    continue
-                if isinstance(voce, dict):
-                    yield voce
-        return _leggi_codex(voci_codex())
 
+def _leggi_claude(righe) -> list[Chiamata]:
     grezze: dict[tuple[str, str], dict] = {}
     esiti: dict[str, bool] = {}
     ordine: list[tuple[str, str]] = []
@@ -361,3 +344,45 @@ def leggi(righe) -> list[Chiamata]:
             is_sidechain=record["is_sidechain"],
         ))
     return chiamate
+
+
+LETTORI = {
+    "codex": _leggi_codex,
+    "claude-code": _leggi_claude,
+}
+
+
+def leggi(righe) -> list[Chiamata]:
+    """Le chiamate API contenute in queste righe, in ordine di comparsa.
+
+    Il formato si riconosce dalla prima voce JSON utile e il lettore si sceglie dal
+    registro in `harness.py`. Un harness riconosciuto ma NON misurabile restituisce zero
+    chiamate: Antigravity non espone i token, e stimarli sarebbe peggio che non averli.
+
+    Le righe malformate si saltano: questo codice gira a casa d'altri, e una riga rotta
+    non deve costare un turno all'utente.
+    """
+    from starkeno import harness
+
+    iteratore = iter(righe)
+    prefisso = []
+    prima_voce = None
+    for riga in iteratore:
+        prefisso.append(riga)
+        try:
+            voce = json.loads(riga.strip()) if isinstance(riga, str) else None
+        except Exception:
+            continue
+        if isinstance(voce, dict):
+            prima_voce = voce
+            break
+    if prima_voce is None:
+        return []
+
+    riconosciuto = harness.riconosci(prima_voce)
+    if riconosciuto is None or not riconosciuto.misurabile:
+        return []
+    lettore = LETTORI.get(riconosciuto.lettore)
+    if lettore is None:
+        return []
+    return lettore(chain(prefisso, iteratore))
