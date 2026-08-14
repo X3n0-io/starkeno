@@ -118,6 +118,7 @@ def test_diagnosis_separates_installed_plugin_manual_trust_and_fresh_collection(
 
     controlli = esegui_diagnosi(
         db_path=database, codex_root=tmp_path / "codex", plugin_root=plugin, now=ORA,
+        home=tmp_path / "home",
     )
     per_codice = {controllo.codice: controllo for controllo in controlli}
 
@@ -136,11 +137,32 @@ def test_stale_collection_is_not_reported_as_healthy(tmp_path):
 
     controlli = esegui_diagnosi(
         db_path=database, codex_root=tmp_path / "codex", plugin_root=plugin, now=ORA,
+        home=tmp_path / "home",
     )
     raccolta = next(c for c in controlli if c.codice == "raccolta")
 
     assert raccolta.stato == "errore"
     assert "non recente" in raccolta.dettaglio
+
+
+def test_antigravity_rilevato_e_dichiarato_non_misurabile(tmp_path):
+    """Zero chiamate senza spiegazione e' indistinguibile da un difetto."""
+    from starkeno import diagnostica
+
+    (tmp_path / ".gemini" / "antigravity").mkdir(parents=True)
+
+    rilevati = dict((n, (m, r)) for n, m, r in diagnostica.harness_rilevati(tmp_path))
+
+    assert "antigravity" in rilevati, "installato e non rilevato"
+    misurabile, motivo = rilevati["antigravity"]
+    assert misurabile is False
+    assert "token" in motivo.lower(), "non dice PERCHE' non e' misurabile"
+
+
+def test_un_harness_assente_non_viene_riportato(tmp_path):
+    from starkeno import diagnostica
+
+    assert diagnostica.harness_rilevati(tmp_path) == []
 
 
 def test_isolated_round_trip_creates_writes_and_reads_only_a_temporary_database():

@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from typing import Literal
 from urllib.parse import quote
 
+from starkeno import harness as registro_harness
 from starkeno.migrazioni import revisione_head
 
 
@@ -113,6 +114,54 @@ def trova_plugin_codex(codex_root: Path) -> Controllo:
     )
 
 
+# Dove ogni harness lascia traccia di essere installato, relativo alla home.
+SEGNI_HARNESS = {
+    "codex": ".codex",
+    "claude-code": ".claude",
+    "antigravity": ".gemini/antigravity",
+}
+
+
+def harness_rilevati(home) -> list[tuple[str, bool, str]]:
+    """Gli harness presenti sulla macchina, col motivo se non sono misurabili.
+
+    In sola lettura: guarda l'esistenza di una cartella, non apre niente. `doctor` e'
+    l'unico posto dove StarkEno puo' spiegare perche' un harness installato non produce
+    numeri — gli hook devono restare muti (invariante 12).
+    """
+    home = Path(home)
+    trovati = []
+    for voce in registro_harness.REGISTRO:
+        segno = SEGNI_HARNESS.get(voce.nome)
+        if segno and (home / segno).exists():
+            trovati.append((voce.nome, voce.misurabile, voce.motivo))
+    return trovati
+
+
+def _controllo_harness(home: Path) -> Controllo:
+    """Non e' mai un errore: un harness che non espone i token non e' un difetto di
+    StarkEno, ed exit 1 direbbe il contrario."""
+    rilevati = harness_rilevati(home)
+    dati = {"harness": [
+        {"nome": nome, "misurabile": misurabile, "motivo": motivo}
+        for nome, misurabile, motivo in rilevati
+    ]}
+    if not rilevati:
+        return Controllo("harness", "attenzione", "nessun harness rilevato", dati)
+    parti = []
+    misurabili = [nome for nome, misurabile, _ in rilevati if misurabile]
+    if misurabili:
+        parti.append("misurati: " + ", ".join(misurabili))
+    parti.extend(
+        "%s non misurabile (%s)" % (nome, motivo)
+        for nome, misurabile, motivo in rilevati if not misurabile
+    )
+    non_misurabili = any(not misurabile for _, misurabile, _ in rilevati)
+    return Controllo(
+        "harness", "attenzione" if non_misurabili else "ok", "; ".join(parti), dati,
+    )
+
+
 def _controllo_python() -> Controllo:
     versione = sys.version_info[:2]
     supportata = (3, 12) <= versione < (3, 15)
@@ -207,7 +256,7 @@ def _timestamp_utc(valore: str) -> datetime:
 
 
 def esegui_diagnosi(
-    *, db_path: Path, codex_root: Path, plugin_root: Path, now: datetime,
+    *, db_path: Path, codex_root: Path, plugin_root: Path, now: datetime, home: Path,
 ) -> tuple[Controllo, ...]:
     """Compone controlli distinti: un fallimento non si traveste da salute."""
     candidato = ispeziona_database(Path(db_path))
@@ -252,5 +301,6 @@ def esegui_diagnosi(
 
     return (
         _controllo_python(), _controllo_dipendenze(), _controllo_bundle(plugin_root),
-        _controllo_round_trip(), database, schema, plugin, trust, raccolta,
+        _controllo_round_trip(), database, schema, plugin, trust,
+        _controllo_harness(Path(home)), raccolta,
     )

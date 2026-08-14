@@ -52,6 +52,7 @@ def _diagnosi_runtime() -> tuple[Controllo, ...]:
         codex_root=_codex_root(),
         plugin_root=plugin,
         now=datetime.now(timezone.utc),
+        home=Path.home(),
     )
     return controlli + (_controllo_inventario(canonico, plugin),)
 
