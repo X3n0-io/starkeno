@@ -151,15 +151,22 @@ def test_each_round_gets_a_fresh_session(session_factory, monkeypatch):
     """
     import starkeno.supervisor as sup
 
+    # Si conservano le SESSIONI, non i loro `id()`. Un `id()` e' unico solo fra oggetti
+    # vivi CONTEMPORANEAMENTE: la sessione del giro precedente viene chiusa e liberata
+    # prima che nasca la successiva, e CPython riusa volentieri quell'indirizzo. Il test
+    # leggeva quel riuso come "sessione riusata fra i giri" e falliva senza che nulla
+    # fosse rotto — misurato: 2 fallimenti su 40 esecuzioni, identici prima e dopo la
+    # correzione delle connessioni. Tenendo un riferimento, gli indirizzi non si
+    # riciclano e l'identita' torna a significare quello che il test vuole dire.
     viste = []
     monkeypatch.setattr(sup, "run_once",
-                        lambda session, now, config: (viste.append(id(session)),
+                        lambda session, now, config: (viste.append(session),
                                                       sup.RoundResult())[1])
 
     run_forever(CONF, session_factory=session_factory, sleep=lambda _: None,
                 max_iterations=3, now_fn=Orologio())
 
-    assert len(set(viste)) == 3, "la stessa sessione e' stata riusata fra i giri"
+    assert len({id(s) for s in viste}) == 3, "la stessa sessione e' stata riusata fra i giri"
 
 
 # ======================================================== guard di istanza singola
