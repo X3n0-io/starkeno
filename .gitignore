@@ -1,0 +1,29 @@
+__pycache__/
+*.pyc
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+starkeno-conto.html
+*.backup-*
+*.recupero
+*.db
+# WAL crea questi accanto al database: non corrispondono a *.db e finirebbero
+# in un `git add .`. Copiare il solo .db come backup perde la coda non ancora
+# scritta nel checkpoint.
+*.db-wal
+*.db-shm
+# Copia legacy dello storico: è un artefatto utente e `*.db` non la copre.
+*.trasferito
+.superpowers/
+.worktrees/
+skill-observations/
+
+# Il supervisore scrive qui a ogni giro: e' output di esecuzione, non del progetto,
+# e senza questa riga un `git add .` se lo porta dentro.
+supervisor.log
+*.log
+
+# Configurazione locale degli strumenti di sviluppo, non del progetto.
+.claude/

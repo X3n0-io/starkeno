@@ -1,0 +1,32 @@
+name: Proposta
+description: Proponi un miglioramento misurabile
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema osservato
+      description: Descrivi il problema, non soltanto la soluzione desiderata.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidenza o criterio di successo
+      description: Usa esempi sintetici e indica come verificare il risultato.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Soluzione proposta
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Confini
+      options:
+        - label: La proposta mantiene i dati locali per impostazione predefinita.
+          required: true
+        - label: Gli esempi non contengono transcript o dati personali.
+          required: true

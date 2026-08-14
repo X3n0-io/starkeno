@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${PLUGIN_ROOT}/starkeno/hook_inizio_sessione.py\"",
+            "commandWindows": "python \"%PLUGIN_ROOT%\\starkeno\\hook_inizio_sessione.py\"",
+            "async": false,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${PLUGIN_ROOT}/starkeno/hook_avvia_ingestione.py\"",
+            "commandWindows": "python \"%PLUGIN_ROOT%\\starkeno\\hook_avvia_ingestione.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

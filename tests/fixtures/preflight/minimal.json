@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "revision": 1,
+  "parent_revision": null,
+  "confirmed": false,
+  "goal": {
+    "id": "goal-release",
+    "description": "Preparare una nota di rilascio.",
+    "deliverable": "Nota di rilascio in Markdown.",
+    "success_criteria": ["Contiene le modifiche verificabili."]
+  },
+  "agents": [
+    {
+      "id": "writer",
+      "responsibility": "Scrive la nota.",
+      "inputs": ["Modifiche verificate"],
+      "output": "Nota di rilascio.",
+      "model_id": "economy",
+      "tool_ids": [],
+      "skill_ids": []
+    }
+  ],
+  "tools": [],
+  "skills": [],
+  "contexts": [
+    {
+      "id": "changes",
+      "description": "Elenco sintetico delle modifiche.",
+      "source": "declared"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "draft",
+      "kind": "llm",
+      "description": "Genera una bozza.",
+      "agent_id": "writer",
+      "model_id": "economy",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": ["changes"],
+      "budget": {
+        "instructions": {"min": 20, "typical": 30, "max": 40, "provenance": "declared", "confidence": "high", "reason": "Prompt stabile."},
+        "dynamic_context": {"min": 50, "typical": 100, "max": 200, "provenance": "declared", "confidence": "medium", "reason": "Modifiche."},
+        "output": {"min": 100, "typical": 150, "max": 250, "provenance": "inferred", "confidence": "medium", "reason": "Lunghezza della nota."},
+        "cacheable_fraction": {"min": 0.2, "typical": 0.5, "max": 0.8, "provenance": "inferred", "confidence": "low", "reason": "Prompt stabile."},
+        "latency_ms": {"min": 100, "typical": 300, "max": 1000, "provenance": "default", "confidence": "low", "reason": "Profilo locale."},
+        "retry_probability": {"min": 0.0, "typical": 0.05, "max": 0.1, "provenance": "default", "confidence": "low", "reason": "Profilo locale."},
+        "max_retries": 1
+      }
+    },
+    {
+      "id": "review",
+      "kind": "human",
+      "description": "Approva la bozza.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun prompt."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun contesto."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun output LLM."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+        "latency_ms": {"min": 100, "typical": 1000, "max": 5000, "provenance": "declared", "confidence": "medium", "reason": "Revisione umana."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    }
+  ],
+  "transitions": [
+    {"source": "draft", "target": "review", "activation": "always", "probability": null, "parallel_group": null, "max_traversals": null}
+  ],
+  "models": [
+    {
+      "id": "economy",
+      "provider": "example",
+      "name": "Example Economy",
+      "input_price_per_million": null,
+      "output_price_per_million": null,
+      "cache_read_price_per_million": null,
+      "cache_write_price_per_million": null,
+      "currency": "USD",
+      "price_verified_at": null,
+      "source": null
+    }
+  ],
+  "entry_node_ids": ["draft"]
+}

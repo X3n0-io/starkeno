@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "revision": 1,
+  "parent_revision": null,
+  "confirmed": false,
+  "goal": {
+    "id": "goal-summary",
+    "description": "Riassumere un breve elenco sintetico di modifiche.",
+    "deliverable": "Un riepilogo testuale conciso.",
+    "success_criteria": ["Il riepilogo cita ogni modifica dichiarata."]
+  },
+  "agents": [
+    {
+      "id": "summarizer",
+      "responsibility": "Produce il riepilogo sintetico.",
+      "inputs": ["Elenco sintetico delle modifiche"],
+      "output": "Riepilogo testuale.",
+      "model_id": "synthetic-model",
+      "tool_ids": [],
+      "skill_ids": []
+    }
+  ],
+  "tools": [],
+  "skills": [],
+  "contexts": [
+    {
+      "id": "synthetic-changes",
+      "description": "Tre modifiche fittizie usate dal corpus.",
+      "source": "declared"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "summarize",
+      "kind": "llm",
+      "description": "Genera il riepilogo.",
+      "agent_id": "summarizer",
+      "model_id": "synthetic-model",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": ["synthetic-changes"],
+      "budget": {
+        "instructions": {"min": 10, "typical": 20, "max": 30, "provenance": "declared", "confidence": "high", "reason": "Prompt sintetico delimitato."},
+        "dynamic_context": {"min": 20, "typical": 40, "max": 60, "provenance": "declared", "confidence": "high", "reason": "Fixture con tre voci brevi."},
+        "output": {"min": 20, "typical": 40, "max": 80, "provenance": "declared", "confidence": "medium", "reason": "Riepilogo sintetico breve."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.2, "max": 0.4, "provenance": "inferred", "confidence": "low", "reason": "Quota sintetica per il corpus."},
+        "latency_ms": {"min": 20, "typical": 50, "max": 100, "provenance": "default", "confidence": "low", "reason": "Valore sintetico, non misurato."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry nel caso semplice."},
+        "max_retries": 0
+      }
+    }
+  ],
+  "transitions": [],
+  "models": [
+    {
+      "id": "synthetic-model",
+      "provider": "synthetic",
+      "name": "Synthetic model profile",
+      "input_price_per_million": null,
+      "output_price_per_million": null,
+      "cache_read_price_per_million": null,
+      "cache_write_price_per_million": null,
+      "currency": "USD",
+      "price_verified_at": null,
+      "source": "synthetic fixture; prices intentionally unknown"
+    }
+  ],
+  "entry_node_ids": ["summarize"]
+}

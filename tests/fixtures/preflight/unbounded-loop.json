@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "revision": 1,
+  "parent_revision": null,
+  "confirmed": false,
+  "goal": {
+    "id": "goal-loop-check",
+    "description": "Verificare che un ciclo opzionale illimitato resti dichiarato.",
+    "deliverable": "Esito sintetico del controllo.",
+    "success_criteria": ["Il massimo viene dichiarato unbounded."]
+  },
+  "agents": [],
+  "tools": [],
+  "skills": [],
+  "contexts": [],
+  "nodes": [
+    {
+      "id": "route",
+      "kind": "gate",
+      "description": "Sceglie fra uscita e ciclo opzionale.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+        "latency_ms": {"min": 1, "typical": 1, "max": 2, "provenance": "declared", "confidence": "high", "reason": "Controllo sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "loop",
+      "kind": "deterministic",
+      "description": "Ciclo opzionale deliberatamente privo di limite.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Passo deterministico."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Passo deterministico."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Passo deterministico."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+        "latency_ms": {"min": 1, "typical": 1, "max": 2, "provenance": "declared", "confidence": "high", "reason": "Passo sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "done",
+      "kind": "human",
+      "description": "Conferma l'uscita finita usata dai sample.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun prompt."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun contesto."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun output LLM."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+        "latency_ms": {"min": 1, "typical": 2, "max": 4, "provenance": "declared", "confidence": "high", "reason": "Conferma sintetica."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    }
+  ],
+  "transitions": [
+    {"source": "route", "target": "done", "activation": "choice", "probability": {"min": 0.9, "typical": 1.0, "max": 1.0, "provenance": "declared", "confidence": "high", "reason": "I sample seguono il ramo finito."}, "parallel_group": null, "max_traversals": null},
+    {"source": "route", "target": "loop", "activation": "choice", "probability": {"min": 0.0, "typical": 0.0, "max": 0.1, "provenance": "declared", "confidence": "high", "reason": "Ramo opzionale usato per il limite massimo."}, "parallel_group": null, "max_traversals": null},
+    {"source": "loop", "target": "loop", "activation": "always", "probability": null, "parallel_group": null, "max_traversals": null}
+  ],
+  "models": [],
+  "entry_node_ids": ["route"]
+}

@@ -1,0 +1,161 @@
+{
+  "schema_version": "1.0",
+  "revision": 3,
+  "parent_revision": 2,
+  "confirmed": false,
+  "goal": {
+    "id": "goal-brief",
+    "description": "Produrre in parallelo note di ricerca e osservazioni di revisione indipendenti.",
+    "deliverable": "Due output paralleli indipendenti: osservazioni di revisione e raccomandazione basata su note fittizie.",
+    "success_criteria": ["Il ramo ricerca produce una sola raccomandazione e il ramo review produce osservazioni indipendenti."]
+  },
+  "agents": [
+    {"id": "coordinator", "responsibility": "Imposta il brief e coordina il passaggio.", "inputs": ["Tema sintetico"], "output": "Piano di lavoro.", "model_id": "synthetic-model", "tool_ids": [], "skill_ids": []},
+    {"id": "researcher", "responsibility": "Raccoglie evidenze sintetiche.", "inputs": ["Piano di lavoro"], "output": "Note sintetiche.", "model_id": "synthetic-model", "tool_ids": [], "skill_ids": []},
+    {"id": "reviewer", "responsibility": "Revisiona il piano in parallelo.", "inputs": ["Piano di lavoro"], "output": "Osservazioni sintetiche.", "model_id": "synthetic-model", "tool_ids": [], "skill_ids": []}
+  ],
+  "tools": [],
+  "skills": [],
+  "contexts": [
+    {"id": "synthetic-topic", "description": "Tema inventato esclusivamente per il corpus.", "source": "declared"}
+  ],
+  "nodes": [
+    {
+      "id": "plan",
+      "kind": "llm",
+      "description": "Definisce un piano breve.",
+      "agent_id": "coordinator",
+      "model_id": "synthetic-model",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": ["synthetic-topic"],
+      "budget": {
+        "instructions": {"min": 20, "typical": 30, "max": 50, "provenance": "declared", "confidence": "high", "reason": "Istruzioni sintetiche."},
+        "dynamic_context": {"min": 20, "typical": 40, "max": 70, "provenance": "declared", "confidence": "medium", "reason": "Tema sintetico."},
+        "output": {"min": 30, "typical": 60, "max": 100, "provenance": "inferred", "confidence": "medium", "reason": "Piano breve."},
+        "cacheable_fraction": {"min": 0.1, "typical": 0.3, "max": 0.5, "provenance": "inferred", "confidence": "low", "reason": "Quota sintetica."},
+        "latency_ms": {"min": 30, "typical": 60, "max": 120, "provenance": "default", "confidence": "low", "reason": "Valore sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.05, "max": 0.1, "provenance": "default", "confidence": "low", "reason": "Retry sintetico limitato."},
+        "max_retries": 1
+      }
+    },
+    {
+      "id": "delegate",
+      "kind": "handoff",
+      "description": "Trasferisce il piano ai due specialisti.",
+      "agent_id": "coordinator",
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Handoff strutturale."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Handoff strutturale."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Handoff strutturale."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+        "latency_ms": {"min": 1, "typical": 2, "max": 5, "provenance": "declared", "confidence": "high", "reason": "Coordinamento sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "research",
+      "kind": "llm",
+      "description": "Produce note sintetiche.",
+      "agent_id": "researcher",
+      "model_id": "synthetic-model",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": ["synthetic-topic"],
+      "budget": {
+        "instructions": {"min": 15, "typical": 25, "max": 40, "provenance": "declared", "confidence": "high", "reason": "Istruzioni sintetiche."},
+        "dynamic_context": {"min": 20, "typical": 40, "max": 80, "provenance": "declared", "confidence": "medium", "reason": "Contesto fittizio."},
+        "output": {"min": 40, "typical": 80, "max": 140, "provenance": "inferred", "confidence": "medium", "reason": "Note sintetiche."},
+        "cacheable_fraction": {"min": 0.1, "typical": 0.3, "max": 0.5, "provenance": "inferred", "confidence": "low", "reason": "Quota sintetica."},
+        "latency_ms": {"min": 40, "typical": 90, "max": 180, "provenance": "default", "confidence": "low", "reason": "Valore sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "review",
+      "kind": "llm",
+      "description": "Revisiona il piano in parallelo.",
+      "agent_id": "reviewer",
+      "model_id": "synthetic-model",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 15, "typical": 25, "max": 40, "provenance": "declared", "confidence": "high", "reason": "Istruzioni sintetiche."},
+        "dynamic_context": {"min": 10, "typical": 20, "max": 40, "provenance": "declared", "confidence": "medium", "reason": "Piano sintetico."},
+        "output": {"min": 20, "typical": 50, "max": 90, "provenance": "inferred", "confidence": "medium", "reason": "Revisione breve."},
+        "cacheable_fraction": {"min": 0.1, "typical": 0.2, "max": 0.4, "provenance": "inferred", "confidence": "low", "reason": "Quota sintetica."},
+        "latency_ms": {"min": 30, "typical": 70, "max": 140, "provenance": "default", "confidence": "low", "reason": "Valore sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "revise",
+      "kind": "llm",
+      "description": "Integra una revisione sintetica.",
+      "agent_id": "coordinator",
+      "model_id": "synthetic-model",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 10, "typical": 20, "max": 30, "provenance": "declared", "confidence": "high", "reason": "Istruzioni sintetiche."},
+        "dynamic_context": {"min": 10, "typical": 30, "max": 50, "provenance": "declared", "confidence": "medium", "reason": "Revisione sintetica."},
+        "output": {"min": 20, "typical": 40, "max": 70, "provenance": "inferred", "confidence": "medium", "reason": "Integrazione breve."},
+        "cacheable_fraction": {"min": 0.1, "typical": 0.2, "max": 0.4, "provenance": "inferred", "confidence": "low", "reason": "Quota sintetica."},
+        "latency_ms": {"min": 20, "typical": 50, "max": 100, "provenance": "default", "confidence": "low", "reason": "Valore sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "decision",
+      "kind": "gate",
+      "description": "Registra la raccomandazione del solo ramo ricerca.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "latency_ms": {"min": 1, "typical": 2, "max": 4, "provenance": "declared", "confidence": "high", "reason": "Controllo sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    }
+  ],
+  "transitions": [
+    {"source": "plan", "target": "delegate", "activation": "always", "probability": null, "parallel_group": null, "max_traversals": null},
+    {"source": "delegate", "target": "research", "activation": "always", "probability": null, "parallel_group": "specialists", "max_traversals": null},
+    {"source": "delegate", "target": "review", "activation": "always", "probability": null, "parallel_group": "specialists", "max_traversals": null},
+    {"source": "research", "target": "decision", "activation": "choice", "probability": {"min": 0.6, "typical": 0.8, "max": 0.9, "provenance": "declared", "confidence": "medium", "reason": "Esito sintetico positivo."}, "parallel_group": null, "max_traversals": null},
+    {"source": "research", "target": "revise", "activation": "choice", "probability": {"min": 0.1, "typical": 0.2, "max": 0.4, "provenance": "declared", "confidence": "medium", "reason": "Esito sintetico da rivedere."}, "parallel_group": null, "max_traversals": null},
+    {"source": "revise", "target": "decision", "activation": "always", "probability": null, "parallel_group": null, "max_traversals": null}
+  ],
+  "models": [
+    {
+      "id": "synthetic-model",
+      "provider": "synthetic",
+      "name": "Synthetic model profile",
+      "input_price_per_million": null,
+      "output_price_per_million": null,
+      "cache_read_price_per_million": null,
+      "cache_write_price_per_million": null,
+      "currency": "USD",
+      "price_verified_at": null,
+      "source": "synthetic fixture; prices intentionally unknown"
+    }
+  ],
+  "entry_node_ids": ["plan"]
+}

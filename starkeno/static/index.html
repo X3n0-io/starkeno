@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>StarkEno — Supervisore</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 p-8">
+
+  <!-- ===================================================================
+       Riga di stato del supervisore.
+
+       Un supervisore morto e un sistema sano mostrano la stessa identica
+       schermata: zero alert. Questa riga e' l'unica cosa che li distingue,
+       ed e' per questo che sta in cima e non in fondo.
+       =================================================================== -->
+  <div id="riga-supervisore" class="mb-6 rounded px-4 py-2 text-sm bg-slate-900 text-slate-400">
+    Supervisore: in attesa del primo giro…
+  </div>
+
+  <!-- ===================================================================
+       Segnalazioni, RAGGRUPPATE PER AGENTE.
+
+       Un agente bloccato su modello frontier fa scattare piu' regole
+       insieme — loop, spreco, forse anomalia di spesa. E' una causa sola e
+       una correzione sola: tre righe sparse si leggerebbero come tre
+       problemi diversi.
+       =================================================================== -->
+  <h1 class="text-2xl font-bold mb-1">Segnalazioni</h1>
+  <p class="text-sm text-slate-500 mb-4">
+    Un agente rinominato orfana le proprie segnalazioni: <code>agente-v1</code> →
+    <code>agente-v2</code> lascia le vecchie senza possibilità di rientro, e si
+    chiuderanno per inattività dopo sette giorni marcate come non risolte.
+  </p>
+  <div id="elenco-alert" class="space-y-4 mb-10"></div>
+
+  <!-- ===================================================================
+       Stato di valutazione delle regole.
+
+       `non_valutabile` dice "sto ancora calibrando" invece di dare via
+       libera; `error` dice che una regola e' rotta. Sono i due modi in cui
+       il silenzio si traveste da salute, e se non arrivano allo schermo non
+       servono a niente.
+       =================================================================== -->
+  <h2 class="text-xl font-bold mb-4">Stato delle regole</h2>
+  <div id="elenco-stati" class="mb-10 text-sm"></div>
+
+  <h2 class="text-xl font-bold mb-4">Agenti</h2>
+  <table class="w-full text-left border-collapse">
+    <thead>
+      <tr class="border-b border-slate-700">
+        <th class="py-2">Agente</th>
+        <th class="py-2">Token totali</th>
+        <th class="py-2" title="I token pesati sono la grandezza con cui ragionano le regole di spesa: i cache write costano 1,25×, l'output ~5×">Token pesati</th>
+        <th class="py-2">Numero azioni</th>
+      </tr>
+    </thead>
+    <tbody id="agents-table-body"></tbody>
+  </table>
+
+  <script>
+    // Intervallo del supervisore, in secondi. Oltre 3 volte questo valore senza un
+    // giro, il supervisore e' da considerarsi fermo e la riga di stato diventa rossa.
+    const INTERVALLO_SUPERVISORE = 60;
+    const SOGLIA_BATTITO_FERMO = 3 * INTERVALLO_SUPERVISORE;
+
+    // `error` DEVE essere visivamente diverso da `ok`: se avessero lo stesso colore,
+    // una regola rotta sembrerebbe una regola sana — il fallimento peggiore di questo
+    // sistema nella sua forma piu' diretta.
+    const STILI_REGOLA = {
+      ok:             "bg-slate-800 text-slate-400",
+      violating:      "bg-red-900 text-red-200",
+      non_valutabile: "bg-slate-700 text-slate-300",
+      error:          "bg-amber-600 text-amber-50 font-bold",
+    };
+    const ETICHETTE_REGOLA = {
+      ok: "ok",
+      violating: "in violazione",
+      non_valutabile: "in calibrazione",
+      error: "REGOLA IN ERRORE",
+    };
+
+    const STILI_ALERT = {
+      candidate: "bg-yellow-900 text-yellow-200",
+      open:      "bg-red-800 text-red-100",
+      resolved:  "bg-emerald-900 text-emerald-200",
+      dismissed: "bg-slate-800 text-slate-400",
+    };
+    const ETICHETTE_ALERT = {
+      candidate: "in osservazione",
+      open:      "aperta",
+      resolved:  "chiusa",
+      dismissed: "ignorata",
+    };
+
+    // Chiudere per rientro e archiviare per inattivita' sono due cose diverse:
+    // "risolto" da solo mentirebbe su meta' dei casi.
+    const ETICHETTE_CHIUSURA = {
+      recovery:  "rientrato",
+      stale:     "archiviato per inattività",
+      dismissed: "ignorato dall'utente",
+    };
+
+    const NOMI_REGOLA = {
+      loop: "loop",
+      expensive_model: "modello costoso",
+      spend_anomaly: "spesa anomala",
+      steady_waste: "spreco costante",
+      data_quality: "qualità dei dati",
+    };
+
+    function badge(testo, classi) {
+      return `<span class="rounded px-2 py-0.5 text-xs ${classi}">${testo}</span>`;
+    }
+
+    function scappa(testo) {
+      const d = document.createElement("div");
+      d.textContent = testo == null ? "" : String(testo);
+      return d.innerHTML;
+    }
+
+    // ---------------------------------------------------------- supervisore
+    async function caricaSupervisore() {
+      const stato = await (await fetch("/api/supervisor/status")).json();
+      const riga = document.getElementById("riga-supervisore");
+
+      if (!stato.last_run_at) {
+        riga.className = "mb-6 rounded px-4 py-2 text-sm bg-amber-700 text-amber-50";
+        riga.textContent = "Supervisore: nessun giro registrato. Il processo è partito?";
+        return;
+      }
+
+      const secondi = (Date.now() - Date.parse(stato.last_run_at)) / 1000;
+      const fermo = secondi > SOGLIA_BATTITO_FERMO;
+      riga.className = "mb-6 rounded px-4 py-2 text-sm " +
+        (fermo ? "bg-red-800 text-red-100 font-bold" : "bg-slate-900 text-slate-400");
+
+      let testo = `Supervisore: ultimo giro ${Math.round(secondi / 60)} min fa ` +
+                  `(${stato.last_run_ms} ms, ${stato.agents_evaluated} agenti)`;
+      if (fermo) testo += " — FERMO";
+      if (stato.rules_failed) testo += ` · ${stato.rules_failed} regole fallite`;
+      if (stato.consecutive_errors) testo += ` · ${stato.consecutive_errors} giri falliti di fila`;
+      if (stato.last_error) testo += ` · ${stato.last_error}`;
+      riga.textContent = testo;
+    }
+
+    // --------------------------------------------------------------- alert
+    async function caricaAlert() {
+      const alerts = await (await fetch("/api/alerts")).json();
+      const contenitore = document.getElementById("elenco-alert");
+
+      if (alerts.length === 0) {
+        contenitore.innerHTML =
+          `<p class="text-slate-500 text-sm">Nessuna segnalazione aperta.
+           Controlla la riga di stato qui sopra: se il supervisore è fermo, questo
+           silenzio non significa che vada tutto bene.</p>`;
+        return;
+      }
+
+      // raggruppamento per agente
+      const perAgente = {};
+      for (const a of alerts) (perAgente[a.project] ||= []).push(a);
+
+      contenitore.innerHTML = Object.entries(perAgente).map(([agente, righe]) => {
+        // Gli alert che dichiarano `related_rule` sono conseguenze di un altro:
+        // si mostrano rientrati, cosi' tre righe si leggono come un incidente.
+        const corpo = righe.map(a => {
+          const correlato = a.evidence && a.evidence.related_rule;
+          const chiusura = a.resolution ? ` · ${ETICHETTE_CHIUSURA[a.resolution] || a.resolution}` : "";
+          const muto = a.muted_until ? ` · 🔇 fino al ${a.muted_until.slice(0, 10)}` : "";
+          return `
+            <div class="border-l-2 border-slate-700 pl-3 py-2 ${correlato ? "ml-6" : ""}">
+              <div class="flex items-center gap-2 flex-wrap">
+                ${badge(ETICHETTE_ALERT[a.status] || a.status, STILI_ALERT[a.status] || "bg-slate-800")}
+                <span class="font-semibold">${scappa(NOMI_REGOLA[a.rule] || a.rule)}</span>
+                ${correlato ? `<span class="text-xs text-slate-500">conseguenza di ${scappa(correlato)}</span>` : ""}
+                <span class="text-xs text-slate-500">${a.episodes} episodi${chiusura}${muto}</span>
+              </div>
+              <div class="text-sm text-slate-300 mt-1">${scappa(a.detail)}</div>
+              ${a.user_note ? `<div class="text-xs text-slate-500 mt-1">nota: ${scappa(a.user_note)}</div>` : ""}
+              <div class="mt-2 flex gap-2">
+                <button class="text-xs rounded bg-slate-800 hover:bg-slate-700 px-2 py-1"
+                        onclick="ignora(${a.id})">Falso positivo…</button>
+                <button class="text-xs rounded bg-slate-800 hover:bg-slate-700 px-2 py-1"
+                        onclick="silenzia(${a.id})">Silenzia 7 giorni</button>
+              </div>
+            </div>`;
+        }).join("");
+
+        return `<div class="rounded border border-slate-800 p-4">
+                  <div class="font-mono text-sm text-slate-400 mb-2">${scappa(agente)}</div>
+                  ${corpo}
+                </div>`;
+      }).join("");
+    }
+
+    // La nota e' obbligatoria e il server la rifiuta se vuota: la storia dei falsi
+    // positivi col loro motivo e' il dato che serve per tarare soglie che oggi non
+    // sono tarate su niente.
+    async function ignora(id) {
+      const nota = prompt("Perché è un falso positivo? (obbligatorio, serve a tarare le soglie)");
+      if (!nota || !nota.trim()) return;
+      await fetch(`/api/alerts/${id}/dismiss`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: nota }),
+      });
+      carica();
+    }
+
+    async function silenzia(id) {
+      const fino = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+      await fetch(`/api/alerts/${id}/mute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ until: fino }),
+      });
+      carica();
+    }
+
+    // ------------------------------------------------------- stato regole
+    async function caricaStatiRegola() {
+      const stati = await (await fetch("/api/rule-status")).json();
+      const contenitore = document.getElementById("elenco-stati");
+
+      if (stati.length === 0) {
+        contenitore.innerHTML = `<p class="text-slate-500">Nessuna regola ancora valutata.</p>`;
+        return;
+      }
+
+      const perAgente = {};
+      for (const s of stati) (perAgente[s.project] ||= []).push(s);
+
+      contenitore.innerHTML = Object.entries(perAgente).map(([agente, righe]) => `
+        <div class="mb-2">
+          <span class="font-mono text-slate-400">${scappa(agente)}</span>
+          <span class="ml-3 inline-flex gap-2 flex-wrap">
+            ${righe.map(s => `<span title="${scappa(s.reason || "")}">${
+                badge(`${scappa(NOMI_REGOLA[s.rule] || s.rule)}: ${ETICHETTE_REGOLA[s.state] || s.state}`,
+                      STILI_REGOLA[s.state] || "bg-slate-800")
+              }</span>`).join("")}
+          </span>
+        </div>`).join("");
+    }
+
+    // ------------------------------------------------------------ agenti
+    async function loadAgents() {
+      const agents = await (await fetch("/api/agents")).json();
+      const tbody = document.getElementById("agents-table-body");
+      tbody.innerHTML = agents.map(a => `
+        <tr class="border-b border-slate-800">
+          <td class="py-2 font-mono">${scappa(a.project)}</td>
+          <td class="py-2">${a.total_tokens.toLocaleString("it-IT")}</td>
+          <td class="py-2 text-amber-200">${a.total_effective_tokens.toLocaleString("it-IT")}</td>
+          <td class="py-2">${a.action_count}</td>
+        </tr>`).join("");
+    }
+
+    function carica() {
+      // Ogni sezione fallisce per conto suo: se un endpoint e' rotto, il resto della
+      // pagina deve restare leggibile. Una dashboard bianca non dice niente a nessuno.
+      caricaSupervisore().catch(e => console.error("supervisore", e));
+      caricaAlert().catch(e => console.error("alert", e));
+      caricaStatiRegola().catch(e => console.error("stato regole", e));
+      loadAgents().catch(e => console.error("agenti", e));
+    }
+
+    carica();
+    // La v0 caricava una volta sola al load: un alert aperto mentre la pagina e'
+    // aperta non si sarebbe visto fino a un refresh manuale.
+    setInterval(carica, 15000);
+  </script>
+</body>
+</html>

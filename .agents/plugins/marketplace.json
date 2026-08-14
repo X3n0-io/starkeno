@@ -1,0 +1,20 @@
+{
+  "name": "starkeno-local",
+  "interface": {
+    "displayName": "StarkEno Local"
+  },
+  "plugins": [
+    {
+      "name": "starkeno",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

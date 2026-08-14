@@ -1,0 +1,49 @@
+name: Bug
+description: Segnala un comportamento riproducibile di StarkEno
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Non allegare transcript, prompt, database, token, username o percorsi personali.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema operativo
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Versione Python
+      placeholder: "3.12.6"
+    validations:
+      required: true
+  - type: input
+    id: starkeno
+    attributes:
+      label: Versione StarkEno
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Riproduzione minima
+      description: Usa dati sintetici e indica risultato atteso e osservato.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output redatto di starkeno doctor
+      description: Rimuovi percorsi e identificatori prima di incollare.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: Ho verificato che la segnalazione non contenga transcript o dati personali.
+          required: true

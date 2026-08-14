@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements/ci.txt
+      - run: python -m pip install -c requirements/ci.txt -e ".[dev]"
+      - run: python -m pytest -q -W error
+
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/ci.txt
+      - run: python -m pip install -c requirements/ci.txt -e ".[dev]"
+      - run: python -m build
+      - name: Install wheel and smoke from an external directory
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/starkeno-wheel"
+          "$RUNNER_TEMP/starkeno-wheel/bin/python" -m pip install dist/*.whl
+          export PATH="$RUNNER_TEMP/starkeno-wheel/bin:$PATH"
+          mkdir -p "$RUNNER_TEMP/starkeno-external"
+          cd "$RUNNER_TEMP/starkeno-external"
+          export STARKENO_DB_PATH="$RUNNER_TEMP/starkeno-data/starkeno.db"
+          export CODEX_HOME="$RUNNER_TEMP/codex"
+          set +e
+          starkeno doctor --json > doctor.json
+          doctor_exit=$?
+          set -e
+          test "$doctor_exit" -eq 1
+          python -c "import json; json.load(open('doctor.json', encoding='utf-8'))"
+          starkeno report --output conto.html --no-open
+          test -s conto.html
+          python -c "import os; from pathlib import Path; from starkeno.migrazioni import upgrade_head; p=Path(os.environ['RUNNER_TEMP'])/'smoke.db'; upgrade_head(p, silenzioso=True); assert p.is_file()"
+
+  audit:
+    name: audit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/ci.txt
+      - run: python -m pip install -c requirements/ci.txt -e ".[dev]"
+      - run: python -m pip check
+      - run: python -m pip_audit -r requirements/ci.txt
+      - run: python scripts/verifica_segreti.py --tracked
+      - run: python scripts/verifica_pubblicazione.py
+      - name: Constraints are reproducible
+        run: |
+          python -m piptools compile pyproject.toml --extra dev --output-file requirements/ci.txt --strip-extras
+          git diff --exit-code -- requirements/ci.txt

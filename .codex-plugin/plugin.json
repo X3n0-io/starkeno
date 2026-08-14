@@ -1,0 +1,16 @@
+{
+  "name": "starkeno",
+  "description": "Trova sprechi ed errori nel modo in cui lavori con Codex",
+  "version": "0.3.2",
+  "hooks": "./hooks/hooks.json",
+  "keywords": [
+    "token",
+    "costi",
+    "osservabilita",
+    "hook"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Simone Mansella"
+  }
+}
