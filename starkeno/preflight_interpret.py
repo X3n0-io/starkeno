@@ -12,9 +12,9 @@ percorso standard, **un solo** retry, e soltanto se l'uscita non valida.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Iterator, Protocol
 
-from starkeno.preflight_schema import Blueprint, FrozenModel
+from starkeno.preflight_schema import Blueprint, FrozenModel, Provenance
 from starkeno.preflight_service import BlueprintInputError, normalize_draft
 
 
@@ -151,23 +151,51 @@ def interpretation_task(user_text: str) -> str:
     )
 
 
+def _ogni_provenance(valore: object, percorso: str) -> Iterator[tuple[str, str]]:
+    """Percorre ricorsivamente `valore` e produce `(percorso, valore_letto)` per ogni
+    campo tipizzato `Provenance`, ovunque compaia nell'albero.
+
+    Non enumera i punti noti per nome o posizione: guarda l'annotazione dichiarata di
+    ogni campo, `type(istanza).model_fields[nome].annotation` (mai l'attributo di
+    istanza `istanza.model_fields`, deprecato da pydantic 2.11 e quindi fatale sotto
+    `-W error`). Un campo `Provenance` aggiunto domani in un punto nuovo dello schema
+    viene trovato senza che questa funzione debba ricordarsene.
+
+    La discesa dentro i modelli e le sequenze segue invece il VALORE a runtime, non
+    l'annotazione statica del campo che lo contiene: e' cosi' che un campo opzionale
+    come `NodeBudget.fixed_tool_cost` (`MoneyEstimate | None`) o `Transition.probability`
+    si attraversa quando vale qualcosa e si salta silenziosamente quando vale `None`,
+    senza bisogno di un caso speciale per l'`Optional`.
+    """
+    if isinstance(valore, FrozenModel):
+        for nome, campo in type(valore).model_fields.items():
+            valore_campo = getattr(valore, nome)
+            figlio = f"{percorso}.{nome}"
+            if campo.annotation is Provenance:
+                yield figlio, valore_campo
+            else:
+                yield from _ogni_provenance(valore_campo, figlio)
+    elif isinstance(valore, (list, tuple)):
+        for indice, elemento in enumerate(valore):
+            etichetta = getattr(elemento, "id", indice)
+            yield from _ogni_provenance(elemento, f"{percorso}[{etichetta}]")
+
+
 def _rifiuta_measured(interpretazione: Interpretation) -> None:
     """Un modello non misura niente. `measured` renderebbe un numero inventato
     indistinguibile da uno osservato, e su questo il progetto non transige.
 
-    Gira sui campi di `NodeBudget` che espongono `.provenance`, invece di
-    enumerarli per nome: cosi' copre anche i campi opzionali come
-    `fixed_tool_cost` (saltati quando valgono `None`) e qualunque campo di
-    budget aggiunto in futuro, senza che questa funzione debba ricordarsene."""
-    for nodo in interpretazione.blueprint.nodes:
-        for nome, stima in nodo.budget:
-            if stima is None or not hasattr(stima, "provenance"):
-                continue
-            if stima.provenance == "measured":
-                raise ValueError(
-                    f"node {nodo.id}: {nome} dichiara provenance 'measured', ma nulla "
-                    "e' stato misurato. Usa 'declared', 'inferred' o 'default'."
-                )
+    Percorre l'intero Blueprint con `_ogni_provenance` e rifiuta 'measured' ovunque
+    compaia un campo tipizzato `Provenance` - i campi di `NodeBudget` (compreso
+    l'opzionale `fixed_tool_cost`), `transitions[].probability.provenance`,
+    `contexts[].source` e qualunque punto aggiunto in futuro - senza enumerarli per
+    nome: e' il tipo del campo a deciderlo, non la sua posizione nell'albero."""
+    for percorso, valore in _ogni_provenance(interpretazione.blueprint, "blueprint"):
+        if valore == "measured":
+            raise ValueError(
+                f"{percorso} dichiara provenance 'measured', ma nulla e' stato "
+                "misurato. Usa 'declared', 'inferred' o 'default'."
+            )
 
 
 def read_interpretation(text: str) -> Interpretation:

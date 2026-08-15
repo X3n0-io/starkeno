@@ -65,7 +65,7 @@ def test_solo_il_modulo_client_nomina_le_variabili_della_chiave():
 import json  # noqa: E402
 
 from starkeno import preflight_interpret as interprete  # noqa: E402
-from starkeno.preflight_schema import load_blueprint  # noqa: E402
+from starkeno.preflight_schema import FrozenModel, Provenance, load_blueprint  # noqa: E402
 
 
 FIXTURE = RADICE / "tests" / "fixtures" / "preflight" / "minimal.json"
@@ -284,3 +284,102 @@ def test_un_provenance_measured_in_fixed_tool_cost_viene_rifiutato():
     esito = interprete.interpret_text("testo", client=client)
 
     assert esito.repaired is True, "un `measured` in fixed_tool_cost deve essere corretto"
+
+
+def test_un_provenance_measured_in_transitions_probability_viene_rifiutato():
+    """Il secondo affioramento del difetto: `blueprint.transitions[].probability.provenance`
+    e' un `Provenance` come quelli di `NodeBudget`, ma `_rifiuta_measured` iterava solo
+    su `nodo.budget` e non lo vedeva mai. Una probabilita' di transizione dichiarata
+    'measured' e' altrettanto inventata di un budget 'measured'."""
+    bugiardo = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    bugiardo["transitions"][0]["probability"] = {
+        "min": 0.1, "typical": 0.5, "max": 0.9,
+        "provenance": "measured", "confidence": "high",
+        "reason": "Osservata nei log di produzione.",
+    }
+    client = ClientFinto(
+        json.dumps({"blueprint": bugiardo, "assumptions": [], "open_questions": []}),
+        _interpretazione(),
+    )
+
+    esito = interprete.interpret_text("testo", client=client)
+
+    assert esito.repaired is True, (
+        "un `measured` nella probabilita' di transizione deve essere corretto"
+    )
+
+
+def test_un_provenance_measured_in_contexts_source_viene_rifiutato():
+    """Il terzo affioramento: `blueprint.contexts[].source` e' tipizzato `Provenance`
+    esattamente come `NodeBudget.instructions.provenance`, ma il campo si chiama
+    `source`, non `provenance` - un'enumerazione per nome non lo avrebbe mai trovato."""
+    bugiardo = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    bugiardo["contexts"][0]["source"] = "measured"
+    client = ClientFinto(
+        json.dumps({"blueprint": bugiardo, "assumptions": [], "open_questions": []}),
+        _interpretazione(),
+    )
+
+    esito = interprete.interpret_text("testo", client=client)
+
+    assert esito.repaired is True, "un `measured` in contexts[].source deve essere corretto"
+
+
+class _RamoSconosciuto(FrozenModel):
+    """Estraneo allo schema Preflight per costruzione: serve solo al test che segue,
+    per provare che il cercatore di `Provenance` segue il TIPO del campo e non un
+    elenco di percorsi noti."""
+
+    grado: Provenance
+
+
+class _AlberoSconosciuto(FrozenModel):
+    """Un contenitore che nidifica `_RamoSconosciuto` in una forma che nessun punto
+    reale dello schema di Preflight usa."""
+
+    rami: tuple[_RamoSconosciuto, ...]
+
+
+def test_il_rifiuto_di_measured_segue_il_tipo_non_un_elenco_di_percorsi():
+    """Regressione strutturale, non tautologica: se `_rifiuta_measured` tornasse a
+    un'enumerazione a mano dei punti noti - i campi di `NodeBudget`,
+    `transitions[].probability`, `contexts[].source`, cioe' esattamente i tre
+    affioramenti gia' corretti - i due test sopra continuerebbero comunque a
+    passare, perche' quei tre punti sarebbero di nuovo elencati a mano. Un campo
+    `Provenance` in una posizione mai vista - come questa, costruita apposta e del
+    tutto estranea allo schema di Preflight - e' cio' che un'enumerazione, per
+    quanto aggiornata, non puo' coprire per costruzione. Il meccanismo su cui
+    `_rifiuta_measured` si appoggia deve trovarlo lo stesso, perche' segue
+    l'annotazione di tipo del campo e non il suo nome o la sua posizione
+    nell'albero."""
+    albero = _AlberoSconosciuto(
+        rami=(_RamoSconosciuto(grado="declared"), _RamoSconosciuto(grado="measured"))
+    )
+
+    trovati = list(interprete._ogni_provenance(albero, "radice"))
+
+    assert any(valore == "measured" for _, valore in trovati), (
+        "il cercatore strutturale non ha trovato un campo Provenance annidato in una "
+        "forma mai vista prima: e' rimasto legato ai percorsi noti"
+    )
+
+
+def test_measured_dentro_reason_non_e_un_falso_positivo():
+    """Il criterio deve essere il TIPO del campo, non il valore trovato in giro: un
+    `reason` di testo libero puo' legittimamente contenere la parola 'measured' (per
+    esempio per spiegare perche' una stima non lo e') senza che il Draft venga
+    rifiutato."""
+    onesto = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    onesto["nodes"][0]["budget"]["output"]["reason"] = (
+        "Non e' measured: e' una stima inferita dalla lunghezza del testo utente."
+    )
+    client = ClientFinto(
+        json.dumps({"blueprint": onesto, "assumptions": [], "open_questions": []})
+    )
+
+    esito = interprete.interpret_text("testo", client=client)
+
+    assert esito.repaired is False, (
+        "la parola 'measured' dentro reason non deve scatenare una riparazione"
+    )
+    assert "measured" in esito.interpretation.blueprint.nodes[0].budget.output.reason
