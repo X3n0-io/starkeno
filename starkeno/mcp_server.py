@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from mcp.server import MCPServer
 
 import starkeno.db as db
 from starkeno.config import DB_PATH
 from starkeno.db import make_session_factory, normalizza_progetto, record_action
+from starkeno.preflight_interpret import interpretation_task, read_interpretation
+from starkeno.preflight_service import BlueprintInputError, write_blueprint_atomic
 from starkeno.schema_version import check_or_die
 
 _session_factory = None
@@ -130,6 +134,97 @@ def log_agent_action(project: str, action: str, model_used: str, tokens_used: in
     """
     return log_agent_action_impl(project, action, model_used, tokens_used,
                                  cache_read_tokens, cache_write_tokens, output_tokens)
+
+
+# ======================================================= porta d'ingresso Preflight
+#
+# StarkEno non chiama alcun modello e non ha alcuna chiave: l'agente che l'utente sta
+# gia' usando (Claude Code, Codex, ...) e' l'interprete. Questi due tool sono l'unico
+# punto di contatto: il primo restituisce il compito, il secondo valida cio' che
+# l'agente ha prodotto da solo. Ne' l'uno ne' l'altro tocca il database — Preflight e'
+# offline, e chiamare `get_session_factory()` qui aprirebbe (e, se manca, creerebbe) il
+# database configurato per un percorso che non ne ha alcun bisogno.
+
+
+def preflight_interpretation_task_impl(text: str) -> str:
+    return interpretation_task(text)
+
+
+@mcp.tool()
+def preflight_interpretation_task(text: str) -> str:
+    """Return the task for turning free-text `text` into a Preflight Draft Blueprint.
+
+    StarkEno calls no model and holds no API key for this: YOU are the interpreter.
+    Read the rules and the JSON schema embedded in the returned task, then produce
+    only a single JSON object that validates against that schema — no prose, no
+    markdown code fences, nothing before or after it. Call `preflight_save_draft`
+    with that JSON as `interpretation_json` next; do not show it to the user first
+    and do not write the Blueprint file yourself.
+
+    The returned string is a stable prefix for a given `text`: calling this twice
+    with the same `text` returns byte-identical output, so it is safe to call again
+    if you need the task text a second time.
+    """
+    return preflight_interpretation_task_impl(text)
+
+
+def preflight_save_draft_impl(
+    interpretation_json: str, output_path: str, format: str = "json"
+) -> str:
+    try:
+        interpretation = read_interpretation(interpretation_json)
+    except (ValueError, BlueprintInputError) as errore:
+        motivo = " ".join(str(errore).splitlines())
+        return (
+            "Validation error, nothing was written: " + motivo + "\n"
+            "Fix the JSON yourself using this message and call preflight_save_draft "
+            "again with the corrected `interpretation_json`."
+        )
+
+    try:
+        written = write_blueprint_atomic(
+            interpretation.blueprint, Path(output_path), format=format, source_path=None
+        )
+    except (OSError, ValueError, BlueprintInputError) as errore:
+        motivo = " ".join(str(errore).splitlines())
+        return (
+            "Write error, nothing was written: " + motivo + "\n"
+            "Fix `output_path` or `format` and call preflight_save_draft again."
+        )
+
+    righe = [f"Draft salvato in {written}."]
+    if interpretation.assumptions:
+        righe.append("Assunzioni: " + "; ".join(interpretation.assumptions))
+    if interpretation.open_questions:
+        righe.append("Domande aperte: " + "; ".join(interpretation.open_questions))
+    righe.append(
+        "Il Draft non e' confermato: 'starkeno preflight analyze' richiede ancora "
+        "il flag letterale --confirmed."
+    )
+    return "\n".join(righe)
+
+
+@mcp.tool()
+def preflight_save_draft(
+    interpretation_json: str, output_path: str, format: str = "json"
+) -> str:
+    """Validate an Interpretation JSON and save the Draft Blueprint it contains.
+
+    `interpretation_json` is the JSON YOU produced from the task returned by
+    `preflight_interpretation_task` — one object with `blueprint`, `assumptions` and
+    `open_questions`. `format` is "json" or "yaml" and defaults to "json".
+
+    On success, the returned text confirms the path written, lists the assumptions
+    and open questions you recorded, and states that the Draft is NOT confirmed: a
+    later `starkeno preflight analyze` still needs the literal --confirmed flag.
+
+    On failure THIS TOOL DOES NOT RAISE. It returns the validation error as plain
+    text instead, and writes nothing. Read the message, fix the JSON yourself, and
+    call preflight_save_draft again with the corrected `interpretation_json` — do
+    not ask the user to fix it, do not resend the same JSON unchanged, and do not
+    fabricate a Blueprint the original text does not support.
+    """
+    return preflight_save_draft_impl(interpretation_json, output_path, format)
 
 
 if __name__ == "__main__":

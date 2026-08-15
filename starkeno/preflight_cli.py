@@ -2,17 +2,16 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 import sys
-import tempfile
 from typing import NoReturn, Sequence
 
-from starkeno.preflight_schema import Blueprint, dump_blueprint, load_blueprint
+from starkeno.preflight_schema import Blueprint, load_blueprint
 from starkeno.preflight_service import (
     BlueprintInputError,
     analyze_confirmed,
     normalize_draft,
+    write_blueprint_atomic,
 )
 
 
@@ -95,9 +94,12 @@ def _run_draft(arguments: argparse.Namespace) -> int:
         blueprint = normalize_draft(text, format_hint=format_hint)
     except BlueprintInputError as exc:
         raise _UsageError(str(exc)) from exc
-    written = _write_blueprint_atomic(
-        blueprint, destination, format=arguments.format, source_path=source_path
-    )
+    try:
+        written = write_blueprint_atomic(
+            blueprint, destination, format=arguments.format, source_path=source_path
+        )
+    except BlueprintInputError as exc:
+        raise _UsageError(str(exc)) from exc
     print(f"Draft salvato: {written}")
     return 0
 
@@ -169,38 +171,6 @@ def _infer_input_format(source_path: Path | None) -> str:
     raise _UsageError(
         "--input-format {json,yaml} e obbligatorio per un suffisso di input ignoto"
     )
-
-
-def _write_blueprint_atomic(
-    blueprint: Blueprint,
-    destination: Path,
-    *,
-    format: str,
-    source_path: Path | None,
-) -> Path:
-    resolved = destination.resolve()
-    if source_path is not None and resolved == source_path.resolve():
-        raise _UsageError("La destinazione di output non puo coincidere con l'input")
-    content = dump_blueprint(blueprint, format=format)  # type: ignore[arg-type]
-    resolved.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{resolved.name}.", suffix=".tmp", dir=resolved.parent
-    )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(content)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, resolved)
-        temporary = None
-    finally:
-        if temporary is not None:
-            try:
-                temporary.unlink(missing_ok=True)
-            except OSError:
-                pass
-    return resolved
 
 
 def _print_user_error(error: Exception) -> None:

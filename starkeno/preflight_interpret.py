@@ -126,6 +126,31 @@ def interpretation_schema() -> dict:
     return Interpretation.model_json_schema()
 
 
+def interpretation_task(user_text: str) -> str:
+    """Compone il compito per un agente che non ha un `ModelClient`: le regole del
+    `SYSTEM_PROMPT`, lo schema JSON di `Interpretation` e il testo dell'utente.
+
+    E' la controparte «senza rete» di `interpret_text`: la porta MCP della parte B
+    restituisce questa stringa a un agente (Claude Code, Codex, ...) che la legge, la
+    esegue con le proprie capacita' di interpretazione e rimanda il JSON risultante a
+    `read_interpretation`. StarkEno non genera mai il Draft da solo.
+
+    Prefisso stabile per costruzione: dipende solo da `SYSTEM_PROMPT`, dallo schema (che
+    non cambia a runtime) e da `user_text`. Nessun timestamp, id o percorso — un compito
+    che varia fra due chiamate con lo stesso testo romperebbe la cache del fornitore
+    lato agente, esattamente cio' che la stabilita' del prefisso in `interpret_text`
+    protegge gia' lato modello diretto.
+    """
+    return (
+        f"{SYSTEM_PROMPT}\n"
+        "JSON schema the output must validate against "
+        "(additionalProperties: false on every object):\n"
+        f"{_schema_text()}\n\n"
+        "User text:\n"
+        f"{user_text}"
+    )
+
+
 def _rifiuta_measured(interpretazione: Interpretation) -> None:
     """Un modello non misura niente. `measured` renderebbe un numero inventato
     indistinguibile da uno osservato, e su questo il progetto non transige.
@@ -145,10 +170,25 @@ def _rifiuta_measured(interpretazione: Interpretation) -> None:
                 )
 
 
-def _leggi(testo: str) -> Interpretation:
+def read_interpretation(text: str) -> Interpretation:
+    """Valida un JSON candidato e lo trasforma in un'`Interpretation` fidata.
+
+    Nome pubblico di quella che era `_leggi`: e' il punto d'ingresso che sia
+    `interpret_text` (via un `ModelClient`) sia il tool MCP `preflight_save_draft`
+    (via un JSON che l'agente ha prodotto da solo, senza `ModelClient`) chiamano per
+    passare dal testo grezzo a un Draft fidato. Fa sempre tutte e tre le cose, nello
+    stesso ordine: validazione pydantic contro lo schema, `normalize_draft` (che
+    garantisce `confirmed=False` su un Draft), e `_rifiuta_measured` — nessuna via
+    d'ingresso puo' saltarne una.
+
+    Solleva su qualunque fallimento — JSON malformato, schema non rispettato,
+    riferimenti rotti, `measured` inventato — sempre con un `ValueError` (diretto o
+    tramite `pydantic.ValidationError`, che ne e' una sottoclasse): il chiamante decide
+    se propagarlo o trasformarlo in testo per l'agente.
+    """
     import json
 
-    dati = json.loads(testo)
+    dati = json.loads(text)
     interpretazione = Interpretation.model_validate(dati)
     normalizzato = normalize_draft(
         interpretazione.blueprint.model_dump_json(), format_hint="json"
@@ -177,7 +217,7 @@ def interpret_text(user_text: str, *, client: ModelClient) -> InterpretationResu
     prima = client.complete(system=SYSTEM_PROMPT, schema=schema, user_text=user_text)
     try:
         return InterpretationResult(
-            interpretation=_leggi(prima.text),
+            interpretation=read_interpretation(prima.text),
             usage=prima.usage,
             repaired=False,
             model=prima.model,
@@ -194,7 +234,7 @@ def interpret_text(user_text: str, *, client: ModelClient) -> InterpretationResu
     consumo = prima.usage.piu(seconda.usage)
     try:
         return InterpretationResult(
-            interpretation=_leggi(seconda.text),
+            interpretation=read_interpretation(seconda.text),
             usage=consumo,
             repaired=True,
             model=seconda.model,

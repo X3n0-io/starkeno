@@ -210,6 +210,43 @@ def test_l_interprete_non_tocca_rete_ambiente_ne_orologio():
     assert not trovati, "preflight_interpret importa %r" % sorted(trovati)
 
 
+def test_il_compito_contiene_le_regole_lo_schema_e_il_testo_ed_e_stabile():
+    """Il compito e' cio' che l'agente legge per produrre l'Interpretation: deve
+    portare le regole del SYSTEM_PROMPT, lo schema JSON e il testo dell'utente."""
+    primo = interprete.interpretation_task("un agente scrive una nota di rilascio")
+    secondo = interprete.interpretation_task("un agente scrive una nota di rilascio")
+
+    assert primo == secondo, "lo stesso testo deve produrre lo stesso compito"
+    assert "Never claim a number was measured" in primo, "mancano le regole"
+    assert '"open_questions"' in primo, "manca lo schema"
+    assert "un agente scrive una nota di rilascio" in primo, "manca il testo dell'utente"
+
+
+def test_il_compito_non_porta_nient_altro_di_locale_oltre_al_testo_utente():
+    """L'unica differenza fra due compiti con testi diversi deve essere il testo:
+    niente timestamp, id o altro dato che varierebbe da una chiamata all'altra e
+    romperebbe la cache del fornitore lato agente."""
+    con_a = interprete.interpretation_task("AAAAAAAAAA")
+    con_b = interprete.interpretation_task("BBBBBBBBBB")
+
+    assert con_a.replace("AAAAAAAAAA", "BBBBBBBBBB") == con_b
+
+
+def test_read_interpretation_e_il_nome_pubblico_della_validazione():
+    """`read_interpretation` sostituisce `_leggi` come punto d'ingresso pubblico: deve
+    fare esattamente cio' che faceva prima, validazione pydantic e rifiuto di measured
+    inclusi, perche' e' quello che i tool MCP della parte B chiameranno direttamente."""
+    interpretazione = interprete.read_interpretation(_interpretazione())
+    assert interpretazione.blueprint.goal.id == "goal-release"
+
+    bugiardo = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    bugiardo["nodes"][0]["budget"]["output"]["provenance"] = "measured"
+    payload = json.dumps({"blueprint": bugiardo, "assumptions": [], "open_questions": []})
+
+    with pytest.raises(ValueError):
+        interprete.read_interpretation(payload)
+
+
 def test_un_provenance_measured_in_fixed_tool_cost_viene_rifiutato():
     """`fixed_tool_cost` e' un settimo campo con `provenance`, portato da un nodo
     `kind="tool"`: non e' fra i sei nomi elencati a mano, ma il rifiuto di `measured`
