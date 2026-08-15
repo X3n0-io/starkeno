@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m starkeno.hook_inizio_sessione",
+            "async": false,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m starkeno.hook_avvia_ingestione",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

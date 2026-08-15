@@ -1,0 +1,15 @@
+{
+  "name": "starkeno-local",
+  "description": "Local marketplace exposing StarkEno as a Claude Code plugin",
+  "owner": {
+    "name": "Simone Mansella"
+  },
+  "plugins": [
+    {
+      "name": "starkeno",
+      "description": "Finds waste and errors in how you work with coding agents",
+      "source": "./plugin-claude-code",
+      "category": "productivity"
+    }
+  ]
+}
