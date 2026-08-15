@@ -7,6 +7,10 @@ usa il versionamento semantico.
 
 ### Added
 
+- Claude Code è un harness supportato e installabile, accanto a Codex, con un bundle e
+  un marketplace propri.
+- `starkeno doctor` elenca gli harness rilevati sulla macchina e, per quelli che non
+  sa misurare, dice perché.
 - Pacchetto wheel/sdist e CLI `starkeno doctor` / `starkeno report`.
 - Diagnostica locale, round-trip isolato e inventario degli storici noti.
 - Recupero esplicito con copia consistente, migrazione, verifica e backup.
@@ -25,6 +29,16 @@ usa il versionamento semantico.
 
 ### Changed
 
+- Il riconoscimento del formato di transcript passa da un ramo condizionale a un
+  registro di harness. Un harness riconosciuto ma non misurabile produce zero chiamate
+  invece di una stima: Antigravity non espone conteggi di token in nessun punto della
+  sua cartella dati.
+- Su Windows il database esce da `%LOCALAPPDATA%` e va in `%USERPROFILE%\.starkeno\`.
+  Un processo lanciato da un host impacchettato MSIX scrive sotto `AppData\Local`
+  nell'overlay privato del pacchetto: misurato, lo stesso script contava 12 righe
+  eseguito dall'hook e 699 da una shell, allo stesso percorso. `starkeno doctor`
+  segnala come recuperabile lo storico rimasto nella vecchia posizione.
+- Il README è in inglese e dichiara lo stato verificato di ogni harness.
 - Dashboard e report non caricano asset remoti.
 - Migrazioni e risorse funzionano anche dal wheel installato.
 - `starkeno doctor` e `starkeno report` non importano il core Preflight e quindi non
@@ -34,6 +48,13 @@ usa il versionamento semantico.
 
 ### Fixed
 
+- Gli hook di Claude Code sono sincroni: le varianti non bloccanti non raccoglievano
+  niente e non lo dicevano. L'avviatore restituisce il controllo in 354 ms e `async`
+  rientra subito, mentre l'ingestione ne richiede circa 1600, e il processo non
+  sopravvive. Su Codex l'avviatore resta, perché lì serve.
+- Un hook `SessionEnd` recupera l'ultimo turno di ogni sessione Claude Code: lo `Stop`
+  scatta prima che il turno sia sul disco, e per l'ultimo non esiste un giro successivo
+  che lo recuperi.
 - L'ingestione riconosce il transcript a eventi di Codex e separa correttamente token
   nuovi, cache letta, cache scritta e token di ragionamento.
 - Chiusura del socket del supervisore quando `bind` o `listen` falliscono.
