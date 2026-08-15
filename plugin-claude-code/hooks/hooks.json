@@ -19,8 +19,20 @@
           {
             "type": "command",
             "command": "python -m starkeno.hook_ingestione",
-            "async": true,
-            "timeout": 60
+            "async": false,
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m starkeno.hook_ingestione",
+            "async": false,
+            "timeout": 30
           }
         ]
       }

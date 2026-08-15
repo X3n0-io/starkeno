@@ -1,29 +1,42 @@
 """Il bundle Claude Code e' separato da quello Codex, e non puo' non esserlo.
 
-Misurato il 15/08/2026 installando un plugin locale usa-e-getta: Claude Code **copia**
-la cartella del plugin in `~/.claude/plugins/cache/<marketplace>/<plugin>/<versione>/` e
-copia soltanto quella. Il marketplace resta referenziato dov'e', il plugin no.
+Misurato il 15/08/2026 installando il plugin e strumentando un hook vero.
 
-Da qui discende tutto il resto:
-
-1. `${CLAUDE_PLUGIN_ROOT}/../starkeno/...` non risolve, perche' nella cache non c'e'
-   nessun `starkeno/`. E fallirebbe nel modo peggiore: gli hook escono 0 e tacciono, e
-   l'utente vedrebbe zero righe senza sapere perche' (vedi il commento misurato in
-   `hook_ingestione.py`).
+1. Claude Code **copia** il plugin in `~/.claude/plugins/cache/<marketplace>/<plugin>/
+   <versione>/`. Con un marketplace di tipo `directory` pero' `${CLAUDE_PLUGIN_ROOT}`
+   risolve al SORGENTE, non alla copia: modificare la copia non cambia niente. Su
+   un'installazione da git la copia sarebbe l'unica cosa presente, e li' non esiste
+   nessun `starkeno/` accanto al bundle.
 2. Gli hook si invocano quindi per modulo, non per percorso: `python -m starkeno.<hook>`
-   non dipende dalla radice del plugin e usa i due prerequisiti che il README gia'
-   impone — Python sul PATH e il pacchetto installato.
+   vale in entrambi i casi e usa i due prerequisiti che il README gia' impone — Python
+   sul PATH e il pacchetto installato. Verificato con una sonda dentro il bundle:
+   l'interprete e' quello giusto, `import starkeno` riesce, e stdin arriva completo di
+   `transcript_path`.
 3. Il manifest NON dichiara `hooks`: Claude Code scopre `hooks/hooks.json` per
    convenzione e i percorsi del manifest si SOMMANO a quelli scoperti invece di
    sostituirli, quindi dichiarare il percorso predefinito rischia di registrare gli hook
    due volte. Nessuno dei plugin ufficiali lo dichiara.
-4. Lo `Stop` chiama l'ingestione DIRETTAMENTE, non tramite l'avviatore che usa Codex.
-   L'avviatore stacca un processo figlio e rientra subito; misurato il 15/08/2026 su un
-   turno vero, rientra in **354 ms** mentre l'ingestione ne richiede **1600**. Claude
-   Code registra l'hook come concluso senza errori (`hookErrors: []`) e il figlio non
-   sopravvive: **zero righe, nessun errore, nessun modo di accorgersene.** Codex ha
-   bisogno dell'avviatore perche' blocca sull'hook; Claude Code ha `async` nativo e non
-   ne ha bisogno.
+4. Lo `Stop` e' SINCRONO e chiama l'ingestione DIRETTAMENTE. Le due varianti non
+   bloccanti sono state provate su turni veri e **non hanno raccolto niente**:
+   l'avviatore di Codex, che stacca un figlio e rientra in 354 ms mentre l'ingestione ne
+   richiede 1600; e `async: true`, che rientra subito uguale. In entrambi i casi il
+   processo non sopravvive, Claude Code registra l'hook come concluso senza errori, e
+   arrivano **zero righe senza un solo segnale**. Con `async` Claude Code non raccoglie
+   nemmeno l'esito, quindi `hookErrors: []` non vuol dire «e' andata bene», vuol dire
+   «non lo so».
+
+   Costa circa 1,6 s a fine turno, quando l'utente sta gia' leggendo la risposta. E' il
+   prezzo dell'unica configurazione che raccoglie davvero, ed e' la stessa che usano gli
+   hook `Stop` dei plugin ufficiali. Codex resta sull'avviatore: li' serve, e li'
+   funziona.
+5. C'e' anche un `SessionEnd`, e non e' ridondanza. Lo `Stop` di Claude Code scatta
+   PRIMA che il turno sia sul disco: misurato, la chiamata portava timestamp 14:21:17,8
+   e l'hook e' partito alle 14:21:18,7 leggendo un transcript che non la conteneva
+   ancora. Rileggendo tutto a ogni giro, il turno N viene recuperato allo `Stop` del
+   turno N+1 — ma l'ULTIMO turno di ogni sessione non avrebbe mai un giro successivo e
+   si perderebbe per sempre. `SessionEnd` arriva a transcript chiuso e lo raccoglie.
+   Sovrapporli non duplica niente: la scrittura e' idempotente sulla chiave
+   `(session_id, message_id)`.
 """
 import json
 from pathlib import Path
@@ -102,22 +115,37 @@ def test_gli_hook_claude_invocano_moduli_che_esistono():
         assert (RADICE / modulo.replace(".", "/")).with_suffix(".py").is_file()
 
 
-def test_lo_stop_claude_non_passa_dall_avviatore_di_codex():
-    """LA regressione misurata: l'avviatore rientra in 354 ms, l'ingestione ne vuole
-    1600, e Claude Code non tiene in vita il figlio staccato. Zero righe e zero errori.
-    """
+def test_lo_stop_claude_e_sincrono_e_non_passa_dall_avviatore():
+    """LA regressione misurata su turni veri: le due varianti non bloccanti — l'avviatore
+    di Codex e `async: true` — raccolgono ZERO righe senza emettere un errore. Rendere
+    di nuovo non bloccante questo hook significa spegnere la raccolta in silenzio."""
     (gruppo_stop,) = _hooks()["hooks"]["Stop"]
     (stop,) = gruppo_stop["hooks"]
 
     assert "hook_avvia_ingestione" not in stop["command"], (
         "l'avviatore serve a Codex, che blocca sull'hook; qui fa perdere la raccolta"
     )
-    assert stop["async"] is True, (
-        "senza async Claude Code aspetterebbe l'ingestione, e il turno lo paga l'utente"
+    assert stop["async"] is False, (
+        "provato: con async il processo non sopravvive e non arriva nessuna riga"
     )
-    assert stop["timeout"] >= 30, (
-        "con async il timeout non blocca nessuno, e l'ingestione dura oltre un secondo"
+    assert stop["timeout"] >= 30, "l'ingestione misurata dura circa 1,6 s"
+
+
+def test_esiste_un_session_end_che_recupera_l_ultimo_turno():
+    """Senza, l'ultimo turno di OGNI sessione si perde: lo Stop lo legge prima che sia
+    scritto, e un turno successivo che lo recuperi non c'e'."""
+    hooks = _hooks()["hooks"]
+    assert "SessionEnd" in hooks, "l'ultimo turno di ogni sessione resterebbe fuori"
+
+    (gruppo,) = hooks["SessionEnd"]
+    (fine,) = gruppo["hooks"]
+    (gruppo_stop,) = hooks["Stop"]
+    (stop,) = gruppo_stop["hooks"]
+
+    assert fine["command"] == stop["command"], (
+        "deve ingerire, non fare qualcosa di diverso dallo Stop"
     )
+    assert fine["async"] is False, "vale la stessa misura dello Stop"
 
 
 def test_il_session_start_claude_resta_sincrono():
