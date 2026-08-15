@@ -30,6 +30,29 @@ def test_security_and_contributing_docs_contain_actionable_contracts():
     assert "Alembic" in contributing
 
 
+def test_il_readme_dichiara_gli_harness_supportati():
+    """Un README che promette piu' di quanto il codice misura e' una bugia lenta."""
+    testo = Path("README.md").read_text(encoding="utf-8")
+
+    for atteso in ("Codex", "Claude Code", "Antigravity"):
+        assert atteso in testo, "il README non nomina %s" % atteso
+    assert "MIT" in testo
+
+
+def test_il_readme_non_promette_gli_harness_non_supportati():
+    """Cursor, OpenCode e OpenClaw restano fuori finche' non esiste un transcript vero
+    da cui leggerne lo schema: nominarli come supportati sarebbe una promessa."""
+    testo = Path("README.md").read_text(encoding="utf-8")
+
+    for nome in ("Cursor", "OpenCode", "OpenClaw"):
+        if nome in testo:
+            posizione = testo.index(nome)
+            contesto = testo[max(0, posizione - 200):posizione + 200].lower()
+            assert "not yet" in contesto or "not supported" in contesto, (
+                "%s compare senza dire che non e' supportato" % nome
+            )
+
+
 def test_readme_links_the_public_project_docs():
     readme = Path("README.md").read_text(encoding="utf-8")
 

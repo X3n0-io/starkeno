@@ -92,15 +92,30 @@ def test_configurazione_runtime_non_dipende_da_variabili_claude():
     assert "PLUGIN_ROOT" in contenuto
 
 
-def test_readme_documenta_fase_2_e_comportamento_reale_di_codex():
+def test_readme_documenta_il_comportamento_reale_degli_hook():
+    """Il README e' in inglese e nomina Claude Code.
+
+    Prima vietava quel nome, ed era giusto: il plugin non esisteva. Il divieto e' caduto
+    quando Claude Code e' diventato installabile e la raccolta e' stata verificata su
+    turni veri.
+    """
     readme = (RADICE / "README.md").read_text(encoding="utf-8")
 
-    assert "Claude Code" not in readme
-    assert "Fase 2" in readme
+    assert "Phase 2" in readme
     assert "starkeno report" in readme
     assert "starkeno doctor" in readme
-    assert "/plugins" in readme
-    assert "/hooks" in readme
-    assert "SessionStart" in readme and "sincrono" in readme
-    assert "Stop" in readme and "background" in readme
-    assert "modello" in readme and "riga" in readme
+    assert "/plugins" in readme and "/hooks" in readme
+    assert "SessionStart" in readme and "Stop" in readme
+    assert "background" in readme, "l'avviatore non bloccante di Codex resta un fatto"
+
+
+def test_il_readme_distingue_gli_hook_dei_due_harness():
+    """I due harness NON hanno la stessa configurazione, e il README non deve lasciar
+    credere il contrario: su Codex lo `Stop` e' un avviatore in background, su Claude
+    Code e' sincrono perche' il processo staccato non sopravvive."""
+    readme = (RADICE / "README.md").read_text(encoding="utf-8")
+
+    assert "synchronous" in readme.lower()
+    assert "SessionEnd" in readme, (
+        "senza SessionEnd l'ultimo turno di ogni sessione Claude Code si perde"
+    )
