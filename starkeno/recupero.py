@@ -19,14 +19,27 @@ class RecuperoError(RuntimeError):
 def inventaria_candidati(
     *, canonico: Path, radice_progetto: Path,
 ) -> tuple[CandidatoDatabase, ...]:
-    """Controlla solo i tre percorsi StarkEno noti, senza cercare file personali."""
+    """Controlla solo i percorsi StarkEno noti, senza cercare file personali.
+
+    Fra questi c'e' la vecchia cartella dati di Windows: il database si e' spostato
+    fuori da `%LOCALAPPDATA%`, e senza guardare anche dove stava prima lo storico di
+    chi aggiorna sparirebbe senza che nessuno lo dica.
+    """
+    from starkeno import percorsi as modulo_percorsi
+
     radice = Path(radice_progetto)
-    percorsi = (
-        Path(canonico),
+    canonico = Path(canonico)
+    da_controllare = [
+        canonico,
         radice / "starkeno.db",
         radice / "starkeno.db.trasferito",
-    )
-    return tuple(ispeziona_database(percorso) for percorso in percorsi)
+    ]
+    storica = modulo_percorsi.cartella_dati_windows_storica()
+    if storica is not None:
+        vecchio = Path(storica) / modulo_percorsi.NOME_DATABASE
+        if vecchio not in da_controllare:
+            da_controllare.append(vecchio)
+    return tuple(ispeziona_database(percorso) for percorso in da_controllare)
 
 
 def _uri_sola_lettura(path: Path) -> str:

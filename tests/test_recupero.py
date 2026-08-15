@@ -38,7 +38,10 @@ def _crea_database(path: Path, revisione="0003", righe=1) -> Path:
     return path
 
 
-def test_inventory_only_checks_known_starkeno_paths(tmp_path):
+def test_inventory_only_checks_known_starkeno_paths(tmp_path, monkeypatch):
+    from starkeno import percorsi
+
+    monkeypatch.setattr(percorsi, "cartella_dati_windows_storica", lambda: None)
     canonico = tmp_path / "dati" / "starkeno.db"
     radice = tmp_path / "repo"
 
@@ -49,6 +52,37 @@ def test_inventory_only_checks_known_starkeno_paths(tmp_path):
         radice / "starkeno.db",
         radice / "starkeno.db.trasferito",
     ]
+
+
+def test_l_inventario_vede_la_vecchia_cartella_windows(tmp_path, monkeypatch):
+    """Il database si e' spostato fuori da `%LOCALAPPDATA%`. Se `doctor` non guardasse
+    anche dove stava prima, lo storico di chi aggiorna sparirebbe in silenzio."""
+    from starkeno import percorsi
+
+    storica = tmp_path / "AppData" / "Local" / "StarkEno"
+    monkeypatch.setattr(percorsi, "cartella_dati_windows_storica", lambda: storica)
+    _crea_database(storica / "starkeno.db", righe=7)
+
+    trovati = inventaria_candidati(
+        canonico=tmp_path / "nuovo" / "starkeno.db", radice_progetto=tmp_path / "repo",
+    )
+
+    per_percorso = {x.percorso: x for x in trovati}
+    vecchio = storica / "starkeno.db"
+    assert vecchio in per_percorso, "storico invisibile: non sarebbe recuperabile"
+    assert per_percorso[vecchio].righe == 7
+
+
+def test_la_vecchia_cartella_non_si_ripete_se_e_gia_quella_canonica(tmp_path, monkeypatch):
+    from starkeno import percorsi
+
+    canonico = tmp_path / "StarkEno" / "starkeno.db"
+    monkeypatch.setattr(
+        percorsi, "cartella_dati_windows_storica", lambda: canonico.parent)
+
+    trovati = inventaria_candidati(canonico=canonico, radice_progetto=tmp_path / "repo")
+
+    assert [x.percorso for x in trovati].count(canonico) == 1
 
 
 def test_recovery_copies_migrates_and_preserves_the_source(tmp_path):

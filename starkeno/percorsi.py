@@ -15,20 +15,37 @@ def cartella_dati() -> Path:
 
     NON accanto al codice: le cartelle dei plugin sono versionate e un aggiornamento
     ne crea una nuova. Il database deve sopravvivere agli aggiornamenti.
+
+    **E su Windows NON sotto `%LOCALAPPDATA%.`** Sembra il posto giusto, ed e' quello che
+    la convenzione indica, ma un processo lanciato da un host impacchettato MSIX scrive
+    li' dentro un overlay privato del pacchetto. Claude Code e' impacchettato cosi':
+    misurato il 15/08/2026, lo stesso identico script contava 12 righe eseguito
+    dall'hook e 699 eseguito da una shell, allo stesso percorso. L'hook ingeriva e
+    scriveva senza un errore, in un database che `report` e `doctor` non guardavano.
+    La home invece non e' virtualizzata, verificato scrivendoci da dentro l'hook e
+    rileggendo da fuori.
     """
     if sys.platform == "win32":
-        base = os.environ.get("LOCALAPPDATA")
-        if base:
-            return Path(base) / "StarkEno"
-    elif sys.platform == "darwin":
+        return Path.home() / ".starkeno"
+    if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "StarkEno"
-    else:
-        base = os.environ.get("XDG_DATA_HOME")
-        if base:
-            return Path(base) / "starkeno"
-        return Path.home() / ".local" / "share" / "starkeno"
-    # Ricaduta comune: se la variabile di piattaforma manca, la home c'e' sempre.
-    return Path.home() / ".starkeno"
+    base = os.environ.get("XDG_DATA_HOME")
+    if base:
+        return Path(base) / "starkeno"
+    return Path.home() / ".local" / "share" / "starkeno"
+
+
+def cartella_dati_windows_storica() -> Path | None:
+    """Dove stava il database su Windows prima del 15/08/2026, se esisteva.
+
+    Serve a `doctor`: chi aggiorna ha lo storico li' e deve poterselo riprendere. Non
+    la usa nessun percorso automatico — adottare uno storico resta una decisione
+    esplicita dell'utente, con backup e verifica.
+    """
+    if sys.platform != "win32":
+        return None
+    base = os.environ.get("LOCALAPPDATA")
+    return Path(base) / "StarkEno" if base else None
 
 
 def percorso_database() -> str:

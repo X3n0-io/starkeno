@@ -110,11 +110,17 @@ lo storico.
 
 | Sistema | Percorso |
 |---|---|
-| Windows | `%LOCALAPPDATA%\StarkEno\starkeno.db` |
+| Windows | `%USERPROFILE%\.starkeno\starkeno.db` |
 | macOS | `~/Library/Application Support/StarkEno/starkeno.db` |
 | Linux | `$XDG_DATA_HOME/starkeno/starkeno.db`, altrimenti `~/.local/share/starkeno/starkeno.db` |
 
 `STARKENO_DB_PATH` ha la precedenza su questi percorsi.
+
+Su Windows il database **non** sta sotto `%LOCALAPPDATA%`, che pure sarebbe la
+convenzione: un processo lanciato da un host impacchettato MSIX scrive lì dentro un
+overlay privato del pacchetto, e la raccolta finirebbe in un database che `report` e
+`doctor` non guardano — senza un errore. Chi aggiorna da una versione precedente trova
+lo storico segnalato da `starkeno doctor` come recuperabile.
 
 `starkeno doctor` inventaria in sola lettura il percorso canonico, `starkeno.db` accanto
 al codice e l'eventuale `starkeno.db.trasferito`. Nessun hook sposta o rinomina lo
