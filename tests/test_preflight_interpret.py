@@ -208,3 +208,42 @@ def test_l_interprete_non_tocca_rete_ambiente_ne_orologio():
     vietati = {"os", "anthropic", "httpx", "requests", "socket", "time", "datetime"}
     trovati = vietati & moduli_importati(PACCHETTO / "preflight_interpret.py")
     assert not trovati, "preflight_interpret importa %r" % sorted(trovati)
+
+
+def test_un_provenance_measured_in_fixed_tool_cost_viene_rifiutato():
+    """`fixed_tool_cost` e' un settimo campo con `provenance`, portato da un nodo
+    `kind="tool"`: non e' fra i sei nomi elencati a mano, ma il rifiuto di `measured`
+    deve valere anche li', non solo sui campi che qualcuno si e' ricordato di scrivere."""
+    bugiardo = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    bugiardo["nodes"].append({
+        "id": "invoke-tool",
+        "kind": "tool",
+        "description": "Chiama uno strumento a pagamento.",
+        "agent_id": None,
+        "model_id": None,
+        "tool_id": None,
+        "skill_ids": [],
+        "context_ids": [],
+        "budget": {
+            "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun prompt."},
+            "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun contesto."},
+            "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun output LLM."},
+            "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+            "latency_ms": {"min": 100, "typical": 300, "max": 1000, "provenance": "declared", "confidence": "medium", "reason": "Chiamata allo strumento."},
+            "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+            "max_retries": 0,
+            "fixed_tool_cost": {
+                "min": 1, "typical": 1, "max": 1, "currency": "USD",
+                "provenance": "measured", "confidence": "high",
+                "reason": "Prezzo dello strumento.",
+            },
+        },
+    })
+    client = ClientFinto(
+        json.dumps({"blueprint": bugiardo, "assumptions": [], "open_questions": []}),
+        _interpretazione(),
+    )
+
+    esito = interprete.interpret_text("testo", client=client)
+
+    assert esito.repaired is True, "un `measured` in fixed_tool_cost deve essere corretto"

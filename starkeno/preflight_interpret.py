@@ -128,12 +128,16 @@ def interpretation_schema() -> dict:
 
 def _rifiuta_measured(interpretazione: Interpretation) -> None:
     """Un modello non misura niente. `measured` renderebbe un numero inventato
-    indistinguibile da uno osservato, e su questo il progetto non transige."""
+    indistinguibile da uno osservato, e su questo il progetto non transige.
+
+    Gira sui campi di `NodeBudget` che espongono `.provenance`, invece di
+    enumerarli per nome: cosi' copre anche i campi opzionali come
+    `fixed_tool_cost` (saltati quando valgono `None`) e qualunque campo di
+    budget aggiunto in futuro, senza che questa funzione debba ricordarsene."""
     for nodo in interpretazione.blueprint.nodes:
-        budget = nodo.budget
-        for nome in ("instructions", "dynamic_context", "output", "cacheable_fraction",
-                     "latency_ms", "retry_probability"):
-            stima = getattr(budget, nome)
+        for nome, stima in nodo.budget:
+            if stima is None or not hasattr(stima, "provenance"):
+                continue
             if stima.provenance == "measured":
                 raise ValueError(
                     f"node {nodo.id}: {nome} dichiara provenance 'measured', ma nulla "
