@@ -17,6 +17,13 @@ Da qui discende tutto il resto:
    convenzione e i percorsi del manifest si SOMMANO a quelli scoperti invece di
    sostituirli, quindi dichiarare il percorso predefinito rischia di registrare gli hook
    due volte. Nessuno dei plugin ufficiali lo dichiara.
+4. Lo `Stop` chiama l'ingestione DIRETTAMENTE, non tramite l'avviatore che usa Codex.
+   L'avviatore stacca un processo figlio e rientra subito; misurato il 15/08/2026 su un
+   turno vero, rientra in **354 ms** mentre l'ingestione ne richiede **1600**. Claude
+   Code registra l'hook come concluso senza errori (`hookErrors: []`) e il figlio non
+   sopravvive: **zero righe, nessun errore, nessun modo di accorgersene.** Codex ha
+   bisogno dell'avviatore perche' blocca sull'hook; Claude Code ha `async` nativo e non
+   ne ha bisogno.
 """
 import json
 from pathlib import Path
@@ -86,14 +93,41 @@ def test_gli_hook_claude_invocano_moduli_che_esistono():
 
     assert gruppo_start["matcher"] == "startup"
     assert start["type"] == stop["type"] == "command"
-    assert 0 < start["timeout"] <= 10 and 0 < stop["timeout"] <= 10
 
     for hook, modulo in (
         (start, "starkeno.hook_inizio_sessione"),
-        (stop, "starkeno.hook_avvia_ingestione"),
+        (stop, "starkeno.hook_ingestione"),
     ):
         assert hook["command"] == "python -m " + modulo
         assert (RADICE / modulo.replace(".", "/")).with_suffix(".py").is_file()
+
+
+def test_lo_stop_claude_non_passa_dall_avviatore_di_codex():
+    """LA regressione misurata: l'avviatore rientra in 354 ms, l'ingestione ne vuole
+    1600, e Claude Code non tiene in vita il figlio staccato. Zero righe e zero errori.
+    """
+    (gruppo_stop,) = _hooks()["hooks"]["Stop"]
+    (stop,) = gruppo_stop["hooks"]
+
+    assert "hook_avvia_ingestione" not in stop["command"], (
+        "l'avviatore serve a Codex, che blocca sull'hook; qui fa perdere la raccolta"
+    )
+    assert stop["async"] is True, (
+        "senza async Claude Code aspetterebbe l'ingestione, e il turno lo paga l'utente"
+    )
+    assert stop["timeout"] >= 30, (
+        "con async il timeout non blocca nessuno, e l'ingestione dura oltre un secondo"
+    )
+
+
+def test_il_session_start_claude_resta_sincrono():
+    """Inietta `additionalContext`: se non fosse sincrono, il contesto arriverebbe a
+    turno gia' cominciato."""
+    (gruppo_start,) = _hooks()["hooks"]["SessionStart"]
+    (start,) = gruppo_start["hooks"]
+
+    assert start["async"] is False
+    assert 0 < start["timeout"] <= 10
 
 
 def test_il_bundle_codex_resta_intatto():

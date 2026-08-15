@@ -18,8 +18,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -m starkeno.hook_avvia_ingestione",
-            "timeout": 5
+            "command": "python -m starkeno.hook_ingestione",
+            "async": true,
+            "timeout": 60
           }
         ]
       }
