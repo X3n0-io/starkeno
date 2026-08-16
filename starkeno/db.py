@@ -9,6 +9,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.types import TypeDecorator
 
 from starkeno.config import SQLITE_BUSY_TIMEOUT_SECONDS
+from starkeno.consuntivo import Esecuzione, Marcatore, RigaOsservata
 from starkeno.conto import AzioneConto
 from starkeno.rules import ActionRecord, WindowStats
 
@@ -1214,4 +1215,125 @@ def get_recent_actions(session: Session, project: str, limit: int = 20) -> list[
         .order_by(AgentAction.timestamp.desc(), AgentAction.id.desc())
         .limit(limit)
         .all()
+    )
+
+
+# ============================================= le esecuzioni dichiarate di un Blueprint
+
+
+def apri_esecuzione(session: Session, *, run_key: str, project: str,
+                    blueprint_hash: str, analysis_json: str, model_map_json: str,
+                    started_at: datetime) -> BlueprintRun:
+    """Apre un'esecuzione. Il chiamante ha gia' verificato che non ce ne sia una aperta."""
+    run = BlueprintRun(
+        run_key=run_key, project=normalizza_progetto(project),
+        blueprint_hash=blueprint_hash, analysis_json=analysis_json,
+        model_map_json=model_map_json, started_at=started_at, ended_at=None,
+    )
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+    return run
+
+
+def esecuzione_aperta(session: Session, project: str) -> BlueprintRun | None:
+    """L'esecuzione aperta su questo progetto, se c'e'.
+
+    Un'esecuzione aperta e dimenticata e' un aspirapolvere: si prenderebbe ogni chiamata
+    successiva del progetto. Aprirne una seconda va rifiutato, e questa e' la lookup.
+    """
+    return (session.query(BlueprintRun)
+            .filter(BlueprintRun.project == normalizza_progetto(project),
+                    BlueprintRun.ended_at.is_(None))
+            .order_by(BlueprintRun.id.desc())
+            .first())
+
+
+def leggi_esecuzione(session: Session, run_key: str) -> BlueprintRun | None:
+    return session.query(BlueprintRun).filter(BlueprintRun.run_key == run_key).first()
+
+
+def aggiungi_marcatore(session: Session, run: BlueprintRun, *, node_id: str,
+                       declared_at: datetime) -> BlueprintRunMarker:
+    """Aggiunge un marcatore assegnando `seq` come massimo corrente piu' uno.
+
+    `seq` non arriva mai dal chiamante: due marcatori con lo stesso `declared_at`
+    andrebbero altrimenti in ordine arbitrario, e l'intervallo fra i due finirebbe sul
+    nodo sbagliato.
+    """
+    massimo = (session.query(func.max(BlueprintRunMarker.seq))
+               .filter(BlueprintRunMarker.run_id == run.id).scalar()) or 0
+    marcatore = BlueprintRunMarker(
+        run_id=run.id, node_id=node_id, declared_at=declared_at, seq=massimo + 1,
+    )
+    session.add(marcatore)
+    session.commit()
+    session.refresh(marcatore)
+    return marcatore
+
+
+def chiudi_esecuzione(session: Session, run: BlueprintRun, *, ended_at: datetime,
+                      model_map_json: str | None = None) -> None:
+    """Chiude l'esecuzione. `model_map_json` omessa lascia invariata quella esistente."""
+    if ended_at < run.started_at:
+        raise ValueError(
+            "ended_at (%s) e' anteriore a started_at (%s): la finestra sarebbe negativa"
+            % (ended_at.isoformat(), run.started_at.isoformat())
+        )
+    run.ended_at = ended_at
+    if model_map_json is not None:
+        run.model_map_json = model_map_json
+    session.commit()
+
+
+def aggiorna_mappatura(session: Session, run: BlueprintRun, *,
+                       model_map_json: str) -> None:
+    """Sostituisce la mappatura modello→profilo, anche su un'esecuzione gia' chiusa.
+
+    Il confronto elenca i modelli osservati che nessuna mappatura copre; dichiararli e
+    ricalcolare e' il ciclo previsto. Nessuna riga raccolta viene toccata: l'attribuzione
+    e' una vista, non un timbro.
+    """
+    run.model_map_json = model_map_json
+    session.commit()
+
+
+def marcatori_di(session: Session, run: BlueprintRun) -> list[Marcatore]:
+    righe = (session.query(BlueprintRunMarker)
+             .filter(BlueprintRunMarker.run_id == run.id)
+             .order_by(BlueprintRunMarker.declared_at.asc(),
+                       BlueprintRunMarker.seq.asc())
+             .all())
+    return [Marcatore(node_id=r.node_id, declared_at=r.declared_at, seq=r.seq)
+            for r in righe]
+
+
+def righe_nella_finestra(session: Session, project: str, inizio: datetime,
+                         fine: datetime) -> list[RigaOsservata]:
+    """Pre-filtro indicizzato. La finestra AUTOREVOLE resta `consuntivo.attribuisci`."""
+    righe = (session.query(AgentAction)
+             .filter(AgentAction.project == normalizza_progetto(project),
+                     AgentAction.timestamp >= inizio,
+                     AgentAction.timestamp <= fine)
+             .order_by(AgentAction.timestamp.asc(), AgentAction.id.asc())
+             .all())
+    return [RigaOsservata(
+        session_id=r.session_id, timestamp=r.timestamp, model_used=r.model_used,
+        tokens_used=r.tokens_used, cache_read_tokens=r.cache_read_tokens,
+        cache_write_tokens=r.cache_write_tokens, output_tokens=r.output_tokens,
+        azioni_nella_chiamata=r.azioni_nella_chiamata,
+    ) for r in righe]
+
+
+def elenca_esecuzioni(session: Session, limite: int = 20) -> list[BlueprintRun]:
+    return (session.query(BlueprintRun)
+            .order_by(BlueprintRun.id.desc()).limit(limite).all())
+
+
+def esecuzione_snapshot(run: BlueprintRun) -> Esecuzione:
+    """Il perimetro come dato puro, pronto per `consuntivo.attribuisci`."""
+    return Esecuzione(
+        run_key=run.run_key, project=run.project, blueprint_hash=run.blueprint_hash,
+        started_at=run.started_at, ended_at=run.ended_at,
+        model_map=json.loads(run.model_map_json or "{}"),
     )
