@@ -1144,7 +1144,72 @@ def test_un_modello_non_mappato_conta_i_token_e_dichiara_la_moneta_ignota():
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
     assert moneta.token_non_prezzati == 1_000_000
-    assert moneta.modelli_non_mappati == (("ignoto", 1_000_000),)
+    assert moneta.modelli_senza_prezzo == (("ignoto", 1_000_000, "non mappato"),)
+
+
+def test_un_modello_mappato_a_un_id_inesistente_dichiara_profilo_inesistente():
+    """La regressione: un id battuto male in `model_map` spariva nello stesso
+    `token_non_prezzati` di un modello mai dichiarato, senza lasciare traccia in
+    `modelli_non_mappati` (che vedeva solo `model_map.get(nome) is None`). Qui il rimedio
+    e' diverso — correggere l'id, non aggiungerlo — quindi va distinto."""
+    blueprint = _blueprint(**PREZZI)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
+
+    moneta = calcola_moneta(righe, {"opus-4": "id-che-non-esiste"}, blueprint)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000
+    assert moneta.modelli_senza_prezzo == (
+        ("opus-4", 1_000_000, "profilo inesistente"),
+    )
+
+
+def test_un_modello_mappato_a_un_listino_incompleto_dichiara_listino_incompleto():
+    """La regressione: un profilo che esiste ma con un prezzo mancante spariva anch'esso
+    in `token_non_prezzati` senza comparire in `modelli_non_mappati`, indistinguibile da
+    un id inesistente o da un modello mai dichiarato — coi tre motivi confusi, chi legge
+    non sa se dichiarare, correggere o completare il listino."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["models"][0].update(PREZZI)  # "economy": prezzato per intero, cosi'
+    # calcola_moneta non torna None per assenza di QUALSIASI listino completo.
+    incompleto = json.loads(json.dumps(payload["models"][0]))
+    incompleto.update({"id": "incompleto", "output_price_per_million": None})
+    payload["models"].append(incompleto)
+    blueprint = Blueprint.model_validate(payload)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
+
+    moneta = calcola_moneta(righe, {"opus-4": "incompleto"}, blueprint)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000
+    assert moneta.modelli_senza_prezzo == (
+        ("opus-4", 1_000_000, "listino incompleto"),
+    )
+
+
+def test_la_moneta_e_i_totali_leggono_le_stesse_righe():
+    """La regressione futura da bloccare: `costruisci` ricostruiva la lista delle righe
+    osservate DUE volte, una per `calcola_moneta` e una per `totali`, una quindicina di
+    righe piu' sotto. Oggi combaciano, ma se una delle due cambiasse da sola la moneta si
+    scollerebbe in silenzio dai totali che dovrebbe descrivere. Righe sia su un nodo sia
+    in `non_attribuite`, e nessun modello mappato: se le due basi divergessero, questa
+    uguaglianza si romperebbe subito."""
+    blueprint = _blueprint(**PREZZI)
+    esecuzione = _esecuzione()
+    marcatori = [_marcatore("draft", 10, 1)]
+    righe = [_riga(5), _riga(15)]
+    attribuzione = attribuisci(esecuzione, marcatori, righe)
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+
+    # Precondizione: le righe finiscono davvero su entrambe le sponde.
+    assert len(attribuzione.non_attribuite) == 1
+    assert sum(len(r) for _, r in attribuzione.per_nodo) == 1
+    assert consuntivo.moneta is not None
+    assert consuntivo.moneta.token_non_prezzati == consuntivo.osservato.totale_tokens
 
 
 def test_senza_prezzi_nel_blueprint_la_moneta_e_assente_non_zero():
@@ -1204,15 +1269,17 @@ MILIONE = Decimal("1000000")
 class Moneta:
     """Il costo osservato, calcolato col listino che ha usato la stima.
 
-    `osservata` copre SOLO le righe di un modello mappato e scomposto per intero.
-    Tutto il resto sta in `token_non_prezzati` e in `modelli_non_mappati`: un costo
-    mancante presentato come costo basso e' peggio di un costo dichiarato ignoto.
+    `osservata` copre SOLO le righe di un modello mappato, con un profilo esistente e un
+    listino completo. Tutto il resto sta in `token_non_prezzati` e in
+    `modelli_senza_prezzo`, ciascuno col MOTIVO: un costo mancante presentato come costo
+    basso e' peggio di un costo dichiarato ignoto, e i tre motivi si rimediano in modo
+    diverso — dichiararlo, correggere l'id, o completare il listino.
     """
 
     valuta: str
     osservata: Decimal
     token_non_prezzati: int
-    modelli_non_mappati: tuple[tuple[str, int], ...]
+    modelli_senza_prezzo: tuple[tuple[str, int, str], ...]
 
 
 def calcola_moneta(
@@ -1226,10 +1293,13 @@ def calcola_moneta(
     i suoi listini usano valute diverse — sommarle produrrebbe un numero che non e'
     denaro.
 
-    Un modello osservato ma NON mappato non annulla la moneta: finisce in
-    `modelli_non_mappati` con i suoi token, che e' l'informazione utile — dice cosa
-    dichiarare per ottenere il numero. Restituire None qui nasconderebbe proprio la
-    riga che serve a rimediare.
+    Un modello osservato ma non prezzato non annulla la moneta: finisce in
+    `modelli_senza_prezzo` coi suoi token e il MOTIVO, perche' i tre casi si rimediano in
+    modo diverso — "non mappato" (assente da `model_map`, va dichiarato), "profilo
+    inesistente" (mappato a un id che non e' in `blueprint.models`, l'id va corretto), o
+    "listino incompleto" (il profilo esiste ma manca almeno uno dei quattro prezzi, il
+    listino va completato). Restituire None qui nasconderebbe proprio la riga che serve a
+    rimediare, e confondere i tre motivi farebbe applicare il rimedio sbagliato.
     """
     profili = {modello.id: modello for modello in blueprint.models}
     listini = {
@@ -1245,14 +1315,20 @@ def calcola_moneta(
 
     costo = Decimal("0")
     non_prezzati = 0
-    non_mappati: list[tuple[str, int]] = []
+    senza_prezzo: list[tuple[str, int, str]] = []
 
     for nome, totale in totali_per_modello(righe):
-        prezzi = listini.get(model_map.get(nome, ""))
+        identificativo = model_map.get(nome)
+        prezzi = listini.get(identificativo) if identificativo is not None else None
         if prezzi is None:
             non_prezzati += totale.totale_tokens
-            if model_map.get(nome) is None:
-                non_mappati.append((nome, totale.totale_tokens))
+            if identificativo is None:
+                motivo = "non mappato"
+            elif identificativo not in profili:
+                motivo = "profilo inesistente"
+            else:
+                motivo = "listino incompleto"
+            senza_prezzo.append((nome, totale.totale_tokens, motivo))
             continue
         # Le righe non scomposte non si prezzano: non si sa quanto fosse output, e
         # prezzarle a tariffa input mente proprio sul caso caro.
@@ -1269,7 +1345,7 @@ def calcola_moneta(
         valuta=valute.pop(),
         osservata=costo,
         token_non_prezzati=non_prezzati,
-        modelli_non_mappati=tuple(non_mappati),
+        modelli_senza_prezzo=tuple(senza_prezzo),
     )
 
 
@@ -1306,18 +1382,35 @@ Poi aggiungi il campo a `Consuntivo`, in fondo alla dataclass:
     moneta: Moneta | None = None
 ```
 
-e in `costruisci`, prima dei due `return`, calcola:
+Infine, in `costruisci`, **sostituisci** le due righe che il Task 3 ha scritto nel ramo
+`ok` —
 
 ```python
-    moneta = calcola_moneta(
-        [riga for _, righe in attribuzione.per_nodo for riga in righe]
-        + list(attribuzione.non_attribuite),
-        esecuzione.model_map,
-        blueprint,
-    ) if attribuzione.stato == "ok" else None
+    osservate = [riga for _, righe in attribuzione.per_nodo for riga in righe]
+    osservato = totali(osservate + list(attribuzione.non_attribuite))
 ```
 
-passandolo come `moneta=moneta` al `return` dello stato `ok` e `moneta=None` all'altro.
+— con queste tre, che calcolano la base delle righe osservate UNA sola volta e la fanno
+leggere sia a `totali` sia a `calcola_moneta`:
+
+```python
+    righe_osservate = ([riga for _, righe in attribuzione.per_nodo for riga in righe]
+                       + list(attribuzione.non_attribuite))
+    osservato = totali(righe_osservate)
+    moneta = calcola_moneta(righe_osservate, esecuzione.model_map, blueprint)
+```
+
+**Non ricostruire la lista una seconda volta.** Il primo istinto sarebbe scrivere
+`moneta = calcola_moneta(...) if attribuzione.stato == "ok" else None` prima del ramo
+non-`ok`, ricalcolando lì la stessa lista che il ramo `ok` costruisce quindici righe piu'
+sotto per `osservato`. Le due liste nascono identiche oggi, ma sono due espressioni
+indipendenti: una modifica futura a una sola delle due le scollerebbe in silenzio, e la
+moneta smetterebbe di descrivere le righe che i totali descrivono. Per questo `moneta` si
+calcola SOLO nel ramo `ok`, dalla stessa `righe_osservate` di `osservato`.
+
+Il ramo non-`ok` (il primo `return`, scritto dal Task 3) resta com'era, con `moneta=None`
+esplicito. Il `return` dello stato `ok`, in fondo alla funzione, riceve `moneta=moneta`
+come ultimo argomento.
 
 - [ ] **Step 4: Esegui i test e verifica che passino**
 
@@ -1325,7 +1418,7 @@ passandolo come `moneta=moneta` al `return` dello stato `ok` e `moneta=None` all
 python -m pytest tests/test_consuntivo.py -v
 ```
 
-Atteso: 26 passed.
+Atteso: 29 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -1415,6 +1508,12 @@ NOTA_CACHE = (
     "calcolo."
 )
 
+_RIMEDIO_PER_MOTIVO = {
+    "non mappato": "dichiaralo in model_map",
+    "profilo inesistente": "correggi l'id dichiarato in model_map",
+    "listino incompleto": "completa il listino del modello nel Blueprint",
+}
+
 
 def rendi_testo(consuntivo: Consuntivo) -> str:
     """La resa condivisa da CLI e tool MCP: una sola verita', non due."""
@@ -1493,10 +1592,10 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
                     scenario.nome, scenario.costo, scenario.valuta))
         if moneta.token_non_prezzati:
             righe.append("  %d token non prezzati" % moneta.token_non_prezzati)
-        for nome, token in moneta.modelli_non_mappati:
+        for nome, token, motivo in moneta.modelli_senza_prezzo:
             righe.append(
-                "  modello non mappato: %s (%d token) — dichiaralo in model_map"
-                % (nome, token)
+                "  modello senza prezzo (%s): %s (%d token) — %s"
+                % (motivo, nome, token, _RIMEDIO_PER_MOTIVO[motivo])
             )
 
     righe.append("")
@@ -1510,7 +1609,7 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
 python -m pytest tests/test_consuntivo.py -v
 ```
 
-Atteso: 29 passed.
+Atteso: 32 passed.
 
 - [ ] **Step 5: Commit**
 

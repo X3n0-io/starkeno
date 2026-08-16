@@ -415,7 +415,73 @@ def test_un_modello_non_mappato_conta_i_token_e_dichiara_la_moneta_ignota():
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
     assert moneta.token_non_prezzati == 1_000_000
-    assert moneta.modelli_non_mappati == (("ignoto", 1_000_000),)
+    assert moneta.modelli_senza_prezzo == (("ignoto", 1_000_000, "non mappato"),)
+
+
+def test_un_modello_mappato_a_un_id_inesistente_dichiara_profilo_inesistente():
+    """La regressione: prima di questo fix un id battuto male in `model_map` spariva nello
+    stesso `token_non_prezzati` di un modello mai dichiarato, senza lasciare traccia in
+    `modelli_non_mappati` (che vedeva solo `model_map.get(nome) is None`). Qui il rimedio
+    e' diverso — correggere l'id, non aggiungerlo — quindi va distinto."""
+    blueprint = _blueprint(**PREZZI)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
+
+    moneta = calcola_moneta(righe, {"opus-4": "id-che-non-esiste"}, blueprint)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000
+    assert moneta.modelli_senza_prezzo == (
+        ("opus-4", 1_000_000, "profilo inesistente"),
+    )
+
+
+def test_un_modello_mappato_a_un_listino_incompleto_dichiara_listino_incompleto():
+    """La regressione: prima di questo fix un profilo che esiste ma con un prezzo
+    mancante spariva anch'esso in `token_non_prezzati` senza comparire in
+    `modelli_non_mappati`, indistinguibile da un id inesistente o da un modello mai
+    dichiarato — coi tre motivi confusi, chi legge non sa se dichiarare, correggere o
+    completare il listino."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["models"][0].update(PREZZI)  # "economy": prezzato per intero, cosi'
+    # calcola_moneta non torna None per assenza di QUALSIASI listino completo.
+    incompleto = json.loads(json.dumps(payload["models"][0]))
+    incompleto.update({"id": "incompleto", "output_price_per_million": None})
+    payload["models"].append(incompleto)
+    blueprint = Blueprint.model_validate(payload)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
+
+    moneta = calcola_moneta(righe, {"opus-4": "incompleto"}, blueprint)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000
+    assert moneta.modelli_senza_prezzo == (
+        ("opus-4", 1_000_000, "listino incompleto"),
+    )
+
+
+def test_la_moneta_e_i_totali_leggono_le_stesse_righe():
+    """La regressione futura da bloccare: `costruisci` ricostruiva la lista delle righe
+    osservate DUE volte, una per `calcola_moneta` e una per `totali`, una quindicina di
+    righe piu' sotto. Oggi combaciano, ma se una delle due cambiasse da sola la moneta si
+    scollerebbe in silenzio dai totali che dovrebbe descrivere. Righe sia su un nodo sia
+    in `non_attribuite`, e nessun modello mappato: se le due basi divergessero, questa
+    uguaglianza si romperebbe subito."""
+    blueprint = _blueprint(**PREZZI)
+    esecuzione = _esecuzione()
+    marcatori = [_marcatore("draft", 10, 1)]
+    righe = [_riga(5), _riga(15)]
+    attribuzione = attribuisci(esecuzione, marcatori, righe)
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+
+    # Precondizione: le righe finiscono davvero su entrambe le sponde.
+    assert len(attribuzione.non_attribuite) == 1
+    assert sum(len(r) for _, r in attribuzione.per_nodo) == 1
+    assert consuntivo.moneta is not None
+    assert consuntivo.moneta.token_non_prezzati == consuntivo.osservato.totale_tokens
 
 
 def test_senza_prezzi_nel_blueprint_la_moneta_e_assente_non_zero():

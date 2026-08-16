@@ -271,15 +271,17 @@ MILIONE = Decimal("1000000")
 class Moneta:
     """Il costo osservato, calcolato col listino che ha usato la stima.
 
-    `osservata` copre SOLO le righe di un modello mappato e scomposto per intero.
-    Tutto il resto sta in `token_non_prezzati` e in `modelli_non_mappati`: un costo
-    mancante presentato come costo basso e' peggio di un costo dichiarato ignoto.
+    `osservata` copre SOLO le righe di un modello mappato, con un profilo esistente e un
+    listino completo. Tutto il resto sta in `token_non_prezzati` e in
+    `modelli_senza_prezzo`, ciascuno col MOTIVO: un costo mancante presentato come costo
+    basso e' peggio di un costo dichiarato ignoto, e i tre motivi si rimediano in modo
+    diverso — dichiararlo, correggere l'id, o completare il listino.
     """
 
     valuta: str
     osservata: Decimal
     token_non_prezzati: int
-    modelli_non_mappati: tuple[tuple[str, int], ...]
+    modelli_senza_prezzo: tuple[tuple[str, int, str], ...]
 
 
 def calcola_moneta(
@@ -293,10 +295,13 @@ def calcola_moneta(
     i suoi listini usano valute diverse — sommarle produrrebbe un numero che non e'
     denaro.
 
-    Un modello osservato ma NON mappato non annulla la moneta: finisce in
-    `modelli_non_mappati` con i suoi token, che e' l'informazione utile — dice cosa
-    dichiarare per ottenere il numero. Restituire None qui nasconderebbe proprio la
-    riga che serve a rimediare.
+    Un modello osservato ma non prezzato non annulla la moneta: finisce in
+    `modelli_senza_prezzo` coi suoi token e il MOTIVO, perche' i tre casi si rimediano in
+    modo diverso — "non mappato" (assente da `model_map`, va dichiarato), "profilo
+    inesistente" (mappato a un id che non e' in `blueprint.models`, l'id va corretto), o
+    "listino incompleto" (il profilo esiste ma manca almeno uno dei quattro prezzi, il
+    listino va completato). Restituire None qui nasconderebbe proprio la riga che serve a
+    rimediare, e confondere i tre motivi farebbe applicare il rimedio sbagliato.
     """
     profili = {modello.id: modello for modello in blueprint.models}
     listini = {
@@ -312,14 +317,20 @@ def calcola_moneta(
 
     costo = Decimal("0")
     non_prezzati = 0
-    non_mappati: list[tuple[str, int]] = []
+    senza_prezzo: list[tuple[str, int, str]] = []
 
     for nome, totale in totali_per_modello(righe):
-        prezzi = listini.get(model_map.get(nome, ""))
+        identificativo = model_map.get(nome)
+        prezzi = listini.get(identificativo) if identificativo is not None else None
         if prezzi is None:
             non_prezzati += totale.totale_tokens
-            if model_map.get(nome) is None:
-                non_mappati.append((nome, totale.totale_tokens))
+            if identificativo is None:
+                motivo = "non mappato"
+            elif identificativo not in profili:
+                motivo = "profilo inesistente"
+            else:
+                motivo = "listino incompleto"
+            senza_prezzo.append((nome, totale.totale_tokens, motivo))
             continue
         # Le righe non scomposte non si prezzano: non si sa quanto fosse output, e
         # prezzarle a tariffa input mente proprio sul caso caro.
@@ -336,7 +347,7 @@ def calcola_moneta(
         valuta=valute.pop(),
         osservata=costo,
         token_non_prezzati=non_prezzati,
-        modelli_non_mappati=tuple(non_mappati),
+        modelli_senza_prezzo=tuple(senza_prezzo),
     )
 
 
@@ -451,12 +462,6 @@ def costruisci(
     scenari = stime_per_scenario(simulazione)
     non_attribuite = totali(attribuzione.non_attribuite)
     senza_sessione = totali(attribuzione.senza_sessione)
-    moneta = calcola_moneta(
-        [riga for _, righe in attribuzione.per_nodo for riga in righe]
-        + list(attribuzione.non_attribuite),
-        esecuzione.model_map,
-        blueprint,
-    ) if attribuzione.stato == "ok" else None
 
     if attribuzione.stato != "ok":
         return Consuntivo(
@@ -469,8 +474,10 @@ def costruisci(
             sessioni=attribuzione.sessioni, moneta=None,
         )
 
-    osservate = [riga for _, righe in attribuzione.per_nodo for riga in righe]
-    osservato = totali(osservate + list(attribuzione.non_attribuite))
+    righe_osservate = ([riga for _, righe in attribuzione.per_nodo for riga in righe]
+                       + list(attribuzione.non_attribuite))
+    osservato = totali(righe_osservate)
+    moneta = calcola_moneta(righe_osservate, esecuzione.model_map, blueprint)
     per_nodo_typical = _nodi_typical(simulazione)
     osservato_per_nodo = dict(attribuzione.per_nodo)
 
