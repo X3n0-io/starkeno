@@ -534,3 +534,105 @@ def _nodi_typical(simulazione: SimulationReport) -> dict[str, StimaScenario]:
             valuta=nodo.currency,
         )
     return risultato
+
+
+NOTA_CACHE = (
+    "Nota: la simulazione conta cache_write una volta per invocazione e cache_read solo "
+    "sui retry, mentre un agente vero rispedisce il contesto a ogni turno. Un cache_read "
+    "osservato molto piu' grande dello stimato e' atteso e sistematico, non un errore di "
+    "calcolo."
+)
+
+_RIMEDIO_PER_MOTIVO = {
+    "non mappato": "dichiaralo in model_map",
+    "profilo inesistente": "correggi l'id dichiarato in model_map",
+    "listino incompleto": "completa il listino del modello nel Blueprint",
+}
+
+
+def rendi_testo(consuntivo: Consuntivo) -> str:
+    """La resa condivisa da CLI e tool MCP: una sola verita', non due."""
+    righe = [
+        "Consuntivo %s — progetto %s" % (consuntivo.run_key, consuntivo.project),
+        "Blueprint %s" % consuntivo.blueprint_hash,
+        "Finestra: %s → %s" % (
+            consuntivo.started_at.isoformat(),
+            consuntivo.ended_at.isoformat() if consuntivo.ended_at else "aperta",
+        ),
+        "Stato: %s" % consuntivo.stato,
+    ]
+    if consuntivo.stato != "ok":
+        righe.append(consuntivo.motivo)
+        if consuntivo.senza_sessione.chiamate:
+            righe.append(
+                "Righe senza sessione nella finestra: %d (mai attribuite)"
+                % consuntivo.senza_sessione.chiamate
+            )
+        return "\n".join(righe)
+
+    osservato = consuntivo.osservato
+    righe.append("")
+    righe.append("Osservato su %d chiamate (%d azioni):" % (osservato.chiamate, osservato.azioni))
+    righe.append(
+        "  input %d · output %d · cache read %d · cache write %d · totale %d"
+        % (osservato.input_tokens, osservato.output_tokens, osservato.cache_read_tokens,
+           osservato.cache_write_tokens, osservato.totale_tokens)
+    )
+    if osservato.righe_non_scomposte:
+        righe.append(
+            "  %d chiamate senza scomposizione: contate nel totale, fuori dalle classi"
+            % osservato.righe_non_scomposte
+        )
+    righe.append("")
+    righe.append("Stimato:")
+    for scenario in consuntivo.scenari:
+        righe.append("  %-11s totale %d" % (scenario.nome, scenario.totale_tokens))
+    righe.append("L'osservato cade: %s" % consuntivo.posizione)
+
+    righe.append("")
+    righe.append("Per nodo, ordinato per scarto (stima: scenario typical):")
+    for nodo in consuntivo.nodi:
+        if nodo.osservato is None:
+            righe.append("  %-16s nessuna osservazione" % nodo.node_id)
+            continue
+        righe.append(
+            "  %-16s osservato %d su %d chiamate · stimato %d · scarto %+d "
+            "(invocazioni stimate %d, unita' diversa dalle chiamate)"
+            % (nodo.node_id, nodo.osservato.totale_tokens, nodo.chiamate_osservate,
+               nodo.stima_typical.totale_tokens if nodo.stima_typical else 0,
+               nodo.scarto_totale_tokens, nodo.executions_stimate)
+        )
+
+    if consuntivo.non_attribuite.chiamate:
+        righe.append("")
+        righe.append(
+            "Non attribuite: %d chiamate, %d token (fuori da ogni intervallo dichiarato)"
+            % (consuntivo.non_attribuite.chiamate, consuntivo.non_attribuite.totale_tokens)
+        )
+    if consuntivo.senza_sessione.chiamate:
+        righe.append(
+            "Senza sessione: %d chiamate, %d token (mai attribuite, non rendono ambigua)"
+            % (consuntivo.senza_sessione.chiamate, consuntivo.senza_sessione.totale_tokens)
+        )
+
+    righe.append("")
+    if consuntivo.moneta is None:
+        righe.append("Moneta: assente — il Blueprint non dichiara un listino completo.")
+    else:
+        moneta = consuntivo.moneta
+        righe.append("Moneta osservata: %s %s" % (moneta.osservata, moneta.valuta))
+        for scenario in consuntivo.scenari:
+            if scenario.costo is not None:
+                righe.append("  stimato %-11s %s %s" % (
+                    scenario.nome, scenario.costo, scenario.valuta))
+        if moneta.token_non_prezzati:
+            righe.append("  %d token non prezzati" % moneta.token_non_prezzati)
+        for nome, token, motivo in moneta.modelli_senza_prezzo:
+            righe.append(
+                "  modello senza prezzo (%s): %s (%d token) — %s"
+                % (motivo, nome, token, _RIMEDIO_PER_MOTIVO[motivo])
+            )
+
+    righe.append("")
+    righe.append(NOTA_CACHE)
+    return "\n".join(righe)

@@ -19,6 +19,7 @@ from starkeno.consuntivo import (
     calcola_moneta,
     costruisci,
     posizione_nella_banda,
+    rendi_testo,
     stime_per_scenario,
     totali,
     totali_per_modello,
@@ -519,3 +520,44 @@ def test_una_riga_non_scomposta_non_si_prezza():
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
     assert moneta.token_non_prezzati == 1_000_000
+
+
+def test_la_resa_dichiara_lo_scarto_atteso_sulla_cache():
+    """Chi lo vede la prima volta pensa di aver sbagliato una sottrazione: la simulazione
+    conta cache_write una volta e cache_read solo sui retry, un agente vero rispedisce il
+    contesto a ogni turno. Va scritto, non lasciato dedurre."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+
+    assert "cache" in testo.lower()
+    assert "contesto a ogni turno" in testo
+
+
+def test_la_resa_di_uno_stato_non_ok_dice_il_motivo_e_non_stampa_numeri():
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(
+        esecuzione, [_marcatore("draft", 0, 1)],
+        [_riga(5, sessione="s1"), _riga(6, sessione="s2")],
+    )
+
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+
+    assert "ambigua" in testo
+    assert "s1" in testo and "s2" in testo
+    assert "Per nodo" not in testo
+
+
+def test_ogni_numero_dice_su_quante_chiamate_e_calcolato():
+    """Il Passo 3 lo richiedera' comunque: un numero tarato su tre esecuzioni e uno
+    tarato su trecento non valgono uguale."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5), _riga(6)])
+
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+
+    assert "su 2 chiamate" in testo
