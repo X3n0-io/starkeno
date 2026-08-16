@@ -289,3 +289,44 @@ def test_scrittura_atomica_non_tocca_destinazione_ne_lascia_temporanei(
 
     assert destination.read_text(encoding="utf-8") == "precedente"
     assert tuple(path.name for path in tmp_path.iterdir()) == ("report.json",)
+
+
+def test_analisi_json_si_rilegge_identica():
+    """Il consuntivo conserva l'analisi come TESTO e la rilegge al confronto.
+
+    `model_dump(mode="json")` manda `Decimal` e `date` in stringa. Se non tornassero
+    indietro identici, l'esecuzione conserverebbe un preventivo che al confronto vale
+    un altro numero — e nessuno se ne accorgerebbe, perche' il testo su disco resta
+    quello giusto.
+    """
+    import json
+
+    from starkeno.preflight_schema import Blueprint
+    from starkeno.preflight_simulate import SimulationReport, simulate_blueprint
+
+    payload = json.loads(
+        (Path(__file__).parent / "fixtures" / "preflight" / "minimal.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["confirmed"] = True
+    # Prezzi veri: sono i campi Decimal, cioe' esattamente quelli a rischio.
+    payload["models"][0]["input_price_per_million"] = "3.00"
+    payload["models"][0]["output_price_per_million"] = "15.00"
+    payload["models"][0]["cache_read_price_per_million"] = "0.30"
+    payload["models"][0]["cache_write_price_per_million"] = "3.75"
+    payload["models"][0]["price_verified_at"] = "2026-08-16"
+    blueprint = Blueprint.model_validate(payload)
+
+    analisi = PreflightAnalysis(
+        blueprint=blueprint,
+        findings=(),
+        simulation=simulate_blueprint(blueprint, samples=8, seed=7),
+        source_path=None,
+    )
+
+    testo = render_analysis(analisi, format="json")
+    riletto = json.loads(testo)
+
+    assert Blueprint.model_validate(riletto["blueprint"]) == blueprint
+    assert SimulationReport.model_validate(riletto["simulation"]) == analisi.simulation
