@@ -151,13 +151,21 @@ def test_preflight_save_draft_impl_un_formato_ignoto_non_solleva(tmp_path, monke
     assert not output.exists()
 
 
-def test_preflight_save_draft_impl_non_tocca_il_database(tmp_path, monkeypatch):
-    """Preflight e' offline: nessuno dei due tool deve chiamare `get_session_factory`."""
+def test_i_tool_preflight_non_toccano_il_database(tmp_path, monkeypatch):
+    """Preflight e' offline: NESSUNO dei due tool deve chiamare `get_session_factory`.
+
+    Prima questo test dichiarava di coprirli entrambi e ne esercitava uno. Da quando
+    `blueprint_run_*` tocca il database accanto a loro, e' la guardia che tiene separate
+    osservazione e predizione: va esercitata su entrambi davvero.
+    """
     def esplode():
-        raise AssertionError("preflight_save_draft non deve toccare il database")
+        raise AssertionError("i tool Preflight non devono toccare il database")
 
     monkeypatch.setattr(mcp_server_module, "get_session_factory", esplode)
     monkeypatch.chdir(tmp_path)
+
+    compito = mcp_server_module.preflight_interpretation_task_impl("Scrivi una nota.")
+    assert isinstance(compito, str) and compito
 
     output = tmp_path / "draft.json"
     risposta = mcp_server_module.preflight_save_draft_impl(
@@ -165,7 +173,7 @@ def test_preflight_save_draft_impl_non_tocca_il_database(tmp_path, monkeypatch):
     )
 
     assert output.exists()
-    assert "Draft" in risposta or str(output) in risposta
+    assert "Draft salvato" in risposta
 
 
 def test_preflight_save_draft_docstring_dice_cosa_fare_con_un_errore():
@@ -286,3 +294,108 @@ def test_preflight_save_draft_docstring_dichiara_confinamento_e_overwrite():
     assert "overwrite" in documentazione, "non menziona il parametro overwrite"
     assert "working directory" in documentazione.lower(), "non dichiara il confinamento"
     assert "exist" in documentazione.lower(), "non dice cosa succede se il file esiste gia'"
+
+
+# ========================================================== il consuntivo di un'esecuzione
+#
+# Questi tre tool TOCCANO il database, a differenza dei due Preflight qui sopra: sono
+# OSSERVAZIONE, non predizione, e stanno accanto a `log_agent_action`. La guardia sopra
+# dimostra che i due mondi restano separati; questi test dimostrano che il lato che tocca
+# il database si comporta.
+
+
+def _analisi_json(tmp_path):
+    """Scrive un'analisi vera con `starkeno preflight analyze`, non un JSON finto."""
+    import json as _json
+
+    from starkeno.preflight_report import PreflightAnalysis, render_analysis
+    from starkeno.preflight_schema import Blueprint
+    from starkeno.preflight_simulate import simulate_blueprint
+
+    payload = _json.loads(
+        (Path(__file__).parent / "fixtures" / "preflight" / "minimal.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["confirmed"] = True
+    blueprint = Blueprint.model_validate(payload)
+    analisi = PreflightAnalysis(
+        blueprint=blueprint, findings=(),
+        simulation=simulate_blueprint(blueprint, samples=8, seed=7), source_path=None,
+    )
+    percorso = tmp_path / "analisi.json"
+    percorso.write_text(render_analysis(analisi, format="json"), encoding="utf-8")
+    return percorso
+
+
+def test_blueprint_run_start_rifiuta_una_seconda_esecuzione_aperta(
+    session_factory, tmp_path, monkeypatch
+):
+    """Un'esecuzione dimenticata aperta si prenderebbe ogni chiamata successiva."""
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    analisi = _analisi_json(tmp_path)
+
+    prima = mcp_server_module.blueprint_run_start_impl(str(analisi), "progetto")
+    seconda = mcp_server_module.blueprint_run_start_impl(str(analisi), "progetto")
+
+    assert "run_key" in prima
+    assert "un'esecuzione aperta" in seconda
+    assert "blueprint_run_end" in seconda
+
+
+def test_blueprint_run_node_rifiuta_un_nodo_fuori_dal_blueprint(
+    session_factory, tmp_path, monkeypatch
+):
+    """Il messaggio deve elencare gli id validi: l'agente li usa per correggersi da solo."""
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    analisi = _analisi_json(tmp_path)
+    avvio = mcp_server_module.blueprint_run_start_impl(str(analisi), "progetto")
+    chiave = avvio.split("run_key: ")[1].split()[0]
+
+    risposta = mcp_server_module.blueprint_run_node_impl(chiave, "inesistente")
+
+    assert "draft" in risposta and "review" in risposta
+
+
+def test_blueprint_run_start_confina_il_percorso_alla_working_directory(
+    session_factory, tmp_path, monkeypatch
+):
+    """`analysis_path` lo sceglie l'agente: fuori dalla radice non si legge."""
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    fuori = tmp_path / "fuori"
+    fuori.mkdir()
+    analisi = _analisi_json(fuori)
+    dentro = tmp_path / "dentro"
+    dentro.mkdir()
+    monkeypatch.chdir(dentro)
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(analisi), "progetto")
+
+    assert "outside" in risposta or "fuori" in risposta
+
+
+def test_blueprint_run_end_restituisce_il_consuntivo(
+    session_factory, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    analisi = _analisi_json(tmp_path)
+    avvio = mcp_server_module.blueprint_run_start_impl(str(analisi), "progetto")
+    chiave = avvio.split("run_key: ")[1].split()[0]
+    mcp_server_module.blueprint_run_node_impl(chiave, "draft")
+
+    risposta = mcp_server_module.blueprint_run_end_impl(chiave)
+
+    assert "Consuntivo" in risposta
+    assert "senza_osservazioni" in risposta
+
+
+def test_una_chiave_sconosciuta_non_solleva(session_factory, monkeypatch):
+    """Nessuno di questi tool solleva: l'errore torna come testo, come save_draft."""
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+
+    risposta = mcp_server_module.blueprint_run_node_impl("mai-vista", "draft")
+
+    assert isinstance(risposta, str) and "mai-vista" in risposta

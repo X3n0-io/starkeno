@@ -168,19 +168,23 @@ def preflight_interpretation_task(text: str) -> str:
     return preflight_interpretation_task_impl(text)
 
 
-def _confina_output_path(output_path: str) -> tuple[Path | None, str]:
-    """Risolve `output_path` e verifica che stia dentro la working directory corrente.
+def _dentro_la_radice(percorso: str) -> tuple[Path | None, Path, Path]:
+    """Risolve `percorso` e dice se sta dentro la working directory del server.
 
-    `output_path` lo sceglie l'agente, non una persona che digita `--output`: senza
-    questo confine accetterebbe `..` e percorsi assoluti verso qualunque punto del
-    disco. `Path.resolve()` normalizza sia i `..` sia i symlink, quindi il confronto
-    va fatto DOPO la risoluzione — mai sulla stringa grezza, che i `..` la
-    aggirerebbero. Restituisce `(percorso_risolto, "")` se dentro la radice, oppure
-    `(None, messaggio_di_errore)` se fuori.
+    `Path.resolve()` normalizza sia i `..` sia i symlink, quindi il confronto va fatto
+    DOPO la risoluzione — mai sulla stringa grezza, che i `..` la aggirerebbero.
     """
     radice = Path.cwd().resolve()
-    risolto = Path(output_path).resolve()
+    risolto = Path(percorso).resolve()
     if not risolto.is_relative_to(radice):
+        return None, risolto, radice
+    return risolto, risolto, radice
+
+
+def _confina_output_path(output_path: str) -> tuple[Path | None, str]:
+    """Come sopra, per una SCRITTURA. Il messaggio dice che non e' stato scritto nulla."""
+    dentro, risolto, radice = _dentro_la_radice(output_path)
+    if dentro is None:
         return None, (
             f"Path error, nothing was written: `output_path` ({output_path}) resolves to "
             f"{risolto}, which is outside the server's working directory ({radice}).\n"
@@ -188,7 +192,19 @@ def _confina_output_path(output_path: str) -> tuple[Path | None, str]:
             "path, or an absolute path already under it — and call preflight_save_draft "
             "again."
         )
-    return risolto, ""
+    return dentro, ""
+
+
+def _confina_input_path(input_path: str) -> tuple[Path | None, str]:
+    """Come sopra, per una LETTURA. Il percorso lo sceglie l'agente anche qui."""
+    dentro, risolto, radice = _dentro_la_radice(input_path)
+    if dentro is None:
+        return None, (
+            f"Path error, nothing was read: ({input_path}) resolves to {risolto}, which "
+            f"is outside the server's working directory ({radice}).\n"
+            "Pass a path that resolves inside the working directory and call again."
+        )
+    return dentro, ""
 
 
 def preflight_save_draft_impl(
@@ -272,6 +288,245 @@ def preflight_save_draft(
     fabricate a Blueprint the original text does not support.
     """
     return preflight_save_draft_impl(interpretation_json, output_path, format, overwrite)
+
+
+# ========================================================== il consuntivo di un'esecuzione
+#
+# Questi tre tool TOCCANO il database, e non e' un'incoerenza con i due Preflight qui
+# sopra: sono OSSERVAZIONE, non predizione, e stanno accanto a `log_agent_action`.
+#
+# Non sono fail-open come gli hook, ed e' deliberato. Un hook silenzioso protegge il
+# turno dell'utente; un marcatore perso in silenzio produce un'attribuzione SBAGLIATA,
+# che e' il danno peggiore di tutti. Qui un errore si dichiara — come testo, mai come
+# eccezione.
+
+
+def _carica_analisi(percorso: Path):
+    """Legge il preventivo e ne valida i due sotto-oggetti che servono al confronto."""
+    import json as _json
+
+    from starkeno.preflight_schema import Blueprint
+    from starkeno.preflight_simulate import SimulationReport
+
+    testo = percorso.read_text(encoding="utf-8")
+    payload = _json.loads(testo)
+    if not isinstance(payload, dict) or "simulation" not in payload:
+        raise ValueError(
+            "il file non e' un'analisi Preflight: manca la chiave 'simulation'"
+        )
+    blueprint = Blueprint.model_validate(payload["blueprint"])
+    simulazione = SimulationReport.model_validate(payload["simulation"])
+    return testo, blueprint, simulazione
+
+
+def blueprint_run_start_impl(analysis_path: str, project: str,
+                             model_map: str | None = None) -> str:
+    import json as _json
+    import uuid
+    from datetime import datetime, timezone
+
+    percorso, errore = _confina_input_path(analysis_path)
+    if percorso is None:
+        return errore
+    try:
+        testo, _blueprint, simulazione = _carica_analisi(percorso)
+    except (OSError, ValueError, UnicodeError) as errore_analisi:
+        motivo = " ".join(str(errore_analisi).splitlines())
+        return (
+            "Analysis error, nothing was recorded: " + motivo + "\n"
+            "Produce the analysis with `starkeno preflight analyze --confirmed "
+            "--format json` and call blueprint_run_start again with its path."
+        )
+    try:
+        mappa = _json.loads(model_map) if model_map else {}
+        if not isinstance(mappa, dict):
+            raise ValueError("model_map deve essere un oggetto JSON")
+    except ValueError as errore_mappa:
+        return "model_map error, nothing was recorded: %s" % errore_mappa
+
+    session = get_session_factory()()
+    try:
+        aperta = db.esecuzione_aperta(session, project)
+        if aperta is not None:
+            return (
+                "Run error, nothing was recorded: c'e' gia' un'esecuzione aperta su "
+                "questo progetto (run_key: %s, aperta il %s).\n"
+                "Chiudila con blueprint_run_end prima di aprirne un'altra: "
+                "un'esecuzione dimenticata aperta si prende ogni chiamata successiva "
+                "del progetto." % (aperta.run_key, aperta.started_at.isoformat())
+            )
+        run = db.apri_esecuzione(
+            session, run_key=uuid.uuid4().hex, project=project,
+            blueprint_hash=simulazione.blueprint_hash, analysis_json=testo,
+            model_map_json=_json.dumps(mappa), started_at=datetime.now(timezone.utc),
+        )
+        return (
+            "Esecuzione aperta — run_key: %s\n"
+            "Dichiara ogni cambio di nodo con blueprint_run_node, e chiudi con "
+            "blueprint_run_end. Le chiamate fuori da un intervallo dichiarato "
+            "risulteranno non attribuite invece di essere indovinate." % run.run_key
+        )
+    finally:
+        session.close()
+
+
+def blueprint_run_node_impl(run_key: str, node_id: str) -> str:
+    from datetime import datetime, timezone
+
+    session = get_session_factory()()
+    try:
+        run = db.leggi_esecuzione(session, run_key)
+        if run is None:
+            return "Run error, nothing was recorded: run_key sconosciuta (%s)." % run_key
+        if run.ended_at is not None:
+            return (
+                "Run error, nothing was recorded: l'esecuzione %s e' gia' chiusa (%s)."
+                % (run_key, run.ended_at.isoformat())
+            )
+        try:
+            _testo, blueprint, _simulazione = _carica_analisi_da_testo(run.analysis_json)
+        except ValueError as errore:
+            return "Run error, nothing was recorded: %s" % errore
+        validi = tuple(nodo.id for nodo in blueprint.nodes)
+        if node_id not in validi:
+            return (
+                "Node error, nothing was recorded: '%s' non e' un nodo di questo "
+                "Blueprint. Nodi validi: %s." % (node_id, ", ".join(validi))
+            )
+        db.aggiungi_marcatore(
+            session, run, node_id=node_id, declared_at=datetime.now(timezone.utc)
+        )
+        return "Nodo corrente: %s (esecuzione %s)." % (node_id, run_key)
+    finally:
+        session.close()
+
+
+def _carica_analisi_da_testo(testo: str):
+    """Come `_carica_analisi`, ma su un testo gia' conservato nel database."""
+    import json as _json
+
+    from starkeno.preflight_schema import Blueprint
+    from starkeno.preflight_simulate import SimulationReport
+
+    payload = _json.loads(testo)
+    return (
+        testo,
+        Blueprint.model_validate(payload["blueprint"]),
+        SimulationReport.model_validate(payload["simulation"]),
+    )
+
+
+def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
+    import json as _json
+    from datetime import datetime, timezone
+
+    from starkeno import consuntivo as consuntivo_modulo
+
+    session = get_session_factory()()
+    try:
+        run = db.leggi_esecuzione(session, run_key)
+        if run is None:
+            return "Run error, nothing was recorded: run_key sconosciuta (%s)." % run_key
+        # La mappatura si aggiorna ANCHE su un'esecuzione gia' chiusa: e' il ciclo
+        # utile. Il primo confronto elenca i modelli non mappati, tu li dichiari, e
+        # richiami questo tool per ricalcolare. L'attribuzione e' una vista: ricalcolarla
+        # non tocca nessuna riga raccolta.
+        mappa_json = None
+        if model_map:
+            try:
+                mappa = _json.loads(model_map)
+                if not isinstance(mappa, dict):
+                    raise ValueError("model_map deve essere un oggetto JSON")
+                mappa_json = _json.dumps(mappa)
+            except ValueError as errore_mappa:
+                return "model_map error, nothing was recorded: %s" % errore_mappa
+
+        if run.ended_at is None:
+            try:
+                db.chiudi_esecuzione(
+                    session, run, ended_at=datetime.now(timezone.utc),
+                    model_map_json=mappa_json,
+                )
+            except ValueError as errore:
+                return "Run error, nothing was recorded: %s" % errore
+        elif mappa_json is not None:
+            db.aggiorna_mappatura(session, run, model_map_json=mappa_json)
+
+        _testo, blueprint, simulazione = _carica_analisi_da_testo(run.analysis_json)
+        esecuzione = db.esecuzione_snapshot(run)
+        righe = db.righe_nella_finestra(
+            session, run.project, run.started_at, run.ended_at
+        )
+        attribuzione = consuntivo_modulo.attribuisci(
+            esecuzione, db.marcatori_di(session, run), righe
+        )
+        return consuntivo_modulo.rendi_testo(consuntivo_modulo.costruisci(
+            esecuzione, attribuzione, simulazione, blueprint
+        ))
+    finally:
+        session.close()
+
+
+@mcp.tool()
+def blueprint_run_start(analysis_path: str, project: str,
+                        model_map: str | None = None) -> str:
+    """Open a Blueprint run and return its `run_key`.
+
+    `analysis_path` is the JSON analysis produced by `starkeno preflight analyze
+    --confirmed --format json`. It is stored verbatim: the run is compared against the
+    estimate you were actually shown, not one recomputed later.
+
+    READS ARE CONFINED to the server's current working directory, `..` and symlinks
+    resolved first. `project` must be the last path segment of the working directory
+    the agent is running in — it is how collected calls are matched.
+
+    `model_map` is an optional JSON object mapping the OBSERVED model name to a
+    `models[].id` of the Blueprint, e.g. `{"claude-opus-4": "opus"}`. Without it the
+    comparison still counts tokens and declares the money unknown; it never guesses.
+
+    THIS TOOL DOES NOT RAISE. Errors — an analysis that will not load, a path outside
+    the working directory, a run already open on this project — come back as plain
+    text and nothing is recorded. Read the message, fix the argument yourself and call
+    again.
+    """
+    return blueprint_run_start_impl(analysis_path, project, model_map)
+
+
+@mcp.tool()
+def blueprint_run_node(run_key: str, node_id: str) -> str:
+    """Declare that work is moving to node `node_id` of the running Blueprint.
+
+    Call this EVERY time you start working on a different node. Calls that fall
+    outside any declared interval are reported as unattributed rather than assigned to
+    a neighbouring node: a number attributed to the wrong node is worse than one left
+    unattributed, because it sends the calibration in the wrong direction.
+
+    `node_id` is validated against the Blueprint stored with the run. An unknown id is
+    rejected and the message lists the valid ones.
+
+    THIS TOOL DOES NOT RAISE. Errors come back as plain text and nothing is recorded.
+    """
+    return blueprint_run_node_impl(run_key, node_id)
+
+
+@mcp.tool()
+def blueprint_run_end(run_key: str, model_map: str | None = None) -> str:
+    """Close the run and return the comparison between the estimate and what was spent.
+
+    `model_map` REPLACES the one given at `blueprint_run_start` when provided; omit it
+    to leave the existing one unchanged.
+
+    The returned text states where the observed total falls inside the estimated band,
+    the per-node deltas ordered by size, and what it refuses to attribute and why.
+    Estimated node invocations and observed API calls are printed side by side and
+    never subtracted: they are different units.
+
+    Calling it again on an already closed run recomputes the comparison without
+    changing anything — attribution is a view, not a stamp on the collected rows.
+
+    THIS TOOL DOES NOT RAISE. Errors come back as plain text.
+    """
+    return blueprint_run_end_impl(run_key, model_map)
 
 
 if __name__ == "__main__":
