@@ -551,7 +551,14 @@ _RIMEDIO_PER_MOTIVO = {
 
 
 def rendi_testo(consuntivo: Consuntivo) -> str:
-    """La resa condivisa da CLI e tool MCP: una sola verita', non due."""
+    """La resa condivisa da CLI e tool MCP: una sola verita', non due.
+
+    ECCEZIONE DICHIARATA. Uno stato diverso da `ok` stampa il motivo e, quando presente,
+    il conteggio diagnostico delle righe senza sessione nella finestra («Righe senza
+    sessione»): spiega perche' non c'e' un confronto, non lo sostituisce. Nessun numero di
+    RISULTATO — totali, per nodo, moneta — viene mai stampato quando lo stato non e' `ok`;
+    quel conteggio e' l'unica eccezione, ed e' voluta.
+    """
     righe = [
         "Consuntivo %s — progetto %s" % (consuntivo.run_key, consuntivo.project),
         "Blueprint %s" % consuntivo.blueprint_hash,
@@ -563,6 +570,7 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
     ]
     if consuntivo.stato != "ok":
         righe.append(consuntivo.motivo)
+        # Diagnostico, non di risultato (vedi l'eccezione nel docstring): resta anche qui.
         if consuntivo.senza_sessione.chiamate:
             righe.append(
                 "Righe senza sessione nella finestra: %d (mai attribuite)"
@@ -628,9 +636,12 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
         if moneta.token_non_prezzati:
             righe.append("  %d token non prezzati" % moneta.token_non_prezzati)
         for nome, token, motivo in moneta.modelli_senza_prezzo:
+            # .get, non [.]: un motivo che _RIMEDIO_PER_MOTIVO non conosce non deve far
+            # cadere l'intera resa con un KeyError. Si dichiara invece di nascondere.
+            rimedio = _RIMEDIO_PER_MOTIVO.get(motivo, "motivo non riconosciuto: %s" % motivo)
             righe.append(
                 "  modello senza prezzo (%s): %s (%d token) — %s"
-                % (motivo, nome, token, _RIMEDIO_PER_MOTIVO[motivo])
+                % (motivo, nome, token, rimedio)
             )
 
     righe.append("")

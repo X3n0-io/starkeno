@@ -1445,7 +1445,8 @@ altrimenti divergono e l'utente vede due verità.
 
 - [ ] **Step 1: Scrivi i test che falliscono**
 
-Aggiungi a `tests/test_consuntivo.py` (import: `rendi_testo`):
+Aggiungi a `tests/test_consuntivo.py` (import: `rendi_testo`; in testa al file serve anche
+`import dataclasses`, per il terzo difetto qui sotto):
 
 ```python
 def test_la_resa_dichiara_lo_scarto_atteso_sulla_cache():
@@ -1479,14 +1480,70 @@ def test_la_resa_di_uno_stato_non_ok_dice_il_motivo_e_non_stampa_numeri():
 
 def test_ogni_numero_dice_su_quante_chiamate_e_calcolato():
     """Il Passo 3 lo richiedera' comunque: un numero tarato su tre esecuzioni e uno
-    tarato su trecento non valgono uguale."""
+    tarato su trecento non valgono uguale.
+
+    Due nodi con un numero DIVERSO di righe: con un solo nodo (o due nodi con lo stesso
+    conteggio) l'assert sul "su N chiamate" per nodo sarebbe soddisfatto anche dalla riga
+    d'intestazione aggregata (`osservato.chiamate`), che riporta lo stesso N per
+    coincidenza — e un `rendi_testo` a cui manchi la clausola per nodo passerebbe lo
+    stesso. Qui `draft` (2 righe) e `review` (3 righe) restano distinti dal totale
+    aggregato (5 righe), quindi ciascuno dei tre numeri prova solo la riga che dichiara di
+    provare."""
     blueprint = _blueprint()
     esecuzione = _esecuzione()
-    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5), _riga(6)])
+    marcatori = [_marcatore("draft", 0, 1), _marcatore("review", 30, 2)]
+    righe = [_riga(5), _riga(10), _riga(35), _riga(40), _riga(45)]
+    attribuzione = attribuisci(esecuzione, marcatori, righe)
+    assert _nodi(attribuzione) == {"draft": 2, "review": 3}  # precondizione sui secchi
 
     testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
 
-    assert "su 2 chiamate" in testo
+    assert "su 2 chiamate" in testo  # la riga di `draft`
+    assert "su 3 chiamate" in testo  # la riga di `review`
+    assert "su 5 chiamate" in testo  # l'intestazione aggregata (2 + 3)
+
+
+def test_la_resa_di_uno_stato_non_ok_conta_le_righe_senza_sessione_ma_non_altri_numeri():
+    """Eccezione dichiarata alla regola «uno stato diverso da ok non stampa numeri»: il
+    conteggio delle righe senza sessione e' diagnostico (spiega perche' non c'e' un
+    confronto), non un numero di risultato, e resta anche qui. La regressione da uccidere
+    e' doppia: sparire del tutto (nessuna test lo copriva finora), o trascinarsi dietro un
+    numero di risultato vero e proprio."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(
+        esecuzione, [_marcatore("draft", 0, 1)],
+        [_riga(5, sessione="s1"), _riga(6, sessione="s2"), _riga(7, sessione="")],
+    )
+    assert attribuzione.stato == "ambigua"
+    assert len(attribuzione.senza_sessione) == 1  # precondizione: il secchio non e' vuoto
+
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+
+    assert "Righe senza sessione nella finestra: 1 (mai attribuite)" in testo
+    assert "Per nodo" not in testo
+    assert "Stimato:" not in testo
+
+
+def test_un_motivo_sconosciuto_in_moneta_non_fa_cadere_la_resa():
+    """`_RIMEDIO_PER_MOTIVO[motivo]` era l'unico accesso non guardato del file: oggi i tre
+    motivi di `calcola_moneta` combaciano sempre con le sue chiavi, ma nulla lo impone, e
+    `Moneta` e' un dataclass pubblico congelato che chiunque puo' costruire con un motivo
+    inventato. La regressione da uccidere e' un `KeyError` che affonderebbe la resa — CLI e
+    tool MCP insieme — su un confronto gia' calcolato correttamente."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    moneta_con_motivo_ignoto = Moneta(
+        valuta="USD", osservata=Decimal("0"), token_non_prezzati=10,
+        modelli_senza_prezzo=(("modello-x", 10, "motivo-inventato"),),
+    )
+    consuntivo = dataclasses.replace(consuntivo, moneta=moneta_con_motivo_ignoto)
+
+    testo = rendi_testo(consuntivo)  # non deve sollevare
+
+    assert "motivo-inventato" in testo
 ```
 
 - [ ] **Step 2: Esegui i test e verifica che falliscano**
@@ -1517,7 +1574,14 @@ _RIMEDIO_PER_MOTIVO = {
 
 
 def rendi_testo(consuntivo: Consuntivo) -> str:
-    """La resa condivisa da CLI e tool MCP: una sola verita', non due."""
+    """La resa condivisa da CLI e tool MCP: una sola verita', non due.
+
+    ECCEZIONE DICHIARATA. Uno stato diverso da `ok` stampa il motivo e, quando presente,
+    il conteggio diagnostico delle righe senza sessione nella finestra («Righe senza
+    sessione»): spiega perche' non c'e' un confronto, non lo sostituisce. Nessun numero di
+    RISULTATO — totali, per nodo, moneta — viene mai stampato quando lo stato non e' `ok`;
+    quel conteggio e' l'unica eccezione, ed e' voluta.
+    """
     righe = [
         "Consuntivo %s — progetto %s" % (consuntivo.run_key, consuntivo.project),
         "Blueprint %s" % consuntivo.blueprint_hash,
@@ -1529,6 +1593,7 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
     ]
     if consuntivo.stato != "ok":
         righe.append(consuntivo.motivo)
+        # Diagnostico, non di risultato (vedi l'eccezione nel docstring): resta anche qui.
         if consuntivo.senza_sessione.chiamate:
             righe.append(
                 "Righe senza sessione nella finestra: %d (mai attribuite)"
@@ -1594,9 +1659,12 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
         if moneta.token_non_prezzati:
             righe.append("  %d token non prezzati" % moneta.token_non_prezzati)
         for nome, token, motivo in moneta.modelli_senza_prezzo:
+            # .get, non [.]: un motivo che _RIMEDIO_PER_MOTIVO non conosce non deve far
+            # cadere l'intera resa con un KeyError. Si dichiara invece di nascondere.
+            rimedio = _RIMEDIO_PER_MOTIVO.get(motivo, "motivo non riconosciuto: %s" % motivo)
             righe.append(
                 "  modello senza prezzo (%s): %s (%d token) — %s"
-                % (motivo, nome, token, _RIMEDIO_PER_MOTIVO[motivo])
+                % (motivo, nome, token, rimedio)
             )
 
     righe.append("")
@@ -1610,7 +1678,7 @@ def rendi_testo(consuntivo: Consuntivo) -> str:
 python -m pytest tests/test_consuntivo.py -v
 ```
 
-Atteso: 32 passed.
+Atteso: 34 passed.
 
 - [ ] **Step 5: Commit**
 

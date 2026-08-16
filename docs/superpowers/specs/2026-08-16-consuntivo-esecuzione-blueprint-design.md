@@ -169,9 +169,11 @@ giorno il server non fosse più locale, questa regola va rivista insieme.
 
 `Consuntivo`, dataclass congelata prodotta da `consuntivo.py`.
 
-**Quattro stati.** Tre non producono numeri: `aperta` (manca `ended_at`), `ambigua` (più
-sessioni), `senza_osservazioni` (nessuna riga candidata con `session_id` non vuota). Il
-quarto è `ok`.
+**Quattro stati.** Tre non producono numeri di risultato: `aperta` (manca `ended_at`),
+`ambigua` (più sessioni), `senza_osservazioni` (nessuna riga candidata con `session_id` non
+vuota). Fa eccezione un solo numero, diagnostico e non di risultato: quante righe senza
+sessione cadono nella finestra, mostrato accanto al motivo quando ce ne sono — spiega
+perché non c'è un confronto, non lo sostituisce. Il quarto stato è `ok`.
 
 `senza_osservazioni` si misura sulle sole righe con sessione, perché sono le uniche
 attribuibili: un'esecuzione che nella finestra trova solo righe senza sessione non è `ok`
