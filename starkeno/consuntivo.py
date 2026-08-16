@@ -16,7 +16,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Mapping, Sequence
+from decimal import Decimal
+from typing import TYPE_CHECKING, Mapping, Sequence
+
+if TYPE_CHECKING:  # pragma: no cover - solo per i tipi
+    from starkeno.preflight_schema import Blueprint
+    from starkeno.preflight_simulate import SimulationReport
 
 
 @dataclass(frozen=True)
@@ -219,3 +224,196 @@ def _intervallo(quando: datetime, confini: list[datetime]) -> int | None:
         if inizio <= quando < fine or (ultimo and quando == fine):
             return indice
     return None
+
+
+SCENARI = ("optimistic", "typical", "prudent", "maximum")
+
+
+@dataclass(frozen=True)
+class StimaScenario:
+    """Un scenario della simulazione, ridotto alle grandezze confrontabili."""
+
+    nome: str
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    totale_tokens: int
+    executions: int
+    llm_calls: int
+    tool_calls: int
+    costo: Decimal | None
+    valuta: str | None
+
+
+@dataclass(frozen=True)
+class ConfrontoNodo:
+    """Un nodo del Blueprint, con l'osservato accanto allo scenario `typical`.
+
+    NON esiste uno scarto fra chiamate: `executions_stimate` conta invocazioni di nodo
+    (una piu' i retry), `chiamate_osservate` conta chiamate API, e un nodo `llm` in una
+    sessione reale sono decine di chiamate. Si stampano affiancate e non si sottraggono
+    mai — e' il punto in cui sarebbe piu' facile produrre un numero preciso e falso.
+    """
+
+    node_id: str
+    osservato: TotaliOsservati | None
+    stima_typical: StimaScenario | None
+    scarto_totale_tokens: int
+    executions_stimate: int
+    chiamate_osservate: int
+
+
+@dataclass(frozen=True)
+class Consuntivo:
+    """Il confronto completo, o la dichiarazione del perche' non c'e'."""
+
+    run_key: str
+    project: str
+    blueprint_hash: str
+    started_at: datetime
+    ended_at: datetime | None
+    stato: str
+    motivo: str
+    osservato: TotaliOsservati
+    scenari: tuple[StimaScenario, ...]
+    posizione: str
+    nodi: tuple[ConfrontoNodo, ...]
+    non_attribuite: TotaliOsservati
+    senza_sessione: TotaliOsservati
+    sessioni: tuple[str, ...]
+
+
+def _stima_da_scenario(nome: str, scenario) -> StimaScenario:
+    return StimaScenario(
+        nome=nome,
+        input_tokens=scenario.input_tokens,
+        output_tokens=scenario.output_tokens,
+        cache_read_tokens=scenario.cache_read_tokens,
+        cache_write_tokens=scenario.cache_write_tokens,
+        totale_tokens=(scenario.input_tokens + scenario.output_tokens
+                       + scenario.cache_read_tokens + scenario.cache_write_tokens),
+        executions=sum(nodo.executions for nodo in scenario.nodes),
+        llm_calls=scenario.llm_calls,
+        tool_calls=scenario.tool_calls,
+        costo=scenario.cost,
+        valuta=scenario.currency,
+    )
+
+
+def stime_per_scenario(simulazione: SimulationReport) -> tuple[StimaScenario, ...]:
+    """Gli scenari presenti, nell'ordine canonico. Quelli `None` restano fuori."""
+    presenti = []
+    for nome in SCENARI:
+        scenario = getattr(simulazione, nome)
+        if scenario is not None:
+            presenti.append(_stima_da_scenario(nome, scenario))
+    return tuple(presenti)
+
+
+def posizione_nella_banda(totale: int, scenari: Sequence[StimaScenario]) -> str:
+    """Dove cade l'osservato rispetto agli scenari. Un solo numero non dice niente.
+
+    Gli scenari assenti si dichiarano assenti: leggerli come zero metterebbe ogni
+    osservazione «oltre il massimo», che e' un giudizio, non una misura.
+    """
+    if not scenari:
+        return "banda incompleta: nessuno scenario disponibile"
+    mancanti = [nome for nome in SCENARI if nome not in {s.nome for s in scenari}]
+    coda = ""
+    if mancanti:
+        coda = " (banda incompleta: mancano %s)" % ", ".join(mancanti)
+
+    ordinati = sorted(scenari, key=lambda s: s.totale_tokens)
+    if totale < ordinati[0].totale_tokens:
+        return "sotto %s" % ordinati[0].nome + coda
+    for precedente, successivo in zip(ordinati, ordinati[1:]):
+        if precedente.totale_tokens <= totale < successivo.totale_tokens:
+            if totale == precedente.totale_tokens:
+                return "esattamente su %s" % precedente.nome + coda
+            return "fra %s e %s" % (precedente.nome, successivo.nome) + coda
+    if totale == ordinati[-1].totale_tokens:
+        return "esattamente su %s" % ordinati[-1].nome + coda
+    return "oltre %s" % ordinati[-1].nome + coda
+
+
+def costruisci(
+    esecuzione: Esecuzione,
+    attribuzione: Attribuzione,
+    simulazione: SimulationReport,
+    blueprint: Blueprint,
+) -> Consuntivo:
+    """Il confronto, o la dichiarazione del perche' non si puo' fare."""
+    scenari = stime_per_scenario(simulazione)
+    non_attribuite = totali(attribuzione.non_attribuite)
+    senza_sessione = totali(attribuzione.senza_sessione)
+
+    if attribuzione.stato != "ok":
+        return Consuntivo(
+            run_key=esecuzione.run_key, project=esecuzione.project,
+            blueprint_hash=esecuzione.blueprint_hash,
+            started_at=esecuzione.started_at, ended_at=esecuzione.ended_at,
+            stato=attribuzione.stato, motivo=attribuzione.motivo,
+            osservato=TOTALI_VUOTI, scenari=scenari, posizione="",
+            nodi=(), non_attribuite=non_attribuite, senza_sessione=senza_sessione,
+            sessioni=attribuzione.sessioni,
+        )
+
+    osservate = [riga for _, righe in attribuzione.per_nodo for riga in righe]
+    osservato = totali(osservate + list(attribuzione.non_attribuite))
+    typical = next((s for s in scenari if s.nome == "typical"), None)
+    per_nodo_typical = _nodi_typical(simulazione)
+    osservato_per_nodo = dict(attribuzione.per_nodo)
+
+    nodi = []
+    for nodo in blueprint.nodes:
+        righe = osservato_per_nodo.get(nodo.id)
+        totali_nodo = totali(righe) if righe else None
+        stima = per_nodo_typical.get(nodo.id)
+        nodi.append(ConfrontoNodo(
+            node_id=nodo.id,
+            osservato=totali_nodo,
+            stima_typical=stima,
+            scarto_totale_tokens=(
+                (totali_nodo.totale_tokens if totali_nodo else 0)
+                - (stima.totale_tokens if stima else 0)
+            ),
+            executions_stimate=stima.executions if stima else 0,
+            chiamate_osservate=totali_nodo.chiamate if totali_nodo else 0,
+        ))
+    nodi.sort(key=lambda n: (-abs(n.scarto_totale_tokens), n.node_id))
+
+    return Consuntivo(
+        run_key=esecuzione.run_key, project=esecuzione.project,
+        blueprint_hash=esecuzione.blueprint_hash,
+        started_at=esecuzione.started_at, ended_at=esecuzione.ended_at,
+        stato="ok", motivo="",
+        osservato=osservato, scenari=scenari,
+        posizione=posizione_nella_banda(osservato.totale_tokens, scenari),
+        nodi=tuple(nodi), non_attribuite=non_attribuite,
+        senza_sessione=senza_sessione, sessioni=attribuzione.sessioni,
+    )
+
+
+def _nodi_typical(simulazione: SimulationReport) -> dict[str, StimaScenario]:
+    """Il subtotale per nodo dello scenario `typical`, indicizzato per `node_id`."""
+    scenario = simulazione.typical
+    if scenario is None:
+        return {}
+    risultato = {}
+    for nodo in scenario.nodes:
+        risultato[nodo.node_id] = StimaScenario(
+            nome="typical",
+            input_tokens=nodo.input_tokens,
+            output_tokens=nodo.output_tokens,
+            cache_read_tokens=nodo.cache_read_tokens,
+            cache_write_tokens=nodo.cache_write_tokens,
+            totale_tokens=(nodo.input_tokens + nodo.output_tokens
+                           + nodo.cache_read_tokens + nodo.cache_write_tokens),
+            executions=nodo.executions,
+            llm_calls=nodo.llm_calls,
+            tool_calls=nodo.tool_calls,
+            costo=nodo.cost,
+            valuta=nodo.currency,
+        )
+    return risultato

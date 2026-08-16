@@ -1,16 +1,27 @@
 """Regressioni concrete dell'attribuzione: ogni test uccide un modo di sbagliare nodo."""
+import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from starkeno.consuntivo import (
     Attribuzione,
+    ConfrontoNodo,
+    Consuntivo,
     Esecuzione,
     Marcatore,
     RigaOsservata,
+    SCENARI,
+    StimaScenario,
     TotaliOsservati,
     attribuisci,
+    costruisci,
+    posizione_nella_banda,
+    stime_per_scenario,
     totali,
     totali_per_modello,
 )
+from starkeno.preflight_schema import Blueprint
+from starkeno.preflight_simulate import simulate_blueprint
 
 INIZIO = datetime(2026, 8, 16, 10, 0, tzinfo=timezone.utc)
 
@@ -204,3 +215,110 @@ def test_esecuzione_senza_marcatori_mette_tutto_in_non_attribuite():
     assert risultato.stato == "ok"
     assert risultato.per_nodo == ()
     assert len(risultato.non_attribuite) == 2
+
+
+FIXTURE = Path(__file__).parent / "fixtures" / "preflight" / "minimal.json"
+
+
+def _blueprint(**prezzi):
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["models"][0].update(prezzi)
+    return Blueprint.model_validate(payload)
+
+
+def _simulazione(blueprint):
+    return simulate_blueprint(blueprint, samples=8, seed=7)
+
+
+def _scenario(nome, totale):
+    """Scenari SINTETICI: la banda va provata su valori scelti, non su una simulazione
+    i cui scenari potrebbero coincidere e rendere il test intermittente."""
+    return StimaScenario(
+        nome=nome, input_tokens=totale, output_tokens=0, cache_read_tokens=0,
+        cache_write_tokens=0, totale_tokens=totale, executions=1, llm_calls=1,
+        tool_calls=0, costo=None, valuta=None,
+    )
+
+
+def test_posizione_nella_banda_dice_dove_cade_l_osservato():
+    scenari = (
+        _scenario("optimistic", 100), _scenario("typical", 200),
+        _scenario("prudent", 300), _scenario("maximum", 400),
+    )
+
+    assert posizione_nella_banda(50, scenari) == "sotto optimistic"
+    assert posizione_nella_banda(250, scenari) == "fra typical e prudent"
+    assert posizione_nella_banda(200, scenari) == "esattamente su typical"
+    assert posizione_nella_banda(500, scenari) == "oltre maximum"
+
+
+def test_uno_scenario_assente_non_entra_nella_banda_come_zero():
+    """La regressione: `None` letto come 0 mette ogni osservazione «oltre il massimo»."""
+    parziali = (_scenario("optimistic", 100), _scenario("typical", 200))
+
+    testo = posizione_nella_banda(10**9, parziali)
+
+    assert "prudent" in testo and "maximum" in testo
+    assert "banda incompleta" in testo
+
+
+def test_stime_per_scenario_salta_gli_scenari_assenti():
+    """Un `maximum` None non deve comparire come uno scenario da zero token."""
+    scenari = stime_per_scenario(_simulazione(_blueprint()))
+
+    assert {s.nome for s in scenari} <= set(SCENARI)
+    assert all(s.totale_tokens >= 0 for s in scenari)
+
+
+def test_nodi_ordinati_per_scarto_assoluto_decrescente():
+    """La prima riga deve rispondere a «dove e' finito il grosso»."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    marcatori = [_marcatore("draft", 0, 1), _marcatore("review", 30, 2)]
+    righe = [_riga(5, totale=50), _riga(35, totale=500_000)]
+    attribuzione = attribuisci(esecuzione, marcatori, righe)
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+
+    assert [nodo.node_id for nodo in consuntivo.nodi][0] == "review"
+
+
+def test_un_nodo_senza_osservazioni_compare_a_zero_e_lo_dichiara():
+    """«costato poco» e «mai eseguito» sono cose diverse: sparire le confonde."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    marcatori = [_marcatore("draft", 0, 1)]
+    attribuzione = attribuisci(esecuzione, marcatori, [_riga(5)])
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+
+    review = [nodo for nodo in consuntivo.nodi if nodo.node_id == "review"]
+    assert len(review) == 1
+    assert review[0].osservato is None
+
+
+def test_le_chiamate_stimate_e_osservate_non_si_sottraggono():
+    """`executions` conta invocazioni di nodo, la riga conta chiamate API: unita'
+    diverse. La regressione da uccidere e' un campo di scarto fra le due."""
+    campi = {campo for campo in ConfrontoNodo.__dataclass_fields__}
+
+    assert "scarto_chiamate" not in campi
+    assert "scarto_executions" not in campi
+    assert "executions_stimate" in campi
+    assert "chiamate_osservate" in campi
+
+
+def test_uno_stato_non_ok_non_produce_nodi():
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(
+        esecuzione, [_marcatore("draft", 0, 1)],
+        [_riga(5, sessione="s1"), _riga(6, sessione="s2")],
+    )
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+
+    assert consuntivo.stato == "ambigua"
+    assert consuntivo.nodi == ()
+    assert consuntivo.motivo
