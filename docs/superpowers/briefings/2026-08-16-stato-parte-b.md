@@ -62,12 +62,22 @@ va estesa insieme.
 
 ## Altri esiti di revisione, aperti
 
-- **Importante — superficie di scrittura di `preflight_save_draft`.** L'`output_path` arriva
-  dall'agente, non da una persona che digita `--output`. Oggi: sovrascrive silenziosamente un file
-  esistente, crea directory a piacere, accetta `..` e percorsi assoluti fuori dal progetto. Sulla
-  CLI la stessa permissività è dietro un consenso esplicito dell'utente; qui no. Da decidere se
-  confinare a una radice, se rifiutare una destinazione esistente, e intanto dirlo nella docstring,
-  che per un tool MCP **è** l'interfaccia.
+- **Chiuso in `2ff4696` — superficie di scrittura di `preflight_save_draft`.** L'`output_path`
+  arriva dall'agente, non da una persona che digita `--output`: prima sovrascriveva silenziosamente
+  file esistenti e accettava `..` e percorsi assoluti fuori dal progetto. Ora le scritture sono
+  **confinate alla directory di lavoro del server** (confronto su percorsi risolti, quindi i `..`
+  sono normalizzati prima del controllo) e **un file esistente non viene sostituito** senza
+  `overwrite=True` esplicito. Gli errori tornano come testo, mai come eccezione, e la docstring del
+  tool dichiara entrambe le regole — per un tool MCP la docstring **è** l'interfaccia. Verificato
+  in modo indipendente dal coordinatore, non solo dai test: percorso legittimo scritto, `..` e
+  assoluto fuori radice rifiutati con il file esca rimasto intatto, sovrascrittura rifiutata senza
+  `overwrite`.
+  Limite noto e accettato: il controllo di esistenza e la scrittura atomica non sono un'unica
+  operazione, quindi resta una finestra TOCTOU teorica. Irrilevante per un server locale a singolo
+  utente; da rivedere se più processi potessero scrivere lo stesso `output_path`.
+- **La CLI non è stata confinata, ed è voluto.** `preflight_cli.py` e `write_blueprint_atomic`
+  restano permissivi: lì il percorso lo digita una persona con `--output`, che è consenso
+  esplicito. Il confinamento è una proprietà **della porta MCP**, non della scrittura in sé.
 - **Minore** — `test_preflight_save_draft_impl_supporta_yaml` resta verde anche se si smette di
   passare `format`, perché JSON è YAML valido: non protegge quanto sembra.
 - **Minore** — il test «non tocca il database» dichiara di coprire entrambi i tool ma ne esercita uno.
