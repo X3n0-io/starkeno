@@ -1148,8 +1148,8 @@ def test_un_modello_non_mappato_conta_i_token_e_dichiara_la_moneta_ignota():
 
 
 def test_un_modello_mappato_a_un_id_inesistente_dichiara_profilo_inesistente():
-    """La regressione: un id battuto male in `model_map` spariva nello stesso
-    `token_non_prezzati` di un modello mai dichiarato, senza lasciare traccia in
+    """La regressione: prima di questo fix un id battuto male in `model_map` spariva nello
+    stesso `token_non_prezzati` di un modello mai dichiarato, senza lasciare traccia in
     `modelli_non_mappati` (che vedeva solo `model_map.get(nome) is None`). Qui il rimedio
     e' diverso — correggere l'id, non aggiungerlo — quindi va distinto."""
     blueprint = _blueprint(**PREZZI)
@@ -1166,10 +1166,11 @@ def test_un_modello_mappato_a_un_id_inesistente_dichiara_profilo_inesistente():
 
 
 def test_un_modello_mappato_a_un_listino_incompleto_dichiara_listino_incompleto():
-    """La regressione: un profilo che esiste ma con un prezzo mancante spariva anch'esso
-    in `token_non_prezzati` senza comparire in `modelli_non_mappati`, indistinguibile da
-    un id inesistente o da un modello mai dichiarato — coi tre motivi confusi, chi legge
-    non sa se dichiarare, correggere o completare il listino."""
+    """La regressione: prima di questo fix un profilo che esiste ma con un prezzo
+    mancante spariva anch'esso in `token_non_prezzati` senza comparire in
+    `modelli_non_mappati`, indistinguibile da un id inesistente o da un modello mai
+    dichiarato — coi tre motivi confusi, chi legge non sa se dichiarare, correggere o
+    completare il listino."""
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
     payload["confirmed"] = True
     payload["models"][0].update(PREZZI)  # "economy": prezzato per intero, cosi'
