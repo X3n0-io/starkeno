@@ -74,7 +74,8 @@ def test_preflight_interpretation_task_docstring_dice_di_produrre_solo_json_e_pa
     assert "only" in documentazione.lower(), "non dice che va prodotto SOLO il JSON"
 
 
-def test_preflight_save_draft_impl_un_json_valido_salva_un_draft_non_confermato(tmp_path):
+def test_preflight_save_draft_impl_un_json_valido_salva_un_draft_non_confermato(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     output = tmp_path / "draft.json"
 
     risposta = mcp_server_module.preflight_save_draft_impl(
@@ -89,7 +90,8 @@ def test_preflight_save_draft_impl_un_json_valido_salva_un_draft_non_confermato(
     assert "--confirmed" in risposta, "non dice che il Draft resta da confermare"
 
 
-def test_preflight_save_draft_impl_supporta_yaml(tmp_path):
+def test_preflight_save_draft_impl_supporta_yaml(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     output = tmp_path / "draft.yaml"
 
     mcp_server_module.preflight_save_draft_impl(
@@ -137,7 +139,8 @@ def test_preflight_save_draft_impl_un_provenance_measured_viene_rifiutato_anche_
     assert not output.exists()
 
 
-def test_preflight_save_draft_impl_un_formato_ignoto_non_solleva(tmp_path):
+def test_preflight_save_draft_impl_un_formato_ignoto_non_solleva(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     output = tmp_path / "draft.txt"
 
     risposta = mcp_server_module.preflight_save_draft_impl(
@@ -154,6 +157,7 @@ def test_preflight_save_draft_impl_non_tocca_il_database(tmp_path, monkeypatch):
         raise AssertionError("preflight_save_draft non deve toccare il database")
 
     monkeypatch.setattr(mcp_server_module, "get_session_factory", esplode)
+    monkeypatch.chdir(tmp_path)
 
     output = tmp_path / "draft.json"
     risposta = mcp_server_module.preflight_save_draft_impl(
@@ -172,3 +176,113 @@ def test_preflight_save_draft_docstring_dice_cosa_fare_con_un_errore():
     assert "does not raise" in documentazione.lower(), "non dichiara il contratto di non sollevare"
     assert "again" in documentazione.lower(), "non dice di riprovare"
     assert "--confirmed" in documentazione, "non dice che il Draft resta da confermare"
+
+
+# ============================================== confinamento di output_path (MCP)
+#
+# `output_path` lo sceglie l'agente, non una persona che digita `--output`: sulla CLI
+# la stessa permissivita' esiste ma dietro un consenso esplicito, qui no. Il tool deve
+# rifiutare qualunque destinazione che non risolva dentro la working directory del
+# server, e non deve mai sovrascrivere un file esistente senza che l'agente lo chieda
+# esplicitamente con `overwrite=True`. Il confinamento vive solo qui: `preflight_cli.py`
+# e `write_blueprint_atomic` restano invariati.
+
+
+def test_preflight_save_draft_impl_un_percorso_con_dotdot_che_esce_dalla_radice_e_rifiutato(
+    tmp_path, monkeypatch
+):
+    """Senza confinamento un `..` scriverebbe fuori dalla working directory del
+    server: qui la radice e' la sottocartella `progetto`, e `../fuori.json` punta
+    a una cartella sorella, non a un suo discendente."""
+    radice = tmp_path / "progetto"
+    radice.mkdir()
+    monkeypatch.chdir(radice)
+    bersaglio = tmp_path / "fuori.json"
+
+    risposta = mcp_server_module.preflight_save_draft_impl(
+        _interpretazione_valida(), "../fuori.json"
+    )
+
+    assert "outside" in risposta.lower(), "non dice che il percorso e' fuori dalla radice"
+    assert not bersaglio.exists(), "ha scritto fuori dalla working directory"
+
+
+def test_preflight_save_draft_impl_un_percorso_assoluto_fuori_dalla_radice_e_rifiutato(
+    tmp_path, monkeypatch
+):
+    radice = tmp_path / "progetto"
+    radice.mkdir()
+    monkeypatch.chdir(radice)
+    altrove = tmp_path / "altrove"
+    altrove.mkdir()
+    bersaglio = altrove / "draft.json"
+
+    risposta = mcp_server_module.preflight_save_draft_impl(
+        _interpretazione_valida(), str(bersaglio)
+    )
+
+    assert "outside" in risposta.lower(), "non dice che il percorso e' fuori dalla radice"
+    assert not bersaglio.exists(), "ha scritto fuori dalla working directory"
+
+
+def test_preflight_save_draft_impl_un_percorso_nidificato_dentro_la_radice_funziona(
+    tmp_path, monkeypatch
+):
+    """Il confinamento non deve rifiutare cio' che sta davvero dentro la radice,
+    incluso un sottopercorso non ancora esistente (le directory intermedie vanno
+    comunque create, come prima)."""
+    monkeypatch.chdir(tmp_path)
+    output = tmp_path / "sotto" / "cartella" / "draft.json"
+
+    risposta = mcp_server_module.preflight_save_draft_impl(
+        _interpretazione_valida(), str(output)
+    )
+
+    salvato = load_blueprint(output.read_text(encoding="utf-8"), format_hint="json")
+    assert salvato.confirmed is False
+    assert str(output) in risposta
+
+
+def test_preflight_save_draft_impl_un_file_esistente_senza_overwrite_e_rifiutato_e_intatto(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    output = tmp_path / "draft.json"
+    output.write_text("contenuto originale", encoding="utf-8")
+
+    risposta = mcp_server_module.preflight_save_draft_impl(
+        _interpretazione_valida(), str(output)
+    )
+
+    assert "already exists" in risposta, "non dice che il file esiste gia'"
+    assert "overwrite" in risposta.lower(), "non dice come sovrascrivere di proposito"
+    assert output.read_text(encoding="utf-8") == "contenuto originale", (
+        "il contenuto originale non e' rimasto intatto"
+    )
+
+
+def test_preflight_save_draft_impl_con_overwrite_true_sostituisce_il_file_esistente(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    output = tmp_path / "draft.json"
+    output.write_text("contenuto originale", encoding="utf-8")
+
+    risposta = mcp_server_module.preflight_save_draft_impl(
+        _interpretazione_valida(), str(output), overwrite=True
+    )
+
+    salvato = load_blueprint(output.read_text(encoding="utf-8"), format_hint="json")
+    assert salvato.confirmed is False
+    assert str(output) in risposta
+
+
+def test_preflight_save_draft_docstring_dichiara_confinamento_e_overwrite():
+    """La docstring e' l'interfaccia del tool MCP: deve dire che le scritture sono
+    confinate alla working directory del server, che un file esistente non viene
+    sovrascritto senza overwrite, e in che forma passare il percorso."""
+    documentazione = mcp_server_module.preflight_save_draft.__doc__ or ""
+
+    assert "overwrite" in documentazione, "non menziona il parametro overwrite"
+    assert "working directory" in documentazione.lower(), "non dichiara il confinamento"
+    assert "exist" in documentazione.lower(), "non dice cosa succede se il file esiste gia'"

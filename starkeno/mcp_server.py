@@ -168,8 +168,32 @@ def preflight_interpretation_task(text: str) -> str:
     return preflight_interpretation_task_impl(text)
 
 
+def _confina_output_path(output_path: str) -> tuple[Path | None, str]:
+    """Risolve `output_path` e verifica che stia dentro la working directory corrente.
+
+    `output_path` lo sceglie l'agente, non una persona che digita `--output`: senza
+    questo confine accetterebbe `..` e percorsi assoluti verso qualunque punto del
+    disco. `Path.resolve()` normalizza sia i `..` sia i symlink, quindi il confronto
+    va fatto DOPO la risoluzione — mai sulla stringa grezza, che i `..` la
+    aggirerebbero. Restituisce `(percorso_risolto, "")` se dentro la radice, oppure
+    `(None, messaggio_di_errore)` se fuori.
+    """
+    radice = Path.cwd().resolve()
+    risolto = Path(output_path).resolve()
+    if not risolto.is_relative_to(radice):
+        return None, (
+            f"Path error, nothing was written: `output_path` ({output_path}) resolves to "
+            f"{risolto}, which is outside the server's working directory ({radice}).\n"
+            "Pass an `output_path` that resolves inside the working directory — a relative "
+            "path, or an absolute path already under it — and call preflight_save_draft "
+            "again."
+        )
+    return risolto, ""
+
+
 def preflight_save_draft_impl(
-    interpretation_json: str, output_path: str, format: str = "json"
+    interpretation_json: str, output_path: str, format: str = "json",
+    overwrite: bool = False,
 ) -> str:
     try:
         interpretation = read_interpretation(interpretation_json)
@@ -181,9 +205,20 @@ def preflight_save_draft_impl(
             "again with the corrected `interpretation_json`."
         )
 
+    risolto, errore_percorso = _confina_output_path(output_path)
+    if risolto is None:
+        return errore_percorso
+
+    if risolto.exists() and not overwrite:
+        return (
+            f"Write error, nothing was written: {risolto} already exists.\n"
+            "Call preflight_save_draft again with overwrite=True to replace it on "
+            "purpose, or choose a different `output_path`."
+        )
+
     try:
         written = write_blueprint_atomic(
-            interpretation.blueprint, Path(output_path), format=format, source_path=None
+            interpretation.blueprint, risolto, format=format, source_path=None
         )
     except (OSError, ValueError, BlueprintInputError) as errore:
         motivo = " ".join(str(errore).splitlines())
@@ -206,7 +241,8 @@ def preflight_save_draft_impl(
 
 @mcp.tool()
 def preflight_save_draft(
-    interpretation_json: str, output_path: str, format: str = "json"
+    interpretation_json: str, output_path: str, format: str = "json",
+    overwrite: bool = False,
 ) -> str:
     """Validate an Interpretation JSON and save the Draft Blueprint it contains.
 
@@ -214,17 +250,28 @@ def preflight_save_draft(
     `preflight_interpretation_task` — one object with `blueprint`, `assumptions` and
     `open_questions`. `format` is "json" or "yaml" and defaults to "json".
 
+    WRITES ARE CONFINED to the server's current working directory. `output_path` is
+    resolved (`..` and symlinks included) and the result MUST land inside that
+    working directory — pass a relative path, or an absolute path that already lives
+    under it. Anything that resolves outside — via `..` or via an absolute path
+    elsewhere — is rejected and nothing is written.
+
+    An EXISTING file at the resolved `output_path` is never overwritten silently: by
+    default the call is rejected and the file on disk is left byte-for-byte
+    untouched. Pass `overwrite=True` only when you deliberately intend to replace it.
+
     On success, the returned text confirms the path written, lists the assumptions
     and open questions you recorded, and states that the Draft is NOT confirmed: a
     later `starkeno preflight analyze` still needs the literal --confirmed flag.
 
-    On failure THIS TOOL DOES NOT RAISE. It returns the validation error as plain
-    text instead, and writes nothing. Read the message, fix the JSON yourself, and
-    call preflight_save_draft again with the corrected `interpretation_json` — do
-    not ask the user to fix it, do not resend the same JSON unchanged, and do not
+    On failure THIS TOOL DOES NOT RAISE. It returns the validation, path-confinement
+    or existing-file error as plain text instead, and writes nothing. Read the
+    message, fix the offending argument yourself (`interpretation_json`,
+    `output_path` or `overwrite`), and call preflight_save_draft again — do not ask
+    the user to fix it, do not resend the same arguments unchanged, and do not
     fabricate a Blueprint the original text does not support.
     """
-    return preflight_save_draft_impl(interpretation_json, output_path, format)
+    return preflight_save_draft_impl(interpretation_json, output_path, format, overwrite)
 
 
 if __name__ == "__main__":
