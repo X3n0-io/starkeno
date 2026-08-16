@@ -1,6 +1,7 @@
 """Regressioni concrete dell'attribuzione: ogni test uccide un modo di sbagliare nodo."""
 import json
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 
 from starkeno.consuntivo import (
@@ -9,11 +10,13 @@ from starkeno.consuntivo import (
     Consuntivo,
     Esecuzione,
     Marcatore,
+    Moneta,
     RigaOsservata,
     SCENARI,
     StimaScenario,
     TotaliOsservati,
     attribuisci,
+    calcola_moneta,
     costruisci,
     posizione_nella_banda,
     stime_per_scenario,
@@ -379,3 +382,74 @@ def test_uno_stato_non_ok_non_produce_nodi():
     assert consuntivo.stato == "ambigua"
     assert consuntivo.nodi == ()
     assert consuntivo.motivo
+
+
+PREZZI = {
+    "input_price_per_million": "3.00",
+    "output_price_per_million": "15.00",
+    "cache_read_price_per_million": "0.30",
+    "cache_write_price_per_million": "3.75",
+}
+
+
+def test_i_token_osservati_si_prezzano_col_listino_del_blueprint():
+    """Gli STESSI prezzi della stima: cosi' lo scarto isola il volume, non il listino."""
+    blueprint = _blueprint(**PREZZI)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
+
+    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint)
+
+    assert moneta is not None
+    assert moneta.valuta == "USD"
+    assert moneta.osservata == Decimal("3.00")
+    assert moneta.token_non_prezzati == 0
+
+
+def test_un_modello_non_mappato_conta_i_token_e_dichiara_la_moneta_ignota():
+    """La regressione peggiore: prezzarlo zero. Un costo mancante sembra un costo basso."""
+    blueprint = _blueprint(**PREZZI)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="ignoto")]
+
+    moneta = calcola_moneta(righe, {}, blueprint)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000
+    assert moneta.modelli_non_mappati == (("ignoto", 1_000_000),)
+
+
+def test_senza_prezzi_nel_blueprint_la_moneta_e_assente_non_zero():
+    """La fixture minimal ha tutti i prezzi a null: e' il caso normale, non un errore."""
+    blueprint = _blueprint()
+    righe = [_riga_grezza(1000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
+
+    assert calcola_moneta(righe, {"opus-4": "economy"}, blueprint) is None
+
+
+def test_valute_diverse_fra_i_modelli_mappati_rendono_la_moneta_assente():
+    """Sommare USD ed EUR produrrebbe un numero che non e' denaro."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["models"][0].update(PREZZI)
+    secondo = json.loads(json.dumps(payload["models"][0]))
+    secondo.update({"id": "premium", "currency": "EUR"})
+    payload["models"].append(secondo)
+    blueprint = Blueprint.model_validate(payload)
+    righe = [
+        _riga_grezza(1000, lettura=0, scrittura=0, uscita=0, modello="a"),
+        _riga_grezza(1000, lettura=0, scrittura=0, uscita=0, modello="b"),
+    ]
+
+    assert calcola_moneta(righe, {"a": "economy", "b": "premium"}, blueprint) is None
+
+
+def test_una_riga_non_scomposta_non_si_prezza():
+    """Senza scomposizione non si sa quanto sia output: prezzarla a tariffa input mente."""
+    blueprint = _blueprint(**PREZZI)
+    righe = [_riga_grezza(1_000_000, lettura=0, scrittura=None, uscita=0, modello="opus-4")]
+
+    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000

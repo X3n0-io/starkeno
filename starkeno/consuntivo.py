@@ -264,6 +264,109 @@ class ConfrontoNodo:
     chiamate_osservate: int
 
 
+MILIONE = Decimal("1000000")
+
+
+@dataclass(frozen=True)
+class Moneta:
+    """Il costo osservato, calcolato col listino che ha usato la stima.
+
+    `osservata` copre SOLO le righe di un modello mappato e scomposto per intero.
+    Tutto il resto sta in `token_non_prezzati` e in `modelli_non_mappati`: un costo
+    mancante presentato come costo basso e' peggio di un costo dichiarato ignoto.
+    """
+
+    valuta: str
+    osservata: Decimal
+    token_non_prezzati: int
+    modelli_non_mappati: tuple[tuple[str, int], ...]
+
+
+def calcola_moneta(
+    righe: Sequence[RigaOsservata],
+    model_map: Mapping[str, str],
+    blueprint: Blueprint,
+) -> Moneta | None:
+    """Prezza i token osservati, o restituisce None dichiarando che non si puo'.
+
+    None in due casi soli: il Blueprint non dichiara **nessun** listino completo, oppure
+    i suoi listini usano valute diverse — sommarle produrrebbe un numero che non e'
+    denaro.
+
+    Un modello osservato ma NON mappato non annulla la moneta: finisce in
+    `modelli_non_mappati` con i suoi token, che e' l'informazione utile — dice cosa
+    dichiarare per ottenere il numero. Restituire None qui nasconderebbe proprio la
+    riga che serve a rimediare.
+    """
+    profili = {modello.id: modello for modello in blueprint.models}
+    listini = {
+        identificativo: prezzi
+        for identificativo, profilo in profili.items()
+        if (prezzi := _prezzi(profilo)) is not None
+    }
+    if not listini:
+        return None
+    valute = {profili[identificativo].currency for identificativo in listini}
+    if len(valute) > 1:
+        return None
+
+    costo = Decimal("0")
+    non_prezzati = 0
+    non_mappati: list[tuple[str, int]] = []
+
+    for nome, totale in totali_per_modello(righe):
+        prezzi = listini.get(model_map.get(nome, ""))
+        if prezzi is None:
+            non_prezzati += totale.totale_tokens
+            if model_map.get(nome) is None:
+                non_mappati.append((nome, totale.totale_tokens))
+            continue
+        # Le righe non scomposte non si prezzano: non si sa quanto fosse output, e
+        # prezzarle a tariffa input mente proprio sul caso caro.
+        non_prezzati += _token_non_scomposti(righe, nome)
+        ingresso, uscita, lettura, scrittura = prezzi
+        costo += (
+            Decimal(totale.input_tokens) * ingresso
+            + Decimal(totale.output_tokens) * uscita
+            + Decimal(totale.cache_read_tokens) * lettura
+            + Decimal(totale.cache_write_tokens) * scrittura
+        ) / MILIONE
+
+    return Moneta(
+        valuta=valute.pop(),
+        osservata=costo,
+        token_non_prezzati=non_prezzati,
+        modelli_non_mappati=tuple(non_mappati),
+    )
+
+
+def _prezzi(profilo) -> tuple[Decimal, Decimal, Decimal, Decimal] | None:
+    """I quattro prezzi del profilo, o None se anche uno solo manca.
+
+    Tutti o nessuno: prezzare l'input e ignorare l'output produce un costo che sembra
+    completo e non lo e'.
+    """
+    if profilo is None:
+        return None
+    valori = (
+        profilo.input_price_per_million, profilo.output_price_per_million,
+        profilo.cache_read_price_per_million, profilo.cache_write_price_per_million,
+    )
+    if any(valore is None for valore in valori):
+        return None
+    return tuple(Decimal(valore) for valore in valori)  # type: ignore[return-value]
+
+
+def _token_non_scomposti(righe: Sequence[RigaOsservata], modello: str) -> int:
+    return sum(
+        riga.tokens_used for riga in righe
+        if riga.model_used == modello and any(
+            componente is None for componente in
+            (riga.cache_read_tokens, riga.cache_write_tokens, riga.output_tokens)
+        )
+    )
+
+
 @dataclass(frozen=True)
 class Consuntivo:
     """Il confronto completo, o la dichiarazione del perche' non c'e'."""
@@ -282,6 +385,7 @@ class Consuntivo:
     non_attribuite: TotaliOsservati
     senza_sessione: TotaliOsservati
     sessioni: tuple[str, ...]
+    moneta: Moneta | None = None
 
 
 def _stima_da_scenario(nome: str, scenario) -> StimaScenario:
@@ -347,6 +451,12 @@ def costruisci(
     scenari = stime_per_scenario(simulazione)
     non_attribuite = totali(attribuzione.non_attribuite)
     senza_sessione = totali(attribuzione.senza_sessione)
+    moneta = calcola_moneta(
+        [riga for _, righe in attribuzione.per_nodo for riga in righe]
+        + list(attribuzione.non_attribuite),
+        esecuzione.model_map,
+        blueprint,
+    ) if attribuzione.stato == "ok" else None
 
     if attribuzione.stato != "ok":
         return Consuntivo(
@@ -356,7 +466,7 @@ def costruisci(
             stato=attribuzione.stato, motivo=attribuzione.motivo,
             osservato=TOTALI_VUOTI, scenari=scenari, posizione="",
             nodi=(), non_attribuite=non_attribuite, senza_sessione=senza_sessione,
-            sessioni=attribuzione.sessioni,
+            sessioni=attribuzione.sessioni, moneta=None,
         )
 
     osservate = [riga for _, righe in attribuzione.per_nodo for riga in righe]
@@ -391,6 +501,7 @@ def costruisci(
         posizione=posizione_nella_banda(osservato.totale_tokens, scenari),
         nodi=tuple(nodi), non_attribuite=non_attribuite,
         senza_sessione=senza_sessione, sessioni=attribuzione.sessioni,
+        moneta=moneta,
     )
 
 
