@@ -264,6 +264,57 @@ class AgentWatermark(Base):
     last_evaluated_action_id = Column(Integer, nullable=False)
 
 
+class BlueprintRun(Base):
+    """Un'esecuzione dichiarata: il perimetro entro cui confrontare stima e realta'.
+
+    `analysis_json` conserva il PREVENTIVO verbatim invece di un riferimento al file:
+    il file su disco puo' essere cancellato o modificato, e un'esecuzione deve
+    conservare la stima contro cui e' stata confrontata. `_run_analyze` costruisce la
+    revisione confermata in memoria e non la scrive da nessuna parte, quindi non esiste
+    nemmeno un file a cui riferirsi.
+
+    Nessuna colonna `status`: `ended_at IS NULL` E' lo stato, e due rappresentazioni
+    della stessa cosa divergono sempre.
+    """
+
+    __tablename__ = "blueprint_runs"
+
+    id = Column(Integer, primary_key=True)
+    run_key = Column(String, nullable=False, unique=True)
+    project = Column(String, nullable=False)
+    blueprint_hash = Column(String, nullable=False)
+    analysis_json = Column(String, nullable=False)
+    model_map_json = Column(String, nullable=False, server_default=text("'{}'"))
+    started_at = Column(UTCDateTime, nullable=False)
+    ended_at = Column(UTCDateTime, nullable=True)
+
+    __table_args__ = (
+        # L'unica query calda: «c'e' un'esecuzione aperta su questo progetto?».
+        Index("ix_blueprint_runs_project_ended", "project", "ended_at"),
+    )
+
+
+class BlueprintRunMarker(Base):
+    """«Da adesso sto lavorando su questo nodo».
+
+    `seq` lo assegna `aggiungi_marcatore` come massimo corrente piu' uno, nella stessa
+    transazione dell'inserimento: due marcatori con lo stesso `declared_at` altrimenti
+    si ordinerebbero a caso, e l'intervallo fra i due finirebbe sul nodo sbagliato.
+    """
+
+    __tablename__ = "blueprint_run_markers"
+
+    id = Column(Integer, primary_key=True)
+    run_id = Column(Integer, nullable=False)
+    node_id = Column(String, nullable=False)
+    declared_at = Column(UTCDateTime, nullable=False)
+    seq = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        Index("ix_blueprint_run_markers_run", "run_id", "declared_at", "seq"),
+    )
+
+
 def make_session_factory(db_path: str, busy_timeout: float | None = None) -> sessionmaker:
     """La factory di sessioni. `busy_timeout` esplicito solo per chi non puo' aspettare.
 

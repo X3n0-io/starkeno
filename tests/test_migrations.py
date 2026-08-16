@@ -141,7 +141,8 @@ def test_upgrade_head_on_a_new_database_builds_the_whole_schema(tmp_path):
 
     assert tables == {
         "agent_actions", "alerts", "rule_status", "supervisor_state",
-        "agent_watermark", "alembic_version",
+        "agent_watermark", "blueprint_runs", "blueprint_run_markers",
+        "alembic_version",
     }
     assert columns == [
         "id", "project", "action", "model_used", "tokens_used", "timestamp",
