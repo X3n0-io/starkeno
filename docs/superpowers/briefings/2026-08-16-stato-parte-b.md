@@ -35,25 +35,30 @@ Conseguenze:
 
 Suite a **591 passed, 2 skipped** sotto `-W error`; `git diff --check` pulito.
 
-## DA FARE PER PRIMO — difetto Critico aperto su `7442c50`
+## Il difetto del `measured`, chiuso in `3f7d663` — leggere prima di toccare quella funzione
 
-`_rifiuta_measured` in `starkeno/preflight_interpret.py` itera **solo** su `nodo.budget`. Un
-`provenance: "measured"` inventato dal modello passa e **viene scritto su disco** da almeno altri
-due percorsi, verificati eseguendoli:
+Un modello non misura niente. `measured` rende un numero inventato indistinguibile da uno
+osservato, ed è il fallimento che questo progetto rifiuta per principio. `_rifiuta_measured` in
+`starkeno/preflight_interpret.py` è l'**unico** controllo del genere in tutto `starkeno/` —
+`preflight_lint` non lo ripete in `analyze` — quindi non esiste una seconda rete.
 
-- `transitions[].probability.provenance`
-- `contexts[].source`
+Lo stesso difetto è affiorato **tre volte**, ogni volta perché la funzione enumerava i punti a
+mano: prima `nodes[].budget.fixed_tool_cost`, poi `transitions[].probability.provenance` e
+`contexts[].source`. In tutti i casi un `"measured"` inventato veniva **scritto su disco**.
 
-È il terzo affioramento dello stesso bug: `fixed_tool_cost` era il primo, corretto in `0fe41cf`.
-Enumerare i punti a mano continua a riaprirlo. **La correzione giusta è strutturale**: percorrere
-ricorsivamente il modello e rifiutare `measured` ovunque compaia un campo `Provenance`, invece di
-elencare collezioni. Serve un test per ciascuno dei vettori noti più uno che copra il caso
-generale.
+Ora la funzione delega a `_ogni_provenance`, che percorre ricorsivamente il Blueprint e cerca i
+campi la cui **annotazione** è `Provenance`, invece di elencare percorsi. Verificato in modo
+indipendente: le 4 dichiarazioni di `Provenance` nello schema sono raggiungibili da `Blueprint`
+per **9 percorsi**, trovati da due scanner scritti apposta, e sono tutti coperti. Nessun falso
+positivo su testo libero che contenga la parola. Il test del caso generale usa modelli sintetici
+mai referenziati da `Blueprint`: ripristinando un'enumerazione a mano dei punti noti, diventa
+rosso — è la guardia contro il quarto giro.
 
-Perché conta più di quanto sembri: un modello non misura niente. `measured` rende un numero
-inventato indistinguibile da uno osservato, ed è il fallimento che questo progetto rifiuta per
-principio. Non esiste una seconda rete di sicurezza — è l'unico controllo in tutto `starkeno/`, e
-`preflight_lint` non lo ripete in `analyze`.
+**Il limite noto, dichiarato anche nel docstring:** la copertura vale per campi annotati
+esattamente `Provenance` dentro un `FrozenModel`, anche annidato in liste o tuple. Un ipotetico
+`Provenance | None` o `tuple[Provenance, ...]` dichiarato direttamente su un modello non sarebbe
+coperto. Oggi nessun punto dello schema usa quelle forme; se un giorno servissero, `_ogni_provenance`
+va estesa insieme.
 
 ## Altri esiti di revisione, aperti
 

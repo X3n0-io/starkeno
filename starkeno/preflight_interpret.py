@@ -161,6 +161,16 @@ def _ogni_provenance(valore: object, percorso: str) -> Iterator[tuple[str, str]]
     `-W error`). Un campo `Provenance` aggiunto domani in un punto nuovo dello schema
     viene trovato senza che questa funzione debba ricordarsene.
 
+    **Il limite di quella promessa, detto invece che scoperto al quarto giro.** La ricerca
+    copre i campi annotati **esattamente** `Provenance` dentro un `FrozenModel`, anche
+    annidato in liste o tuple: sono le 4 dichiarazioni e i 9 percorsi che lo schema usa
+    oggi, verificati. **Non** coprirebbe un campo dichiarato `Provenance | None` oppure
+    `tuple[Provenance, ...]` direttamente su un modello, perche' quell'annotazione non e'
+    `Provenance` e una stringa nuda non viene attraversata dalla discesa. Oggi nessun
+    punto dello schema usa quelle forme; se un giorno servissero, questa funzione va
+    estesa insieme. Enumerare i punti a mano ha gia' riaperto lo stesso difetto tre volte:
+    la promessa va tenuta stretta a cio' che il codice mantiene davvero.
+
     La discesa dentro i modelli e le sequenze segue invece il VALORE a runtime, non
     l'annotazione statica del campo che lo contiene: e' cosi' che un campo opzionale
     come `NodeBudget.fixed_tool_cost` (`MoneyEstimate | None`) o `Transition.probability`
