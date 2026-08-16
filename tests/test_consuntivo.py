@@ -6,7 +6,10 @@ from starkeno.consuntivo import (
     Esecuzione,
     Marcatore,
     RigaOsservata,
+    TotaliOsservati,
     attribuisci,
+    totali,
+    totali_per_modello,
 )
 
 INIZIO = datetime(2026, 8, 16, 10, 0, tzinfo=timezone.utc)
@@ -42,6 +45,55 @@ def _marcatore(nodo, minuti, seq):
 
 def _nodi(attribuzione):
     return {nodo: len(righe) for nodo, righe in attribuzione.per_nodo}
+
+
+def _riga_grezza(totale, *, lettura, scrittura, uscita, modello="opus", azioni=1):
+    return RigaOsservata(
+        session_id="s1", timestamp=INIZIO, model_used=modello, tokens_used=totale,
+        cache_read_tokens=lettura, cache_write_tokens=scrittura, output_tokens=uscita,
+        azioni_nella_chiamata=azioni,
+    )
+
+
+def test_totali_scompongono_le_quattro_classi_come_il_conto():
+    """`ingresso = totale - lettura - scrittura - uscita`, identico a calcola_conto."""
+    righe = [_riga_grezza(1000, lettura=100, scrittura=50, uscita=200, azioni=3)]
+
+    risultato = totali(righe)
+
+    assert risultato.chiamate == 1
+    assert risultato.azioni == 3
+    assert risultato.input_tokens == 650
+    assert risultato.cache_read_tokens == 100
+    assert risultato.cache_write_tokens == 50
+    assert risultato.output_tokens == 200
+    assert risultato.totale_tokens == 1000
+    assert risultato.righe_non_scomposte == 0
+
+
+def test_una_scomposizione_parziale_vale_come_nessuna_scomposizione():
+    """NULL significa «non dichiarato». Trattarlo come 0 sottostima la spesa, ed e'
+    esattamente cio' che `record_action` documenta di non voler fare."""
+    righe = [_riga_grezza(1000, lettura=100, scrittura=None, uscita=200)]
+
+    risultato = totali(righe)
+
+    assert risultato.totale_tokens == 1000
+    assert risultato.righe_non_scomposte == 1
+    assert risultato.input_tokens == 0
+    assert risultato.cache_read_tokens == 0
+
+
+def test_totali_per_modello_separano_i_modelli_e_ordinano_per_nome():
+    righe = [
+        _riga_grezza(1000, lettura=0, scrittura=0, uscita=100, modello="sonnet"),
+        _riga_grezza(2000, lettura=0, scrittura=0, uscita=200, modello="opus"),
+    ]
+
+    risultato = totali_per_modello(righe)
+
+    assert [nome for nome, _ in risultato] == ["opus", "sonnet"]
+    assert risultato[0][1].totale_tokens == 2000
 
 
 def test_riga_sul_confine_appartiene_al_nodo_nuovo():

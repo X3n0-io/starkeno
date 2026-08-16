@@ -71,6 +71,63 @@ class Attribuzione:
     sessioni: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class TotaliOsservati:
+    """I totali di un insieme di righe, con la stessa scomposizione della stima.
+
+    `totale_tokens` segue sempre `tokens_used`, anche quando la scomposizione manca:
+    una riga difettosa resta visibile nel totale grezzo invece di sparire. Le quattro
+    classi accolgono solo le righe scomposte per intero, e `righe_non_scomposte` dice
+    quante sono rimaste fuori.
+    """
+
+    chiamate: int
+    azioni: int
+    input_tokens: int
+    output_tokens: int
+    cache_read_tokens: int
+    cache_write_tokens: int
+    totale_tokens: int
+    righe_non_scomposte: int
+
+
+TOTALI_VUOTI = TotaliOsservati(0, 0, 0, 0, 0, 0, 0, 0)
+
+
+def totali(righe: Sequence[RigaOsservata]) -> TotaliOsservati:
+    """Somma le righe. Una scomposizione parziale vale come nessuna scomposizione."""
+    chiamate = azioni = ingresso = uscita = lettura = scrittura = 0
+    totale = non_scomposte = 0
+    for riga in righe:
+        chiamate += 1
+        azioni += riga.azioni_nella_chiamata
+        totale += riga.tokens_used
+        componenti = (riga.cache_read_tokens, riga.cache_write_tokens, riga.output_tokens)
+        if any(componente is None for componente in componenti):
+            non_scomposte += 1
+            continue
+        cache_read, cache_write, output = componenti
+        lettura += cache_read
+        scrittura += cache_write
+        uscita += output
+        ingresso += riga.tokens_used - cache_read - cache_write - output
+    return TotaliOsservati(
+        chiamate=chiamate, azioni=azioni, input_tokens=ingresso, output_tokens=uscita,
+        cache_read_tokens=lettura, cache_write_tokens=scrittura, totale_tokens=totale,
+        righe_non_scomposte=non_scomposte,
+    )
+
+
+def totali_per_modello(
+    righe: Sequence[RigaOsservata],
+) -> tuple[tuple[str, TotaliOsservati], ...]:
+    """I totali separati per `model_used`, che e' la grana su cui si applica un prezzo."""
+    raccolta: dict[str, list[RigaOsservata]] = {}
+    for riga in righe:
+        raccolta.setdefault(riga.model_used, []).append(riga)
+    return tuple((nome, totali(raccolta[nome])) for nome in sorted(raccolta))
+
+
 def _vuota(stato: str, motivo: str, senza_sessione=()) -> Attribuzione:
     return Attribuzione(
         stato=stato, motivo=motivo, per_nodo=(), non_attribuite=(),
