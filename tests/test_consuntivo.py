@@ -227,6 +227,21 @@ def _blueprint(**prezzi):
     return Blueprint.model_validate(payload)
 
 
+def _blueprint_senza_massimo():
+    """Come `_blueprint`, ma con `max_retries` assente sul nodo `draft` (`nodes[0]`).
+
+    Questo fa scattare `_has_unbounded_maximum` in `preflight_simulate.py`
+    (`max_retries is None` e `retry_probability.max > 0`), quindi la simulazione lascia
+    `maximum = None`. Il grafo NON e' pero' inevitabilmente unbounded — lo richiederebbe
+    `retry_probability.typical >= 1`, e quello di `draft` e' 0.05 — quindi `optimistic`,
+    `typical` e `prudent` restano tutti presenti: e' l'unico modo di ottenere un Blueprint
+    con esattamente uno scenario assente e gli altri tre no."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["nodes"][0]["budget"]["max_retries"] = None
+    return Blueprint.model_validate(payload)
+
+
 def _simulazione(blueprint):
     return simulate_blueprint(blueprint, samples=8, seed=7)
 
@@ -264,11 +279,17 @@ def test_uno_scenario_assente_non_entra_nella_banda_come_zero():
 
 
 def test_stime_per_scenario_salta_gli_scenari_assenti():
-    """Un `maximum` None non deve comparire come uno scenario da zero token."""
-    scenari = stime_per_scenario(_simulazione(_blueprint()))
+    """Un `maximum` None non deve comparire come uno scenario da zero token.
 
-    assert {s.nome for s in scenari} <= set(SCENARI)
-    assert all(s.totale_tokens >= 0 for s in scenari)
+    La regressione: togliere `if scenario is not None:` in `stime_per_scenario` prova a
+    costruire uno `StimaScenario` anche dal `maximum` assente di `_blueprint_senza_massimo`
+    (vedi la sua docstring) invece di ometterlo."""
+    scenari = stime_per_scenario(_simulazione(_blueprint_senza_massimo()))
+
+    nomi = {s.nome for s in scenari}
+    assert "maximum" not in nomi
+    assert nomi == {"optimistic", "typical", "prudent"}
+    assert not any(s.nome == "maximum" and s.totale_tokens == 0 for s in scenari)
 
 
 def test_nodi_ordinati_per_scarto_assoluto_decrescente():
@@ -296,6 +317,42 @@ def test_un_nodo_senza_osservazioni_compare_a_zero_e_lo_dichiara():
     review = [nodo for nodo in consuntivo.nodi if nodo.node_id == "review"]
     assert len(review) == 1
     assert review[0].osservato is None
+
+
+def test_il_join_col_nodo_stimato_usa_il_node_id():
+    """La regressione: se `per_nodo_typical.get(nodo.id)` in `costruisci` smettesse di
+    combaciare, o le due sorgenti di `executions_stimate` / `chiamate_osservate` si
+    scambiassero, la suite restava verde lo stesso — prima solo l'ordinamento e il nodo
+    da 500000 token erano coperti, e quel nodo domina qualunque scarto per costruzione."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    marcatori = [_marcatore("draft", 0, 1), _marcatore("review", 30, 2)]
+    righe = [_riga(5, totale=300), _riga(10, totale=400), _riga(35, totale=100)]
+    attribuzione = attribuisci(esecuzione, marcatori, righe)
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+
+    per_nodo = {nodo.node_id: nodo for nodo in consuntivo.nodi}
+    draft, review = per_nodo["draft"], per_nodo["review"]
+
+    assert draft.stima_typical is not None and draft.stima_typical.nome == "typical"
+    assert draft.stima_typical.totale_tokens > 0  # draft e' llm, con budget reale
+
+    assert review.stima_typical is not None
+    assert review.stima_typical.totale_tokens == 0  # review e' human, budget tutto zero
+    # Il contrasto e' il punto: un join che pescasse il nodo sbagliato scambierebbe
+    # questi due totali.
+
+    assert draft.stima_typical.totale_tokens == (
+        draft.stima_typical.input_tokens + draft.stima_typical.output_tokens
+        + draft.stima_typical.cache_read_tokens + draft.stima_typical.cache_write_tokens
+    )
+    assert draft.executions_stimate >= 1
+    assert draft.chiamate_osservate == 2
+
+    assert draft.scarto_totale_tokens == (
+        draft.osservato.totale_tokens - draft.stima_typical.totale_tokens
+    )
 
 
 def test_le_chiamate_stimate_e_osservate_non_si_sottraggono():

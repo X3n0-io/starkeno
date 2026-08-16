@@ -361,7 +361,6 @@ def costruisci(
 
     osservate = [riga for _, righe in attribuzione.per_nodo for riga in righe]
     osservato = totali(osservate + list(attribuzione.non_attribuite))
-    typical = next((s for s in scenari if s.nome == "typical"), None)
     per_nodo_typical = _nodi_typical(simulazione)
     osservato_per_nodo = dict(attribuzione.per_nodo)
 
