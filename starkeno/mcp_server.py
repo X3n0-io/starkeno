@@ -301,22 +301,52 @@ def preflight_save_draft(
 # eccezione.
 
 
-def _carica_analisi(percorso: Path):
-    """Legge il preventivo e ne valida i due sotto-oggetti che servono al confronto."""
+def _valida_analisi(testo: str):
+    """Nucleo condiviso: valida un'analisi Preflight a partire dal suo testo JSON.
+
+    Usato sia da `_carica_analisi` (da file) sia da `_carica_analisi_da_testo` (dal
+    campo `analysis_json` gia' in database) — la STESSA validazione, non due copie
+    divergenti. Prima di questa funzione divergevano: `_carica_analisi` controllava
+    solo 'simulation' e poi indicizzava `payload["blueprint"]` alla cieca, cosi' un
+    payload dict con 'simulation' ma senza 'blueprint' sollevava `KeyError` — un
+    `LookupError`, non un `ValueError` — che l'`except (OSError, ValueError,
+    UnicodeError)` del chiamante non intercetta: usciva da `blueprint_run_start_impl`
+    e dal tool MCP fino all'agente come errore di protocollo invece che come testo
+    dichiarato. `_carica_analisi_da_testo` non aveva alcun controllo delle chiavi.
+
+    Solleva SEMPRE `ValueError` — mai `KeyError` ne' altri `LookupError` — per ogni
+    problema strutturale, in quest'ordine: il testo non e' JSON valido
+    (`json.JSONDecodeError` e' gia' una sottoclasse di `ValueError`, passa cosi'
+    com'e'); il risultato non e' un dict; manca la chiave 'blueprint' o 'simulation'
+    (o entrambe); il contenuto non valida contro il modello
+    (`pydantic.ValidationError` e' anch'essa una sottoclasse di `ValueError`).
+    """
     import json as _json
 
     from starkeno.preflight_schema import Blueprint
     from starkeno.preflight_simulate import SimulationReport
 
-    testo = percorso.read_text(encoding="utf-8")
     payload = _json.loads(testo)
-    if not isinstance(payload, dict) or "simulation" not in payload:
+    if not isinstance(payload, dict):
         raise ValueError(
-            "il file non e' un'analisi Preflight: manca la chiave 'simulation'"
+            "il file non e' un'analisi Preflight: il contenuto non e' un oggetto JSON"
+        )
+    mancanti = [chiave for chiave in ("blueprint", "simulation") if chiave not in payload]
+    if mancanti:
+        verbo = "manca la chiave" if len(mancanti) == 1 else "mancano le chiavi"
+        elenco = " e ".join("'%s'" % chiave for chiave in mancanti)
+        raise ValueError(
+            "il file non e' un'analisi Preflight: %s %s" % (verbo, elenco)
         )
     blueprint = Blueprint.model_validate(payload["blueprint"])
     simulazione = SimulationReport.model_validate(payload["simulation"])
     return testo, blueprint, simulazione
+
+
+def _carica_analisi(percorso: Path):
+    """Legge il preventivo da file e delega la validazione a `_valida_analisi`."""
+    testo = percorso.read_text(encoding="utf-8")
+    return _valida_analisi(testo)
 
 
 def blueprint_run_start_impl(analysis_path: str, project: str,
@@ -402,18 +432,12 @@ def blueprint_run_node_impl(run_key: str, node_id: str) -> str:
 
 
 def _carica_analisi_da_testo(testo: str):
-    """Come `_carica_analisi`, ma su un testo gia' conservato nel database."""
-    import json as _json
+    """Come `_carica_analisi`, ma su un testo gia' conservato nel database.
 
-    from starkeno.preflight_schema import Blueprint
-    from starkeno.preflight_simulate import SimulationReport
-
-    payload = _json.loads(testo)
-    return (
-        testo,
-        Blueprint.model_validate(payload["blueprint"]),
-        SimulationReport.model_validate(payload["simulation"]),
-    )
+    Delega anch'essa a `_valida_analisi`: stessa validazione, non una seconda copia
+    che potrebbe divergere di nuovo.
+    """
+    return _valida_analisi(testo)
 
 
 def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
@@ -452,7 +476,10 @@ def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
         elif mappa_json is not None:
             db.aggiorna_mappatura(session, run, model_map_json=mappa_json)
 
-        _testo, blueprint, simulazione = _carica_analisi_da_testo(run.analysis_json)
+        try:
+            _testo, blueprint, simulazione = _carica_analisi_da_testo(run.analysis_json)
+        except ValueError as errore:
+            return "Run error, nothing was recorded: %s" % errore
         esecuzione = db.esecuzione_snapshot(run)
         righe = db.righe_nella_finestra(
             session, run.project, run.started_at, run.ended_at

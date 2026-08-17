@@ -399,3 +399,91 @@ def test_una_chiave_sconosciuta_non_solleva(session_factory, monkeypatch):
     risposta = mcp_server_module.blueprint_run_node_impl("mai-vista", "draft")
 
     assert isinstance(risposta, str) and "mai-vista" in risposta
+
+
+# ============================================ analisi senza 'blueprint' o 'simulation'
+#
+# Trovato dal reviewer e riprodotto per esecuzione: `_carica_analisi` controllava solo
+# la chiave 'simulation' e poi indicizzava `payload["blueprint"]` alla cieca. Un file
+# valido, un dict, con 'simulation' ma senza 'blueprint' sollevava `KeyError` — un
+# `LookupError`, non un `ValueError` — che l'`except (OSError, ValueError,
+# UnicodeError)` del chiamante non intercetta: l'eccezione attraversava
+# `blueprint_run_start_impl` fino al tool MCP, che la dichiara di NON sollevare mai.
+# La correzione converge `_carica_analisi` e `_carica_analisi_da_testo` su un unico
+# validatore condiviso (`_valida_analisi`) che solleva sempre `ValueError`.
+
+
+def test_blueprint_run_start_un_analisi_senza_blueprint_torna_testo_non_keyerror(
+    session_factory, tmp_path, monkeypatch
+):
+    """La regressione esatta trovata dal reviewer: `{"simulation": {}}` e' JSON
+    valido, e' un dict, ha 'simulation' — e senza il controllo della chiave
+    'blueprint', `Blueprint.model_validate(payload["blueprint"])` sollevava
+    `KeyError: 'blueprint'`. Un `KeyError` non e' intercettato da
+    `except (OSError, ValueError, UnicodeError)`: l'eccezione usciva da
+    `blueprint_run_start_impl` (e dal tool MCP) come errore di protocollo invece che
+    come testo su cui l'agente puo' agire. Qui deve tornare testo, e non deve
+    registrare nulla.
+    """
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    percorso = tmp_path / "senza_blueprint.json"
+    percorso.write_text(json.dumps({"simulation": {}}), encoding="utf-8")
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(percorso), "progetto")
+
+    assert isinstance(risposta, str) and risposta
+    assert "Analysis error" in risposta
+    assert "blueprint" in risposta.lower(), "non dice che manca 'blueprint'"
+
+    session = session_factory()
+    assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
+    session.close()
+
+
+def test_blueprint_run_start_un_analisi_senza_simulation_torna_testo(
+    session_factory, tmp_path, monkeypatch
+):
+    """Caso simmetrico al precedente: 'blueprint' c'e', 'simulation' no. Il
+    controllo delle due chiavi deve valere in entrambe le direzioni, non solo su
+    quella che il vecchio `_carica_analisi` gia' guardava."""
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    percorso = tmp_path / "senza_simulation.json"
+    percorso.write_text(json.dumps({"blueprint": {}}), encoding="utf-8")
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(percorso), "progetto")
+
+    assert isinstance(risposta, str) and risposta
+    assert "Analysis error" in risposta
+    assert "simulation" in risposta.lower(), "non dice che manca 'simulation'"
+
+    session = session_factory()
+    assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
+    session.close()
+
+
+def test_blueprint_run_start_un_analisi_che_non_e_un_dict_torna_testo(
+    session_factory, tmp_path, monkeypatch
+):
+    """JSON valido ma non un oggetto (qui una lista): deve fallire in modo
+    dichiarato prima ancora di cercare le chiavi 'blueprint'/'simulation'."""
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    percorso = tmp_path / "lista.json"
+    percorso.write_text("[]", encoding="utf-8")
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(percorso), "progetto")
+
+    assert isinstance(risposta, str) and risposta
+    assert "Analysis error" in risposta
+
+    session = session_factory()
+    assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
+    session.close()

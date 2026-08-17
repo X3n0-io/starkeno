@@ -2272,6 +2272,94 @@ def test_una_chiave_sconosciuta_non_solleva(session_factory, monkeypatch):
     risposta = mcp_server_module.blueprint_run_node_impl("mai-vista", "draft")
 
     assert isinstance(risposta, str) and "mai-vista" in risposta
+
+
+# ============================================ analisi senza 'blueprint' o 'simulation'
+#
+# Trovato dal reviewer e riprodotto per esecuzione: `_carica_analisi` controllava solo
+# la chiave 'simulation' e poi indicizzava `payload["blueprint"]` alla cieca. Un file
+# valido, un dict, con 'simulation' ma senza 'blueprint' sollevava `KeyError` — un
+# `LookupError`, non un `ValueError` — che l'`except (OSError, ValueError,
+# UnicodeError)` del chiamante non intercetta: l'eccezione attraversava
+# `blueprint_run_start_impl` fino al tool MCP, che la dichiara di NON sollevare mai.
+# La correzione converge `_carica_analisi` e `_carica_analisi_da_testo` su un unico
+# validatore condiviso (`_valida_analisi`) che solleva sempre `ValueError`.
+
+
+def test_blueprint_run_start_un_analisi_senza_blueprint_torna_testo_non_keyerror(
+    session_factory, tmp_path, monkeypatch
+):
+    """La regressione esatta trovata dal reviewer: `{"simulation": {}}` e' JSON
+    valido, e' un dict, ha 'simulation' — e senza il controllo della chiave
+    'blueprint', `Blueprint.model_validate(payload["blueprint"])` sollevava
+    `KeyError: 'blueprint'`. Un `KeyError` non e' intercettato da
+    `except (OSError, ValueError, UnicodeError)`: l'eccezione usciva da
+    `blueprint_run_start_impl` (e dal tool MCP) come errore di protocollo invece che
+    come testo su cui l'agente puo' agire. Qui deve tornare testo, e non deve
+    registrare nulla.
+    """
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    percorso = tmp_path / "senza_blueprint.json"
+    percorso.write_text(json.dumps({"simulation": {}}), encoding="utf-8")
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(percorso), "progetto")
+
+    assert isinstance(risposta, str) and risposta
+    assert "Analysis error" in risposta
+    assert "blueprint" in risposta.lower(), "non dice che manca 'blueprint'"
+
+    session = session_factory()
+    assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
+    session.close()
+
+
+def test_blueprint_run_start_un_analisi_senza_simulation_torna_testo(
+    session_factory, tmp_path, monkeypatch
+):
+    """Caso simmetrico al precedente: 'blueprint' c'e', 'simulation' no. Il
+    controllo delle due chiavi deve valere in entrambe le direzioni, non solo su
+    quella che il vecchio `_carica_analisi` gia' guardava."""
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    percorso = tmp_path / "senza_simulation.json"
+    percorso.write_text(json.dumps({"blueprint": {}}), encoding="utf-8")
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(percorso), "progetto")
+
+    assert isinstance(risposta, str) and risposta
+    assert "Analysis error" in risposta
+    assert "simulation" in risposta.lower(), "non dice che manca 'simulation'"
+
+    session = session_factory()
+    assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
+    session.close()
+
+
+def test_blueprint_run_start_un_analisi_che_non_e_un_dict_torna_testo(
+    session_factory, tmp_path, monkeypatch
+):
+    """JSON valido ma non un oggetto (qui una lista): deve fallire in modo
+    dichiarato prima ancora di cercare le chiavi 'blueprint'/'simulation'."""
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    percorso = tmp_path / "lista.json"
+    percorso.write_text("[]", encoding="utf-8")
+
+    risposta = mcp_server_module.blueprint_run_start_impl(str(percorso), "progetto")
+
+    assert isinstance(risposta, str) and risposta
+    assert "Analysis error" in risposta
+
+    session = session_factory()
+    assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
+    session.close()
 ```
 
 E **estendi la guardia esistente**, sostituendo il corpo di
@@ -2370,22 +2458,52 @@ Poi, in fondo al file prima del blocco `if __name__ == "__main__":`:
 # eccezione.
 
 
-def _carica_analisi(percorso: Path):
-    """Legge il preventivo e ne valida i due sotto-oggetti che servono al confronto."""
+def _valida_analisi(testo: str):
+    """Nucleo condiviso: valida un'analisi Preflight a partire dal suo testo JSON.
+
+    Usato sia da `_carica_analisi` (da file) sia da `_carica_analisi_da_testo` (dal
+    campo `analysis_json` gia' in database) — la STESSA validazione, non due copie
+    divergenti. Prima di questa funzione divergevano: `_carica_analisi` controllava
+    solo 'simulation' e poi indicizzava `payload["blueprint"]` alla cieca, cosi' un
+    payload dict con 'simulation' ma senza 'blueprint' sollevava `KeyError` — un
+    `LookupError`, non un `ValueError` — che l'`except (OSError, ValueError,
+    UnicodeError)` del chiamante non intercetta: usciva da `blueprint_run_start_impl`
+    e dal tool MCP fino all'agente come errore di protocollo invece che come testo
+    dichiarato. `_carica_analisi_da_testo` non aveva alcun controllo delle chiavi.
+
+    Solleva SEMPRE `ValueError` — mai `KeyError` ne' altri `LookupError` — per ogni
+    problema strutturale, in quest'ordine: il testo non e' JSON valido
+    (`json.JSONDecodeError` e' gia' una sottoclasse di `ValueError`, passa cosi'
+    com'e'); il risultato non e' un dict; manca la chiave 'blueprint' o 'simulation'
+    (o entrambe); il contenuto non valida contro il modello
+    (`pydantic.ValidationError` e' anch'essa una sottoclasse di `ValueError`).
+    """
     import json as _json
 
     from starkeno.preflight_schema import Blueprint
     from starkeno.preflight_simulate import SimulationReport
 
-    testo = percorso.read_text(encoding="utf-8")
     payload = _json.loads(testo)
-    if not isinstance(payload, dict) or "simulation" not in payload:
+    if not isinstance(payload, dict):
         raise ValueError(
-            "il file non e' un'analisi Preflight: manca la chiave 'simulation'"
+            "il file non e' un'analisi Preflight: il contenuto non e' un oggetto JSON"
+        )
+    mancanti = [chiave for chiave in ("blueprint", "simulation") if chiave not in payload]
+    if mancanti:
+        verbo = "manca la chiave" if len(mancanti) == 1 else "mancano le chiavi"
+        elenco = " e ".join("'%s'" % chiave for chiave in mancanti)
+        raise ValueError(
+            "il file non e' un'analisi Preflight: %s %s" % (verbo, elenco)
         )
     blueprint = Blueprint.model_validate(payload["blueprint"])
     simulazione = SimulationReport.model_validate(payload["simulation"])
     return testo, blueprint, simulazione
+
+
+def _carica_analisi(percorso: Path):
+    """Legge il preventivo da file e delega la validazione a `_valida_analisi`."""
+    testo = percorso.read_text(encoding="utf-8")
+    return _valida_analisi(testo)
 
 
 def blueprint_run_start_impl(analysis_path: str, project: str,
@@ -2471,18 +2589,12 @@ def blueprint_run_node_impl(run_key: str, node_id: str) -> str:
 
 
 def _carica_analisi_da_testo(testo: str):
-    """Come `_carica_analisi`, ma su un testo gia' conservato nel database."""
-    import json as _json
+    """Come `_carica_analisi`, ma su un testo gia' conservato nel database.
 
-    from starkeno.preflight_schema import Blueprint
-    from starkeno.preflight_simulate import SimulationReport
-
-    payload = _json.loads(testo)
-    return (
-        testo,
-        Blueprint.model_validate(payload["blueprint"]),
-        SimulationReport.model_validate(payload["simulation"]),
-    )
+    Delega anch'essa a `_valida_analisi`: stessa validazione, non una seconda copia
+    che potrebbe divergere di nuovo.
+    """
+    return _valida_analisi(testo)
 
 
 def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
@@ -2521,7 +2633,10 @@ def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
         elif mappa_json is not None:
             db.aggiorna_mappatura(session, run, model_map_json=mappa_json)
 
-        _testo, blueprint, simulazione = _carica_analisi_da_testo(run.analysis_json)
+        try:
+            _testo, blueprint, simulazione = _carica_analisi_da_testo(run.analysis_json)
+        except ValueError as errore:
+            return "Run error, nothing was recorded: %s" % errore
         esecuzione = db.esecuzione_snapshot(run)
         righe = db.righe_nella_finestra(
             session, run.project, run.started_at, run.ended_at
@@ -2604,7 +2719,8 @@ def blueprint_run_end(run_key: str, model_map: str | None = None) -> str:
 python -m pytest tests/test_mcp_server.py tests/test_mcp_warning.py -v
 ```
 
-Atteso: tutti verdi.
+Atteso: tutti verdi — 38 passed (i tre test della validazione condivisa di
+'blueprint'/'simulation' inclusi).
 
 - [ ] **Step 5: Commit**
 
