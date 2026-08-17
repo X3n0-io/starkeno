@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -86,6 +87,11 @@ def _parser() -> argparse.ArgumentParser:
     doctor.add_argument("--confirm-repair", action="store_true")
     comandi.add_parser("report", help="genera il conto HTML locale", add_help=False)
     comandi.add_parser("preflight", help="analizza Blueprint locali", add_help=False)
+    consuntivo = comandi.add_parser(
+        "consuntivo", help="confronta un'esecuzione con il preventivo che la prevedeva")
+    consuntivo.add_argument("--run", dest="run_key")
+    consuntivo.add_argument("--elenco", action="store_true")
+    consuntivo.add_argument("--json", action="store_true", dest="json_output")
     return parser
 
 
@@ -100,6 +106,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         from starkeno import preflight_cli
 
         return preflight_cli.main(residui)
+    if argomenti.comando == "consuntivo":
+        return _esegui_consuntivo(argomenti)
 
     if residui:
         parser.error("argomenti non riconosciuti: " + " ".join(residui))
@@ -116,3 +124,106 @@ def main(argv: Sequence[str] | None = None) -> int:
     controlli = _diagnosi_runtime()
     _stampa_diagnosi(controlli, json_output=argomenti.json_output)
     return 1 if any(c.stato == "errore" for c in controlli) else 0
+
+
+def _stampa_utf8(testo: str, *, file=None) -> None:
+    """Stampa `testo` su `file` (default `sys.stdout`), tollerando una codepage di
+    console che non lo rappresenta.
+
+    Il testo reso da `consuntivo.rendi_testo` contiene em-dash, freccia e middle dot
+    ('—', '→', '·'), e `project`/`run_key` sono stringhe libere che possono contenere
+    qualunque carattere Unicode. Su Windows, quando la codepage attiva della console e'
+    una legacy come cp1252 invece di UTF-8, un `print()` diretto su uno di questi valori
+    solleva `UnicodeEncodeError` — un comando diagnostico che cade proprio mentre scrive
+    il proprio output e' peggio di uno che non gira affatto.
+
+    Si tenta la stampa normale e, solo se fallisce, ci si ri-codifica sostituendo i
+    caratteri non rappresentabili invece di lasciar cadere il comando. `file` si
+    risolve QUI dentro e non come default dell'argomento: legato in cima al modulo
+    punterebbe per sempre allo stdout letto all'avvio, e non a quello che `capsys` (o
+    una console reale) sostituisce dopo.
+    """
+    flusso = file if file is not None else sys.stdout
+    try:
+        print(testo, file=flusso)
+    except UnicodeEncodeError:
+        codifica = getattr(flusso, "encoding", None) or "ascii"
+        print(
+            testo.encode(codifica, errors="replace").decode(codifica, errors="replace"),
+            file=flusso,
+        )
+
+
+def _esegui_consuntivo(argomenti) -> int:
+    """Il confronto, guardato senza passare dall'agente e senza spenderne i token.
+
+    Import differito come per `preflight`: il confronto carica pydantic, inutile a
+    `doctor` e `report`.
+    """
+    import json as _json
+
+    from starkeno import consuntivo as consuntivo_modulo, db
+    from starkeno.preflight_service import validate_stored_analysis
+
+    if not argomenti.run_key and not argomenti.elenco:
+        _stampa_utf8("Errore: serve --run <chiave> oppure --elenco", file=sys.stderr)
+        return 2
+
+    fabbrica = db.make_readonly_session_factory(str(_database_runtime()))
+    sessione = fabbrica()
+    try:
+        if argomenti.elenco:
+            esecuzioni = db.elenca_esecuzioni(sessione)
+            if not esecuzioni:
+                _stampa_utf8("Nessuna esecuzione registrata.")
+                return 0
+            for run in esecuzioni:
+                _stampa_utf8("%s  %-20s %s  %s" % (
+                    run.run_key, run.project, run.started_at.isoformat(),
+                    run.ended_at.isoformat() if run.ended_at else "aperta",
+                ))
+            return 0
+
+        run = db.leggi_esecuzione(sessione, argomenti.run_key)
+        if run is None:
+            _stampa_utf8(
+                "Errore: run_key sconosciuta (%s)" % argomenti.run_key, file=sys.stderr,
+            )
+            return 2
+
+        # Il preventivo e' conservato verbatim in `analysis_json` (mai ricalcolato: il
+        # confronto vale contro cio' che l'agente ha davvero visto). Delega la STESSA
+        # validazione usata dai tool MCP dell'esecuzione: un'analisi corrotta — uno
+        # storico scritto prima che la validazione esistesse, o un dato manomesso — si
+        # dichiara qui come errore leggibile e uscita non-zero, mai come KeyError o
+        # pydantic.ValidationError non intercettati fino al terminale dell'utente.
+        try:
+            _testo, blueprint, simulazione = validate_stored_analysis(run.analysis_json)
+        except ValueError as errore:
+            _stampa_utf8(
+                "Errore: analisi corrotta per l'esecuzione %s: %s"
+                % (argomenti.run_key, errore),
+                file=sys.stderr,
+            )
+            return 2
+
+        esecuzione = db.esecuzione_snapshot(run)
+        righe = (
+            db.righe_nella_finestra(sessione, run.project, run.started_at, run.ended_at)
+            if run.ended_at is not None else []
+        )
+        attribuzione = consuntivo_modulo.attribuisci(
+            esecuzione, db.marcatori_di(sessione, run), righe
+        )
+        risultato = consuntivo_modulo.costruisci(
+            esecuzione, attribuzione, simulazione, blueprint
+        )
+        if argomenti.json_output:
+            _stampa_utf8(_json.dumps(asdict(risultato), ensure_ascii=False, indent=2,
+                                     default=str))
+        else:
+            _stampa_utf8(consuntivo_modulo.rendi_testo(risultato))
+        return 0
+    finally:
+        sessione.close()
+        fabbrica.kw["bind"].dispose()

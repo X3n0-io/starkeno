@@ -113,3 +113,62 @@ def write_blueprint_atomic(
             except OSError:
                 pass
     return resolved
+
+
+# ============================================== il preventivo di un'esecuzione registrata
+#
+# Non e' Preflight (lint + simulazione di un Blueprint nuovo): e' la lettura di un'analisi
+# GIA' prodotta e conservata verbatim in `blueprint_runs.analysis_json`. Vive qui perche' ha
+# DUE chiamanti sola-lettura che non possono importarsi a vicenda: i tool MCP
+# dell'esecuzione in `mcp_server.py` (che importa l'SDK MCP a livello di modulo) e il
+# comando `starkeno consuntivo` in `cli.py` (che non deve trascinare quell'SDK dentro un
+# comando da terminale). Questo modulo non ha ne' l'uno ne' l'altro problema.
+
+
+def validate_stored_analysis(text: str) -> tuple[str, Blueprint, SimulationReport]:
+    """Valida il testo JSON di un'analisi Preflight (Blueprint + simulazione) salvata.
+
+    Condivisa da `mcp_server.py` (`_carica_analisi` da file, `_carica_analisi_da_testo` dal
+    campo `analysis_json` gia' in database) e da `cli.py` (`_esegui_consuntivo`, che legge
+    lo stesso campo in sola lettura): STESSA validazione, non copie che potrebbero
+    divergere di nuovo. Divergevano prima che questa funzione esistesse: una versione
+    controllava solo la chiave 'simulation' e poi indicizzava `payload["blueprint"]` alla
+    cieca, cosi' un payload — un dict, con 'simulation' ma senza 'blueprint' — sollevava
+    `KeyError`, un `LookupError` e non un `ValueError`, che un `except (OSError, ValueError,
+    UnicodeError)` a monte non intercetta: l'eccezione attraversava il chiamante come errore
+    di protocollo invece che come testo dichiarato.
+
+    Solleva SEMPRE `ValueError` — mai `KeyError` ne' altri `LookupError` — per ogni
+    problema strutturale, in quest'ordine: il testo non e' JSON valido
+    (`json.JSONDecodeError` e' gia' una sottoclasse di `ValueError`, passa cosi' com'e');
+    il risultato non e' un dict; manca la chiave 'blueprint' o 'simulation' (o entrambe);
+    il contenuto non valida contro il proprio modello (`pydantic.ValidationError` e'
+    anch'essa una sottoclasse di `ValueError`).
+
+    Ritorna `(text, blueprint, simulation)` — il testo originale incluso, cosi' un
+    chiamante che deve conservarlo verbatim (`blueprint_run_start_impl`) non deve
+    ri-leggerlo da un'altra fonte.
+
+    Importa `SimulationReport` qui dentro, non in cima al modulo: stesso schema lazy di
+    `simulate_blueprint` qui sopra, cosi' un comando CLI che non confronta nulla (`doctor`,
+    `report`) non si carica pydantic in tasca.
+    """
+    import json as _json
+
+    from starkeno.preflight_simulate import SimulationReport
+
+    payload = _json.loads(text)
+    if not isinstance(payload, dict):
+        raise ValueError(
+            "il file non e' un'analisi Preflight: il contenuto non e' un oggetto JSON"
+        )
+    missing = [key for key in ("blueprint", "simulation") if key not in payload]
+    if missing:
+        verb = "manca la chiave" if len(missing) == 1 else "mancano le chiavi"
+        elenco = " e ".join("'%s'" % key for key in missing)
+        raise ValueError(
+            "il file non e' un'analisi Preflight: %s %s" % (verb, elenco)
+        )
+    blueprint = Blueprint.model_validate(payload["blueprint"])
+    simulation = SimulationReport.model_validate(payload["simulation"])
+    return text, blueprint, simulation

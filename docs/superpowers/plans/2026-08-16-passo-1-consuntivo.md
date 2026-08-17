@@ -2733,20 +2733,121 @@ git commit -m "feat: i tre tool dell'esecuzione, e la guardia che tiene Prefligh
 
 ### Task 9: Il comando `starkeno consuntivo`
 
+**Nota su questo blocco.** La prima stesura di questo task indicizzava
+`payload["blueprint"]` senza controllo — esattamente il difetto trovato dal reviewer e
+corretto nel Task 8 (`_valida_analisi`/`validate_stored_analysis`: vedi la nota li' sopra).
+Riprodurlo qui avrebbe aperto una TERZA copia della stessa validazione, con lo stesso buco.
+Il blocco sotto e' la versione corretta — quella davvero implementata — non quella con
+l'indicizzazione senza guardia.
+
 **Files:**
 - Modify: `starkeno/cli.py`
+- Modify: `starkeno/mcp_server.py` (`_carica_analisi`/`_carica_analisi_da_testo` delegano al
+  validatore condiviso spostato in questo task, invece di portarne una copia propria)
+- Modify: `starkeno/preflight_service.py` (nuova funzione pubblica condivisa)
 - Test: `tests/test_cli.py`
 
 **Interfaces:**
 - Consumes: `db.elenca_esecuzioni`, `db.leggi_esecuzione`, `db.marcatori_di`,
   `db.righe_nella_finestra`, `db.esecuzione_snapshot` (Task 7); `consuntivo.*` (Task 1-5)
-- Produces: il sottocomando `consuntivo` di `starkeno`
+- Produces: il sottocomando `consuntivo` di `starkeno`; `starkeno.preflight_service
+  .validate_stored_analysis(text) -> tuple[str, Blueprint, SimulationReport]` — il
+  validatore dell'analisi salvata, condiviso con `_carica_analisi`/`_carica_analisi_da_testo`
+  di `mcp_server.py` (Task 8). Vive in `preflight_service.py` e non in `mcp_server.py`
+  perche' `cli.py` non puo' importare quest'ultimo (carica l'SDK MCP a livello di modulo, e
+  un comando da terminale non deve trascinarlo dentro), mentre `preflight_service.py` non ha
+  ne' quella dipendenza ne' alcun accesso al database.
 
 - [ ] **Step 1: Scrivi i test che falliscono**
 
 Aggiungi a `tests/test_cli.py`:
 
 ```python
+# =================================================================== starkeno consuntivo
+#
+# Il comando guarda il confronto stima/osservato senza passare dall'agente: sola lettura
+# (`db.make_readonly_session_factory`), mai un `_impl` MCP. Le esecuzioni si scrivono qui
+# direttamente con `db.apri_esecuzione`, non tramite `starkeno.mcp_server`: quel modulo
+# importa l'SDK MCP a livello di modulo e `cli.py` non deve trascinarlo dentro un comando
+# da terminale — questi test restano rappresentativi solo se rispettano la stessa regola.
+
+
+def _testo_analisi_valida() -> str:
+    """Un'analisi Preflight valida (Blueprint + simulazione), come testo JSON pronto per
+    `blueprint_runs.analysis_json`. Stessa costruzione di `_analisi_json` in
+    `test_mcp_server.py`, ma restituisce testo invece di scrivere un file: la CLI legge
+    `analysis_json` dal database, non da un percorso su disco."""
+    from starkeno.preflight_report import PreflightAnalysis, render_analysis
+    from starkeno.preflight_schema import Blueprint
+    from starkeno.preflight_simulate import simulate_blueprint
+
+    payload = json.loads(
+        (Path(__file__).parent / "fixtures" / "preflight" / "minimal.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["confirmed"] = True
+    blueprint = Blueprint.model_validate(payload)
+    analisi = PreflightAnalysis(
+        blueprint=blueprint, findings=(),
+        simulation=simulate_blueprint(blueprint, samples=8, seed=7), source_path=None,
+    )
+    return render_analysis(analisi, format="json")
+
+
+def _apri_esecuzione_diretta(percorso_db, *, run_key, project="progetto",
+                             analysis_json=None) -> str:
+    """Scrive un'esecuzione APERTA direttamente nel database, con gli strumenti di
+    scrittura normali (`db.apri_esecuzione`) e non con un `_impl` MCP, e chiude e
+    dispone la propria connessione prima di restituire il controllo: la CLI la legge
+    poi da una sessione sola-lettura fresca, mai da una scrittura ancora in sospeso
+    (stesso ordine di `test_report_conto.py`)."""
+    from datetime import datetime, timezone
+
+    from starkeno import db
+
+    fabbrica = db.make_session_factory(str(percorso_db))
+    sessione = fabbrica()
+    try:
+        db.apri_esecuzione(
+            sessione, run_key=run_key, project=project,
+            blueprint_hash="hash-test",
+            analysis_json=(
+                analysis_json if analysis_json is not None else _testo_analisi_valida()
+            ),
+            model_map_json="{}", started_at=datetime.now(timezone.utc),
+        )
+    finally:
+        sessione.close()
+        fabbrica.kw["bind"].dispose()
+    return run_key
+
+
+class _StdoutSoloAscii:
+    """Sostituto di `sys.stdout` che solleva `UnicodeEncodeError` su un carattere
+    non-ASCII, come farebbe una console Windows con una codepage legacy (es. cp1252)
+    invece di UTF-8.
+
+    Il fallimento e' atomico per costruzione: `.write()` o accoda l'intera stringa o non
+    accoda nulla, cosi' il test non dipende dal buffering interno di
+    `io.TextIOWrapper`, che non garantisce la stessa atomicita'."""
+
+    def __init__(self):
+        self.encoding = "ascii"
+        self._righe = []
+
+    def write(self, testo):
+        testo.encode("ascii")  # solleva UnicodeEncodeError sui caratteri non-ASCII
+        self._righe.append(testo)
+        return len(testo)
+
+    def flush(self):
+        pass
+
+    def testo_scritto(self) -> str:
+        return "".join(self._righe)
+
+
 def test_consuntivo_elenco_su_database_vuoto(tmp_path, monkeypatch, capsys):
     """Nessuna esecuzione non e' un errore: e' un'informazione."""
     from starkeno import cli
@@ -2774,6 +2875,127 @@ def test_consuntivo_su_chiave_sconosciuta_esce_2(tmp_path, monkeypatch, capsys):
 
     assert codice == 2
     assert "mai-vista" in capsys.readouterr().err
+
+
+def test_consuntivo_senza_run_ne_elenco_esce_2(capsys):
+    """Ne' l'uno ne' l'altro modo d'uso: un errore d'uso dichiarato, non un crash e non
+    un no-op silenzioso. Non tocca il database: non serve nemmeno prepararne uno."""
+    from starkeno import cli
+
+    codice = cli.main(["consuntivo"])
+
+    assert codice == 2
+    assert "--run" in capsys.readouterr().err
+
+
+def test_consuntivo_su_analisi_corrotta_esce_2_senza_sollevare(
+    tmp_path, monkeypatch, capsys,
+):
+    """La regressione che questo task esiste per non reintrodurre: il brief originale
+    indicizzava `payload["blueprint"]` alla cieca, e un `analysis_json` con 'simulation'
+    ma senza 'blueprint' (dato vero: puo' capitare da uno storico scritto prima che la
+    validazione esistesse) sollevava `KeyError` invece di tornare un errore dichiarato.
+    Qui l'esecuzione e' scritta direttamente nel database, scavalcando ogni validazione
+    a monte, cosi' il test riproduce un'analisi davvero corrotta e non una che i tool
+    MCP avrebbero gia' rifiutato. Deve uscire non-zero, mai sollevare."""
+    from starkeno import cli
+    from starkeno.hook_ingestione import prepara_database
+
+    percorso = tmp_path / "corrotta.db"
+    prepara_database(str(percorso), silenzioso=True)
+    monkeypatch.setenv("STARKENO_DB_PATH", str(percorso))
+    _apri_esecuzione_diretta(
+        percorso, run_key="run-corrotta",
+        analysis_json=json.dumps({"simulation": {}}),
+    )
+
+    codice = cli.main(["consuntivo", "--run", "run-corrotta"])
+
+    catturato = capsys.readouterr()
+    assert codice == 2
+    assert "run-corrotta" in catturato.err
+    assert "blueprint" in catturato.err.lower()
+
+
+def test_consuntivo_elenco_con_esecuzioni_le_elenca(tmp_path, monkeypatch, capsys):
+    from starkeno import cli
+    from starkeno.hook_ingestione import prepara_database
+
+    percorso = tmp_path / "con_dati.db"
+    prepara_database(str(percorso), silenzioso=True)
+    monkeypatch.setenv("STARKENO_DB_PATH", str(percorso))
+    _apri_esecuzione_diretta(percorso, run_key="run-elenco", project="progetto-x")
+
+    codice = cli.main(["consuntivo", "--elenco"])
+
+    catturato = capsys.readouterr()
+    assert codice == 0
+    assert "run-elenco" in catturato.out
+    assert "progetto-x" in catturato.out
+
+
+def test_consuntivo_run_json_produce_json_valido(tmp_path, monkeypatch, capsys):
+    """`--json` deve restare macchina-leggibile anche su un'esecuzione ancora aperta,
+    dove il confronto non arriva a calcolare nodi o moneta."""
+    from starkeno import cli
+    from starkeno.hook_ingestione import prepara_database
+
+    percorso = tmp_path / "json.db"
+    prepara_database(str(percorso), silenzioso=True)
+    monkeypatch.setenv("STARKENO_DB_PATH", str(percorso))
+    _apri_esecuzione_diretta(percorso, run_key="run-json")
+
+    codice = cli.main(["consuntivo", "--run", "run-json", "--json"])
+
+    catturato = capsys.readouterr()
+    assert codice == 0
+    payload = json.loads(catturato.out)
+    assert payload["run_key"] == "run-json"
+    assert payload["stato"] == "aperta"
+
+
+def test_consuntivo_su_codepage_console_limitata_non_solleva(tmp_path, monkeypatch):
+    """`consuntivo.rendi_testo` contiene em-dash e freccia: su una console con una
+    codepage che non li rappresenta (qui simulata con ascii puro) il comando non deve
+    sollevare `UnicodeEncodeError` mentre stampa il proprio output."""
+    from starkeno import cli
+    from starkeno.hook_ingestione import prepara_database
+
+    percorso = tmp_path / "utf8.db"
+    prepara_database(str(percorso), silenzioso=True)
+    monkeypatch.setenv("STARKENO_DB_PATH", str(percorso))
+    _apri_esecuzione_diretta(percorso, run_key="run-utf8")
+    finto_stdout = _StdoutSoloAscii()
+    monkeypatch.setattr(sys, "stdout", finto_stdout)
+
+    codice = cli.main(["consuntivo", "--run", "run-utf8"])
+
+    assert codice == 0
+    assert "Consuntivo" in finto_stdout.testo_scritto()
+
+
+def test_consuntivo_non_trascina_mcp_server(tmp_path):
+    """`cli.py` non deve importare `mcp_server`: quel modulo carica l'SDK MCP a livello
+    di modulo, e un comando da terminale non deve trascinarlo dentro (stesso spirito di
+    `test_importare_la_cli_non_carica_il_core_preflight`, ma end-to-end su un'esecuzione
+    vera del comando, non solo sull'import di `cli.py`)."""
+    from starkeno.hook_ingestione import prepara_database
+
+    percorso = tmp_path / "vuoto.db"
+    prepara_database(str(percorso), silenzioso=True)
+
+    codice = (
+        "import sys, os;"
+        "os.environ['STARKENO_DB_PATH'] = sys.argv[1];"
+        "from starkeno import cli;"
+        "cli.main(['consuntivo', '--elenco']);"
+        "sys.exit(1 if 'starkeno.mcp_server' in sys.modules else 0)"
+    )
+    esito = subprocess.run(
+        [sys.executable, "-c", codice, str(percorso)], capture_output=True
+    )
+
+    assert esito.returncode == 0, esito.stderr.decode("utf-8", "replace")
 ```
 
 - [ ] **Step 2: Esegui i test e verifica che falliscano**
@@ -2782,11 +3004,99 @@ def test_consuntivo_su_chiave_sconosciuta_esce_2(tmp_path, monkeypatch, capsys):
 python -m pytest tests/test_cli.py -k consuntivo -v
 ```
 
-Atteso: FAIL — `argument comando: invalid choice: 'consuntivo'`.
+Atteso: FAIL — `argument comando: invalid choice: 'consuntivo'` su tutti gli otto.
 
-- [ ] **Step 3: Scrivi l'implementazione minima**
+- [ ] **Step 3: Scrivi l'implementazione**
 
-In `starkeno/cli.py`, dentro `_parser()` prima del `return parser`:
+**3a. Sposta il validatore condiviso in `starkeno/preflight_service.py`** (in fondo al
+file, dopo `write_blueprint_atomic`), e rendilo pubblico:
+
+```python
+# ============================================== il preventivo di un'esecuzione registrata
+#
+# Non e' Preflight (lint + simulazione di un Blueprint nuovo): e' la lettura di un'analisi
+# GIA' prodotta e conservata verbatim in `blueprint_runs.analysis_json`. Vive qui perche' ha
+# DUE chiamanti sola-lettura che non possono importarsi a vicenda: i tool MCP
+# dell'esecuzione in `mcp_server.py` (che importa l'SDK MCP a livello di modulo) e il
+# comando `starkeno consuntivo` in `cli.py` (che non deve trascinare quell'SDK dentro un
+# comando da terminale). Questo modulo non ha ne' l'uno ne' l'altro problema.
+
+
+def validate_stored_analysis(text: str) -> tuple[str, Blueprint, SimulationReport]:
+    """Valida il testo JSON di un'analisi Preflight (Blueprint + simulazione) salvata.
+
+    Condivisa da `mcp_server.py` (`_carica_analisi` da file, `_carica_analisi_da_testo` dal
+    campo `analysis_json` gia' in database) e da `cli.py` (`_esegui_consuntivo`, che legge
+    lo stesso campo in sola lettura): STESSA validazione, non copie che potrebbero
+    divergere di nuovo. Divergevano prima che questa funzione esistesse: una versione
+    controllava solo la chiave 'simulation' e poi indicizzava `payload["blueprint"]` alla
+    cieca, cosi' un payload — un dict, con 'simulation' ma senza 'blueprint' — sollevava
+    `KeyError`, un `LookupError` e non un `ValueError`, che un `except (OSError, ValueError,
+    UnicodeError)` a monte non intercetta: l'eccezione attraversava il chiamante come errore
+    di protocollo invece che come testo dichiarato.
+
+    Solleva SEMPRE `ValueError` — mai `KeyError` ne' altri `LookupError` — per ogni
+    problema strutturale, in quest'ordine: il testo non e' JSON valido
+    (`json.JSONDecodeError` e' gia' una sottoclasse di `ValueError`, passa cosi' com'e');
+    il risultato non e' un dict; manca la chiave 'blueprint' o 'simulation' (o entrambe);
+    il contenuto non valida contro il proprio modello (`pydantic.ValidationError` e'
+    anch'essa una sottoclasse di `ValueError`).
+
+    Ritorna `(text, blueprint, simulation)` — il testo originale incluso, cosi' un
+    chiamante che deve conservarlo verbatim (`blueprint_run_start_impl`) non deve
+    ri-leggerlo da un'altra fonte.
+
+    Importa `SimulationReport` qui dentro, non in cima al modulo: stesso schema lazy di
+    `simulate_blueprint` qui sopra, cosi' un comando CLI che non confronta nulla (`doctor`,
+    `report`) non si carica pydantic in tasca.
+    """
+    import json as _json
+
+    from starkeno.preflight_simulate import SimulationReport
+
+    payload = _json.loads(text)
+    if not isinstance(payload, dict):
+        raise ValueError(
+            "il file non e' un'analisi Preflight: il contenuto non e' un oggetto JSON"
+        )
+    missing = [key for key in ("blueprint", "simulation") if key not in payload]
+    if missing:
+        verb = "manca la chiave" if len(missing) == 1 else "mancano le chiavi"
+        elenco = " e ".join("'%s'" % key for key in missing)
+        raise ValueError(
+            "il file non e' un'analisi Preflight: %s %s" % (verb, elenco)
+        )
+    blueprint = Blueprint.model_validate(payload["blueprint"])
+    simulation = SimulationReport.model_validate(payload["simulation"])
+    return text, blueprint, simulation
+```
+
+**3b. In `starkeno/mcp_server.py`**, importa `validate_stored_analysis` accanto agli altri
+simboli di `preflight_service` e RIMUOVI la copia locale `_valida_analisi`: `_carica_analisi`
+e `_carica_analisi_da_testo` delegano ora alla funzione spostata, stesso comportamento e
+stessi messaggi:
+
+```python
+def _carica_analisi(percorso: Path):
+    """Legge il preventivo da file e delega la validazione a
+    `preflight_service.validate_stored_analysis`."""
+    testo = percorso.read_text(encoding="utf-8")
+    return validate_stored_analysis(testo)
+```
+
+```python
+def _carica_analisi_da_testo(testo: str):
+    """Come `_carica_analisi`, ma su un testo gia' conservato nel database.
+
+    Delega anch'essa a `preflight_service.validate_stored_analysis`: stessa validazione
+    usata anche da `cli.py` (`consuntivo`), non una copia locale che potrebbe divergere
+    di nuovo.
+    """
+    return validate_stored_analysis(testo)
+```
+
+**3c. In `starkeno/cli.py`**, `import sys` in cima (non c'era ancora). Dentro `_parser()`
+prima del `return parser`:
 
 ```python
     consuntivo = comandi.add_parser(
@@ -2796,16 +3106,46 @@ In `starkeno/cli.py`, dentro `_parser()` prima del `return parser`:
     consuntivo.add_argument("--json", action="store_true", dest="json_output")
 ```
 
-In `main()`, subito dopo il ramo `preflight`:
+In `main()`, subito dopo il ramo `preflight` e PRIMA del controllo `if residui:` (gli
+argomenti di `doctor` che seguono, come `argomenti.repair_from`, non esistono sul
+namespace di `consuntivo` — il ramo deve tornare prima di arrivarci):
 
 ```python
     if argomenti.comando == "consuntivo":
         return _esegui_consuntivo(argomenti)
 ```
 
-E in fondo al file:
+E in fondo al file, un helper di stampa UTF-8-tollerante e l'implementazione:
 
 ```python
+def _stampa_utf8(testo: str, *, file=None) -> None:
+    """Stampa `testo` su `file` (default `sys.stdout`), tollerando una codepage di
+    console che non lo rappresenta.
+
+    Il testo reso da `consuntivo.rendi_testo` contiene em-dash, freccia e middle dot
+    ('—', '→', '·'), e `project`/`run_key` sono stringhe libere che possono contenere
+    qualunque carattere Unicode. Su Windows, quando la codepage attiva della console e'
+    una legacy come cp1252 invece di UTF-8, un `print()` diretto su uno di questi valori
+    solleva `UnicodeEncodeError` — un comando diagnostico che cade proprio mentre scrive
+    il proprio output e' peggio di uno che non gira affatto.
+
+    Si tenta la stampa normale e, solo se fallisce, ci si ri-codifica sostituendo i
+    caratteri non rappresentabili invece di lasciar cadere il comando. `file` si
+    risolve QUI dentro e non come default dell'argomento: legato in cima al modulo
+    punterebbe per sempre allo stdout letto all'avvio, e non a quello che `capsys` (o
+    una console reale) sostituisce dopo.
+    """
+    flusso = file if file is not None else sys.stdout
+    try:
+        print(testo, file=flusso)
+    except UnicodeEncodeError:
+        codifica = getattr(flusso, "encoding", None) or "ascii"
+        print(
+            testo.encode(codifica, errors="replace").decode(codifica, errors="replace"),
+            file=flusso,
+        )
+
+
 def _esegui_consuntivo(argomenti) -> int:
     """Il confronto, guardato senza passare dall'agente e senza spenderne i token.
 
@@ -2815,9 +3155,10 @@ def _esegui_consuntivo(argomenti) -> int:
     import json as _json
 
     from starkeno import consuntivo as consuntivo_modulo, db
+    from starkeno.preflight_service import validate_stored_analysis
 
     if not argomenti.run_key and not argomenti.elenco:
-        print("Errore: serve --run <chiave> oppure --elenco", file=sys.stderr)
+        _stampa_utf8("Errore: serve --run <chiave> oppure --elenco", file=sys.stderr)
         return 2
 
     fabbrica = db.make_readonly_session_factory(str(_database_runtime()))
@@ -2826,10 +3167,10 @@ def _esegui_consuntivo(argomenti) -> int:
         if argomenti.elenco:
             esecuzioni = db.elenca_esecuzioni(sessione)
             if not esecuzioni:
-                print("Nessuna esecuzione registrata.")
+                _stampa_utf8("Nessuna esecuzione registrata.")
                 return 0
             for run in esecuzioni:
-                print("%s  %-20s %s  %s" % (
+                _stampa_utf8("%s  %-20s %s  %s" % (
                     run.run_key, run.project, run.started_at.isoformat(),
                     run.ended_at.isoformat() if run.ended_at else "aperta",
                 ))
@@ -2837,16 +3178,27 @@ def _esegui_consuntivo(argomenti) -> int:
 
         run = db.leggi_esecuzione(sessione, argomenti.run_key)
         if run is None:
-            print("Errore: run_key sconosciuta (%s)" % argomenti.run_key,
-                  file=sys.stderr)
+            _stampa_utf8(
+                "Errore: run_key sconosciuta (%s)" % argomenti.run_key, file=sys.stderr,
+            )
             return 2
 
-        payload = _json.loads(run.analysis_json)
-        from starkeno.preflight_schema import Blueprint
-        from starkeno.preflight_simulate import SimulationReport
+        # Il preventivo e' conservato verbatim in `analysis_json` (mai ricalcolato: il
+        # confronto vale contro cio' che l'agente ha davvero visto). Delega la STESSA
+        # validazione usata dai tool MCP dell'esecuzione: un'analisi corrotta — uno
+        # storico scritto prima che la validazione esistesse, o un dato manomesso — si
+        # dichiara qui come errore leggibile e uscita non-zero, mai come KeyError o
+        # pydantic.ValidationError non intercettati fino al terminale dell'utente.
+        try:
+            _testo, blueprint, simulazione = validate_stored_analysis(run.analysis_json)
+        except ValueError as errore:
+            _stampa_utf8(
+                "Errore: analisi corrotta per l'esecuzione %s: %s"
+                % (argomenti.run_key, errore),
+                file=sys.stderr,
+            )
+            return 2
 
-        blueprint = Blueprint.model_validate(payload["blueprint"])
-        simulazione = SimulationReport.model_validate(payload["simulation"])
         esecuzione = db.esecuzione_snapshot(run)
         righe = (
             db.righe_nella_finestra(sessione, run.project, run.started_at, run.ended_at)
@@ -2859,31 +3211,32 @@ def _esegui_consuntivo(argomenti) -> int:
             esecuzione, attribuzione, simulazione, blueprint
         )
         if argomenti.json_output:
-            print(_json.dumps(asdict(risultato), ensure_ascii=False, indent=2,
-                              default=str))
+            _stampa_utf8(_json.dumps(asdict(risultato), ensure_ascii=False, indent=2,
+                                     default=str))
         else:
-            print(consuntivo_modulo.rendi_testo(risultato))
+            _stampa_utf8(consuntivo_modulo.rendi_testo(risultato))
         return 0
     finally:
         sessione.close()
         fabbrica.kw["bind"].dispose()
 ```
 
-Aggiungi `import sys` in cima a `cli.py` se non c'è già.
-
 - [ ] **Step 4: Esegui i test e verifica che passino**
 
 ```bash
-python -m pytest tests/test_cli.py -v
+python -m pytest tests/test_cli.py tests/test_mcp_server.py tests/test_preflight_cli.py -v
 ```
 
-Atteso: tutti verdi.
+Atteso: tutti verdi — 78 passed (14 in `test_cli.py`, 6 preesistenti + 8 nuovi; 25 in
+`test_mcp_server.py` e 39 in `test_preflight_cli.py`, entrambi invariati dallo spostamento
+del validatore).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add starkeno/cli.py tests/test_cli.py
-git commit -m "feat: starkeno consuntivo, per guardare il confronto senza spendere token"
+git add starkeno/cli.py starkeno/mcp_server.py starkeno/preflight_service.py tests/test_cli.py \
+        docs/superpowers/plans/2026-08-16-passo-1-consuntivo.md
+git commit -m "feat: starkeno consuntivo, il confronto guardato senza spendere token"
 ```
 
 ---

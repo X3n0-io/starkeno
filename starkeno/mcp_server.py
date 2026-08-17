@@ -6,7 +6,11 @@ import starkeno.db as db
 from starkeno.config import DB_PATH
 from starkeno.db import make_session_factory, normalizza_progetto, record_action
 from starkeno.preflight_interpret import interpretation_task, read_interpretation
-from starkeno.preflight_service import BlueprintInputError, write_blueprint_atomic
+from starkeno.preflight_service import (
+    BlueprintInputError,
+    validate_stored_analysis,
+    write_blueprint_atomic,
+)
 from starkeno.schema_version import check_or_die
 
 _session_factory = None
@@ -301,52 +305,11 @@ def preflight_save_draft(
 # eccezione.
 
 
-def _valida_analisi(testo: str):
-    """Nucleo condiviso: valida un'analisi Preflight a partire dal suo testo JSON.
-
-    Usato sia da `_carica_analisi` (da file) sia da `_carica_analisi_da_testo` (dal
-    campo `analysis_json` gia' in database) — la STESSA validazione, non due copie
-    divergenti. Prima di questa funzione divergevano: `_carica_analisi` controllava
-    solo 'simulation' e poi indicizzava `payload["blueprint"]` alla cieca, cosi' un
-    payload dict con 'simulation' ma senza 'blueprint' sollevava `KeyError` — un
-    `LookupError`, non un `ValueError` — che l'`except (OSError, ValueError,
-    UnicodeError)` del chiamante non intercetta: usciva da `blueprint_run_start_impl`
-    e dal tool MCP fino all'agente come errore di protocollo invece che come testo
-    dichiarato. `_carica_analisi_da_testo` non aveva alcun controllo delle chiavi.
-
-    Solleva SEMPRE `ValueError` — mai `KeyError` ne' altri `LookupError` — per ogni
-    problema strutturale, in quest'ordine: il testo non e' JSON valido
-    (`json.JSONDecodeError` e' gia' una sottoclasse di `ValueError`, passa cosi'
-    com'e'); il risultato non e' un dict; manca la chiave 'blueprint' o 'simulation'
-    (o entrambe); il contenuto non valida contro il modello
-    (`pydantic.ValidationError` e' anch'essa una sottoclasse di `ValueError`).
-    """
-    import json as _json
-
-    from starkeno.preflight_schema import Blueprint
-    from starkeno.preflight_simulate import SimulationReport
-
-    payload = _json.loads(testo)
-    if not isinstance(payload, dict):
-        raise ValueError(
-            "il file non e' un'analisi Preflight: il contenuto non e' un oggetto JSON"
-        )
-    mancanti = [chiave for chiave in ("blueprint", "simulation") if chiave not in payload]
-    if mancanti:
-        verbo = "manca la chiave" if len(mancanti) == 1 else "mancano le chiavi"
-        elenco = " e ".join("'%s'" % chiave for chiave in mancanti)
-        raise ValueError(
-            "il file non e' un'analisi Preflight: %s %s" % (verbo, elenco)
-        )
-    blueprint = Blueprint.model_validate(payload["blueprint"])
-    simulazione = SimulationReport.model_validate(payload["simulation"])
-    return testo, blueprint, simulazione
-
-
 def _carica_analisi(percorso: Path):
-    """Legge il preventivo da file e delega la validazione a `_valida_analisi`."""
+    """Legge il preventivo da file e delega la validazione a
+    `preflight_service.validate_stored_analysis`."""
     testo = percorso.read_text(encoding="utf-8")
-    return _valida_analisi(testo)
+    return validate_stored_analysis(testo)
 
 
 def blueprint_run_start_impl(analysis_path: str, project: str,
@@ -434,10 +397,11 @@ def blueprint_run_node_impl(run_key: str, node_id: str) -> str:
 def _carica_analisi_da_testo(testo: str):
     """Come `_carica_analisi`, ma su un testo gia' conservato nel database.
 
-    Delega anch'essa a `_valida_analisi`: stessa validazione, non una seconda copia
-    che potrebbe divergere di nuovo.
+    Delega anch'essa a `preflight_service.validate_stored_analysis`: stessa validazione
+    usata anche da `cli.py` (`consuntivo`), non una copia locale che potrebbe divergere
+    di nuovo.
     """
-    return _valida_analisi(testo)
+    return validate_stored_analysis(testo)
 
 
 def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
