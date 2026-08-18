@@ -29,6 +29,8 @@ CLI supportata:
 ```bash
 starkeno doctor
 starkeno report --no-open
+starkeno consuntivo --elenco
+starkeno consuntivo --run <chiave>
 ```
 
 ## Architettura
@@ -38,6 +40,8 @@ starkeno report --no-open
 - `starkeno/hook_ingestione.py`: hook `Stop` fail-open e idempotente.
 - `starkeno/hook_inizio_sessione.py`: contesto minimo per `SessionStart`.
 - `starkeno/conto.py`: modello puro del conto.
+- `starkeno/consuntivo.py`: modello puro del confronto fra un preventivo e l'esecuzione
+  osservata; nessuna dipendenza da SQLAlchemy, orologio o filesystem.
 - `starkeno/report_conto.py`: report HTML locale, senza server o rete.
 - `starkeno/diagnostica.py`: controlli del doctor; produzione in sola lettura e
   round-trip soltanto su un database temporaneo.
@@ -78,6 +82,12 @@ ambienti isolati.
     Python 3.13 una connessione raccolta dal GC senza `close()` emette `ResourceWarning`,
     e sotto `-W error` fa fallire un test a caso; la fixture `nessuna_connessione_lasciata_aperta`
     di `tests/conftest.py` lo verifica in modo deterministico anche su 3.12.
+15. L'attribuzione di una chiamata a un nodo di un Blueprint e' una VISTA calcolata al
+    momento del confronto, mai una colonna su `agent_actions`. L'hook non conosce i
+    Blueprint, e una dichiarazione sbagliata si corregge ricalcolando.
+16. Quando l'attribuzione e' incerta si dichiara: piu' di una sessione nella finestra
+    ferma il confronto invece di sommare, e i conteggi di chiamate stimati e osservati
+    si stampano affiancati senza mai sottrarsi, perche' contano unita' diverse.
 
 ## Regole per modifiche e pubblicazione
 

@@ -7,6 +7,9 @@ usa il versionamento semantico.
 
 ### Added
 
+- Consuntivo di un'esecuzione: tre tool MCP (`blueprint_run_start`, `blueprint_run_node`,
+  `blueprint_run_end`) e il comando `starkeno consuntivo` confrontano il preventivo di un
+  Blueprint con le chiamate davvero raccolte, dichiarando cosa non sanno attribuire.
 - Claude Code è un harness supportato e installabile, accanto a Codex, con un bundle e
   un marketplace propri.
 - `starkeno doctor` elenca gli harness rilevati sulla macchina e, per quelli che non
