@@ -51,6 +51,25 @@ usa il versionamento semantico.
 
 ### Fixed
 
+- `starkeno consuntivo` dichiara invece di cadere quando non c'è niente da leggere. La
+  sessione è aperta in sola lettura (`mode=ro`, che fallisce invece di creare): su
+  un'installazione fresca il comando usciva con un traceback `OperationalError`, e su uno
+  schema precedente alla tabella `blueprint_runs` con `no such table`. Adesso entrambi
+  sono un messaggio con il rimedio e un'uscita non-zero.
+- I totali osservati passano dalle stesse guardie di qualità dati del conto
+  (`rules.effective_tokens`), non da una copia parziale. Misurato: una riga i cui
+  componenti superavano il totale dava `input_tokens = -1100` senza alcun segnale, ed era
+  pure prezzata. Ora una riga incoerente è contata a parte, dichiarata nella resa e mai
+  prezzata.
+- La riga «Moneta: assente» distingue le sue due cause — nessun listino completo, oppure
+  listini in valute diverse — perché i rimedi sono opposti. Prima ne dichiarava una sola
+  per entrambe.
+- Il confronto stampa i modelli che la **stima** non ha saputo prezzare
+  (`unknown_prices`), come già faceva per quelli osservati: due numeri adiacenti non
+  possono avere onestà diversa senza dirlo. Il costo stimato non viene soppresso, perché
+  uno scenario con costo valorizzato non ha usato le categorie mancanti.
+- Il `README.md` dichiara il confronto, i tre tool MCP e il comando `starkeno consuntivo`:
+  erano documentati solo in `AGENTS.md`, che un visitatore del repository non legge.
 - Gli hook di Claude Code sono sincroni: le varianti non bloccanti non raccoglievano
   niente e non lo dicevano. L'avviatore restituisce il controllo in 354 ms e `async`
   rientra subito, mentre l'ingestione ne richiede circa 1600, e il processo non

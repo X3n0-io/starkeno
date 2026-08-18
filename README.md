@@ -153,6 +153,51 @@ capabilities included in this experimental version.
 Missing tool costs stay unknown: a free tool must explicitly declare a fixed cost of zero.
 Costs in different currencies are not converted or summed.
 
+## Estimate against execution
+
+Preflight estimates what a Blueprint *should* cost; the hooks record what the agent
+*actually* spent. The comparison puts the two side by side: where the observed total falls
+inside the estimated band, and the per-node gap, ordered by size.
+
+Attribution is declared, never guessed. The agent marks each change of node as it works,
+and calls that fall outside every declared interval are reported as unattributed rather
+than assigned to a neighbour — a number on the wrong node sends the calibration in the
+wrong direction, which is worse than a number left unclaimed. If the window contains more
+than one session, the comparison stops and says so instead of picking one.
+
+Three MCP tools drive it, alongside `log_agent_action`. None of them raises: errors come
+back as plain text, and nothing is recorded.
+
+| Tool | What it does |
+|---|---|
+| `blueprint_run_start` | Opens a run against a stored `preflight analyze --format json` output and returns its `run_key`. The analysis is kept verbatim, so the run is compared against the estimate you were shown, not one recomputed later. |
+| `blueprint_run_node` | Declares that work has moved to a node. Unknown node ids are rejected and the message lists the valid ones. |
+| `blueprint_run_end` | Closes the run and returns the comparison. Calling it again on a closed run recomputes it — attribution is a view, not a stamp on the collected rows. |
+
+To read the same comparison from a terminal, without spending the agent's tokens:
+
+```bash
+starkeno consuntivo --elenco                 # list the recorded runs
+starkeno consuntivo --run <run_key>          # the comparison as text
+starkeno consuntivo --run <run_key> --json   # the same, machine-readable
+```
+
+The command opens the database read-only: it creates nothing and migrates nothing. On a
+machine where the hooks have not collected yet, it says so and exits non-zero.
+
+Both sides declare their holes. Observed calls whose model is not mapped to a Blueprint
+model, or whose token breakdown is missing or contradicts itself, are counted and named
+instead of being priced at a plausible-looking number; and when the Blueprint leaves a
+price out, the estimate says which model it could not price. Money is reported as
+**absent, not zero**, when there is no complete price list at all, or when the price lists
+use more than one currency.
+
+One gap is expected and is not a defect: the simulation counts `cache_write` once per
+invocation and `cache_read` only on retries, while a real agent resends the context every
+turn. Observed cache reads will be much larger than estimated ones, systematically. The
+output says so, because the first person to see it will think they got a subtraction
+wrong.
+
 ## Where the data lives
 
 The database does not live in the plugin folder: updates cannot erase your history.
@@ -218,6 +263,7 @@ for r in con.execute('SELECT project, COUNT(*), SUM(tokens_used) FROM agent_acti
 | `starkeno/hook_ingestione.py` | Idempotent end-of-turn ingestion |
 | `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook |
 | `starkeno/conto.py` | Pure model of the bill |
+| `starkeno/consuntivo.py` | Pure model of estimate against execution |
 | `starkeno/report_conto.py` | Static HTML page generator |
 | `starkeno/percorsi.py` | Per-platform data paths |
 | `starkeno/db.py` | Models and queries; the only module that talks to SQLAlchemy |

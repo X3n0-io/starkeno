@@ -3326,3 +3326,48 @@ git commit -m "docs: registra il consuntivo e l'invariante dell'attribuzione com
 - **Non importa esecuzioni da n8n o Make.** StarkEno non le osserva, e nessuna riga di
   questo piano le fa comparire.
 - **Non rimuove la dipendenza `anthropic`**, che resta una decisione separata.
+
+---
+
+## Correzioni della revisione finale (2026-08-18)
+
+Questo piano resta il **verbale di ciò che è stato pianificato**: i suoi listati non
+vengono riscritti a posteriori, o non sarebbe più un verbale. Le divergenze introdotte
+dalla revisione finale, prima della pubblicazione, sono elencate qui. Dove piano e codice
+non coincidono, **vale il codice**; la specifica di design è stata aggiornata di
+conseguenza.
+
+- **`starkeno consuntivo` su database assente o pre-migrazione.** Il piano non prevedeva
+  guardie: `make_readonly_session_factory` apre con `mode=ro`, che fallisce invece di
+  creare, e il comando cadeva con un traceback `OperationalError` su un'installazione
+  fresca. Ora `cli.py` controlla `database.exists()` prima di costruire la fabbrica
+  (stesso precedente di `report_conto.genera_report`) e intercetta `db.ErroreLettura` —
+  l'eccezione ri-esportata da `db.py`, l'unico modulo che importa SQLAlchemy — per il
+  caso «tabella `blueprint_runs` assente». Entrambi: messaggio dichiarato e uscita 2.
+- **`totali()` passa dalle guardie di `rules.effective_tokens`.** Il listato del Task 2
+  replicava un solo ramo su quattro («scomposizione parziale»), e una riga con componenti
+  che superano il totale produceva `input_tokens = -1100` senza alcun segnale — e veniva
+  anche **prezzata**. Ora `totali`, `totali_per_modello`, `calcola_moneta` e `costruisci`
+  ricevono `weights` e `max_plausible` come parametri keyword-only, esattamente come
+  `conto.calcola_conto`, e le due porte (`cli.py`, `mcp_server.py`) leggono `config` e li
+  passano. `TotaliOsservati` ha un secondo contatore, `righe_rifiutate`, e una riga fuori
+  dalle classi non viene mai prezzata.
+- **«Moneta: assente» distingue le due cause.** Il listato del Task 6 stampava una riga
+  sola («il Blueprint non dichiara un listino completo») anche quando la causa era
+  *valute diverse*, cioè con listini completissimi. `Consuntivo` porta ora
+  `motivo_moneta`, prodotto da `motivo_moneta_assente`, e la resa dà il rimedio giusto.
+- **La stima dichiara i propri buchi.** `SimulationReport.unknown_prices` non era letto da
+  nessuno. `Consuntivo` porta ora `stima_senza_prezzo` e la resa lo stampa accanto al
+  costo stimato. La regola della specifica «`unknown_prices` non vuoto → moneta assente su
+  entrambi i lati» è stata **rifiutata**: vedi il paragrafo *Moneta* nella specifica.
+- **`README.md`.** Il Task 10 aggiornava `AGENTS.md` e `CHANGELOG.md` e non il README, che
+  è l'unico documento che un visitatore del repository pubblico legge. Ora dichiara il
+  confronto, i tre tool MCP e il comando con le sue opzioni.
+- **Il parsing di `model_map` esiste una volta sola.** I listati dei Task 7 e 8 lo
+  scrivevano due volte; è la stessa forma del difetto che aveva già morso questo ramo.
+  Ora c'è `_mappa_modelli`, con lo stesso testo d'errore per entrambi i chiamanti.
+- **`_carica_analisi_da_testo` non esiste più.** Dopo lo spostamento di
+  `validate_stored_analysis` in `preflight_service.py` (Task 8 bis) il suo corpo era
+  `return validate_stored_analysis(testo)`: tre nomi per una sola operazione. È stato
+  inlineato nei due punti di chiamata. `_carica_analisi` resta, perché legge davvero il
+  file.

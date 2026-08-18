@@ -60,6 +60,21 @@ def test_readme_links_the_public_project_docs():
         assert nome in readme
 
 
+def test_il_readme_dichiara_la_superficie_supportata_del_confronto():
+    """Il rovescio di `test_il_readme_dichiara_gli_harness_supportati`: un README che
+    promette meno di quanto il codice fa e' una funzione che nessuno trova. `AGENTS.md` e
+    `CHANGELOG.md` erano stati aggiornati e il README no, quindi un visitatore del
+    repository pubblico non poteva scoprire ne' il comando ne' i tre tool MCP."""
+    readme = Path("README.md").read_text(encoding="utf-8")
+
+    for atteso in (
+        "starkeno consuntivo",
+        "blueprint_run_start", "blueprint_run_node", "blueprint_run_end",
+        "--elenco", "--run", "--json",
+    ):
+        assert atteso in readme, "il README non nomina %s" % atteso
+
+
 @pytest.mark.parametrize("nome", ["bug.yml", "feature.yml"])
 def test_issue_forms_are_valid_and_require_privacy_confirmation(nome):
     form = yaml.safe_load(

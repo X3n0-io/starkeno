@@ -209,8 +209,33 @@ preciso e falso.
 che ha usato la stima, così lo scarto isola il volume e non il listino. Solo per le righe
 il cui `model_used` è mappato in `model_map_json`. Le altre contano i token e dichiarano
 la moneta **ignota**, e il confronto elenca i `model_used` privi di mappatura con quanti
-token pesano, così si sa cosa dichiarare. Blueprint senza prezzi, o con `unknown_prices`
-non vuoto: moneta assente su entrambi i lati — assente, non zero.
+token pesano, così si sa cosa dichiarare.
+
+La moneta osservata è **assente, non zero**, in due casi soli, e il confronto dice
+**quale**: il Blueprint non dichiara nessun listino completo, oppure i suoi listini usano
+valute diverse. I due rimedi sono opposti — completare un listino, o riportare listini già
+completi a una sola valuta — e una riga sola che ne nomina uno solo manda a cercare nel
+posto sbagliato chi ha l'altro problema.
+
+`unknown_prices` **non** sopprime la moneta. Una prima versione di questo paragrafo diceva
+«Blueprint senza prezzi, o con `unknown_prices` non vuoto: moneta assente su entrambi i
+lati»: la seconda metà è stata **rifiutata in revisione** e il codice non la implementa.
+`preflight_simulate.py` è esplicito che *«uno scenario con costo valorizzato non ha usato
+le categorie mancanti»*, quindi un costo stimato valorizzato è un numero valido, e
+sopprimerlo butterebbe via una misura per prudenza. La regola è invece **simmetrica alle
+righe osservate**: quando `unknown_prices` non è vuoto, il confronto stampa quegli id
+accanto al costo stimato. Così entrambi i lati dichiarano i propri buchi, e non capita che
+due numeri adiacenti abbiano onestà diversa senza dirlo.
+
+**Righe che non entrano nelle quattro classi.** La scomposizione osservata passa dalle
+stesse guardie di qualità dati di `rules.effective_tokens` che usa `conto.calcola_conto`,
+non da una seconda serie scritta a mano. Due contatori, perché i due casi si rimediano in
+modo diverso: *senza scomposizione* (assente o parziale — la forma più comune, e non un
+difetto) e *rifiutata* (componente negativo, somma sopra il totale, totale implausibile —
+quello sì). Una riga fuori dalle classi non viene **mai prezzata**: i suoi token finiscono
+in `token_non_prezzati`, perché un costo mancante presentato come costo basso è peggio di
+un costo dichiarato ignoto. Il modulo resta puro: `weights` e `max_plausible` arrivano come
+parametri dalle due porte, come già fa `conto.calcola_conto`.
 
 **Ogni numero porta su quante chiamate è calcolato.** Il Passo 3 lo richiederà comunque, e
 aggiungerlo dopo a un formato già letto costa di più.
@@ -244,6 +269,14 @@ Import differito in `cli.py` come già fa `preflight`, perché il confronto cari
 La logica sta una volta sola nel modulo puro; le due porte sono involucri sottili — lo
 stesso rapporto che c'è già fra `preflight_service.py`, `preflight_cli.py` e
 `mcp_server.py`.
+
+Il comando legge in **sola lettura** (`mode=ro`: fallisce invece di creare) e non migra
+niente. I due stati in cui non c'è nulla da leggere si dichiarano come gli altri errori —
+messaggio e uscita non-zero, mai un traceback: **database assente** («gli hook non hanno
+ancora raccolto niente», che è lo stato di ogni lettore al giorno uno) e **schema più
+vecchio della migrazione che ha introdotto `blueprint_runs`** (che è lo stato di ogni
+utente esistente finché il suo prossimo hook di fine turno non applica `upgrade_head`).
+Stessa guardia che `report_conto.genera_report` applica già alla stessa fabbrica.
 
 ## Errori
 
