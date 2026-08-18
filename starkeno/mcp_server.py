@@ -3,7 +3,7 @@ from pathlib import Path
 from mcp.server import MCPServer
 
 import starkeno.db as db
-from starkeno.config import DB_PATH
+from starkeno.config import DB_PATH, MAX_PLAUSIBLE_TOKENS, TOKEN_COST_WEIGHTS
 from starkeno.db import make_session_factory, normalizza_progetto, record_action
 from starkeno.preflight_interpret import interpretation_task, read_interpretation
 from starkeno.preflight_service import (
@@ -312,6 +312,29 @@ def _carica_analisi(percorso: Path):
     return validate_stored_analysis(testo)
 
 
+def _mappa_modelli(model_map: str | None) -> tuple[dict | None, str]:
+    """Il `model_map` come dizionario, oppure `(None, errore)` da restituire al chiamante.
+
+    UNA copia sola, e non e' pignoleria: due copie della stessa regola scritte in due
+    task diversi sono gia' divergute una volta su questo ramo, producendo un `KeyError`
+    che e' uscito da un tool documentato come «non solleva mai». `blueprint_run_start` e
+    `blueprint_run_end` devono accettare e rifiutare gli stessi input, con lo stesso
+    testo, oggi e dopo la prossima modifica.
+
+    `None`/vuoto vale come mappa vuota: e' il chiamante a decidere se questo significa
+    «nessuna mappatura» (start) o «non aggiornare quella esistente» (end).
+    """
+    import json as _json
+
+    try:
+        mappa = _json.loads(model_map) if model_map else {}
+        if not isinstance(mappa, dict):
+            raise ValueError("model_map deve essere un oggetto JSON")
+    except ValueError as errore_mappa:
+        return None, "model_map error, nothing was recorded: %s" % errore_mappa
+    return mappa, ""
+
+
 def blueprint_run_start_impl(analysis_path: str, project: str,
                              model_map: str | None = None) -> str:
     import json as _json
@@ -330,12 +353,9 @@ def blueprint_run_start_impl(analysis_path: str, project: str,
             "Produce the analysis with `starkeno preflight analyze --confirmed "
             "--format json` and call blueprint_run_start again with its path."
         )
-    try:
-        mappa = _json.loads(model_map) if model_map else {}
-        if not isinstance(mappa, dict):
-            raise ValueError("model_map deve essere un oggetto JSON")
-    except ValueError as errore_mappa:
-        return "model_map error, nothing was recorded: %s" % errore_mappa
+    mappa, errore_mappa = _mappa_modelli(model_map)
+    if mappa is None:
+        return errore_mappa
 
     session = get_session_factory()()
     try:
@@ -377,7 +397,10 @@ def blueprint_run_node_impl(run_key: str, node_id: str) -> str:
                 % (run_key, run.ended_at.isoformat())
             )
         try:
-            _testo, blueprint, _simulazione = _carica_analisi_da_testo(run.analysis_json)
+            # `analysis_json` e' il preventivo conservato verbatim: si rilegge con la
+            # STESSA validazione di `_carica_analisi` e della CLI (`consuntivo`), mai con
+            # una copia locale che possa divergere di nuovo.
+            _testo, blueprint, _simulazione = validate_stored_analysis(run.analysis_json)
         except ValueError as errore:
             return "Run error, nothing was recorded: %s" % errore
         validi = tuple(nodo.id for nodo in blueprint.nodes)
@@ -392,16 +415,6 @@ def blueprint_run_node_impl(run_key: str, node_id: str) -> str:
         return "Nodo corrente: %s (esecuzione %s)." % (node_id, run_key)
     finally:
         session.close()
-
-
-def _carica_analisi_da_testo(testo: str):
-    """Come `_carica_analisi`, ma su un testo gia' conservato nel database.
-
-    Delega anch'essa a `preflight_service.validate_stored_analysis`: stessa validazione
-    usata anche da `cli.py` (`consuntivo`), non una copia locale che potrebbe divergere
-    di nuovo.
-    """
-    return validate_stored_analysis(testo)
 
 
 def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
@@ -421,13 +434,10 @@ def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
         # non tocca nessuna riga raccolta.
         mappa_json = None
         if model_map:
-            try:
-                mappa = _json.loads(model_map)
-                if not isinstance(mappa, dict):
-                    raise ValueError("model_map deve essere un oggetto JSON")
-                mappa_json = _json.dumps(mappa)
-            except ValueError as errore_mappa:
-                return "model_map error, nothing was recorded: %s" % errore_mappa
+            mappa, errore_mappa = _mappa_modelli(model_map)
+            if mappa is None:
+                return errore_mappa
+            mappa_json = _json.dumps(mappa)
 
         if run.ended_at is None:
             try:
@@ -441,7 +451,9 @@ def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
             db.aggiorna_mappatura(session, run, model_map_json=mappa_json)
 
         try:
-            _testo, blueprint, simulazione = _carica_analisi_da_testo(run.analysis_json)
+            # Stessa validazione della CLI (`consuntivo`) e di `_carica_analisi`: una
+            # sola, mai una copia locale che possa divergere di nuovo.
+            _testo, blueprint, simulazione = validate_stored_analysis(run.analysis_json)
         except ValueError as errore:
             return "Run error, nothing was recorded: %s" % errore
         esecuzione = db.esecuzione_snapshot(run)
@@ -451,8 +463,11 @@ def blueprint_run_end_impl(run_key: str, model_map: str | None = None) -> str:
         attribuzione = consuntivo_modulo.attribuisci(
             esecuzione, db.marcatori_di(session, run), righe
         )
+        # `consuntivo.py` e' puro e non legge `config`: le guardie di qualita' dati di
+        # `rules.effective_tokens` gliele passa questa porta, come fa `cli.py`.
         return consuntivo_modulo.rendi_testo(consuntivo_modulo.costruisci(
-            esecuzione, attribuzione, simulazione, blueprint
+            esecuzione, attribuzione, simulazione, blueprint,
+            weights=TOKEN_COST_WEIGHTS, max_plausible=MAX_PLAUSIBLE_TOKENS,
         ))
     finally:
         session.close()

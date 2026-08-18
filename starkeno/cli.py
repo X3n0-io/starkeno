@@ -163,13 +163,31 @@ def _esegui_consuntivo(argomenti) -> int:
     import json as _json
 
     from starkeno import consuntivo as consuntivo_modulo, db
+    from starkeno.config import MAX_PLAUSIBLE_TOKENS, TOKEN_COST_WEIGHTS
     from starkeno.preflight_service import validate_stored_analysis
 
     if not argomenti.run_key and not argomenti.elenco:
         _stampa_utf8("Errore: serve --run <chiave> oppure --elenco", file=sys.stderr)
         return 2
 
-    fabbrica = db.make_readonly_session_factory(str(_database_runtime()))
+    # `make_readonly_session_factory` apre SQLite con `mode=ro`: FALLISCE invece di
+    # creare, e senza questa guardia un'installazione fresca — lo stato di ogni lettore
+    # al giorno uno — riceveva un traceback `OperationalError` al posto di un comando
+    # documentato. Stesso precedente di `report_conto.genera_report`, che guarda
+    # `database.exists()` prima di costruire la stessa fabbrica. La CLI resta sola
+    # lettura: non crea niente e non migra niente, dice solo cosa manca e a chi tocca.
+    database = _database_runtime()
+    if not database.exists():
+        _stampa_utf8(
+            "Errore: nessun database in %s.\n"
+            "Gli hook non hanno ancora raccolto niente: installa il plugin del tuo "
+            "agente, completa qualche turno, poi verifica con `starkeno doctor`. Questo "
+            "comando legge soltanto: non crea il database." % database,
+            file=sys.stderr,
+        )
+        return 2
+
+    fabbrica = db.make_readonly_session_factory(str(database))
     sessione = fabbrica()
     try:
         if argomenti.elenco:
@@ -215,8 +233,12 @@ def _esegui_consuntivo(argomenti) -> int:
         attribuzione = consuntivo_modulo.attribuisci(
             esecuzione, db.marcatori_di(sessione, run), righe
         )
+        # Le guardie di qualita' dati arrivano da qui: `consuntivo.py` e' puro e non legge
+        # `config`, come `conto.py`. La porta la legge e la passa (stesso schema di
+        # `report_conto.genera_report` verso `calcola_conto`).
         risultato = consuntivo_modulo.costruisci(
-            esecuzione, attribuzione, simulazione, blueprint
+            esecuzione, attribuzione, simulazione, blueprint,
+            weights=TOKEN_COST_WEIGHTS, max_plausible=MAX_PLAUSIBLE_TOKENS,
         )
         if argomenti.json_output:
             _stampa_utf8(_json.dumps(asdict(risultato), ensure_ascii=False, indent=2,
@@ -224,6 +246,19 @@ def _esegui_consuntivo(argomenti) -> int:
         else:
             _stampa_utf8(consuntivo_modulo.rendi_testo(risultato))
         return 0
+    except db.ErroreLettura as errore:
+        # Il file c'e' ma non si legge: tipicamente uno schema precedente alla migrazione
+        # che ha introdotto `blueprint_runs`, cioe' ogni database esistente finche' il suo
+        # prossimo hook di fine turno non applica `upgrade_head`. Si dichiara come gli
+        # altri errori del comando — messaggio e uscita non-zero — mai come traceback.
+        _stampa_utf8(
+            "Errore: il database %s non si legge (%s).\n"
+            "Se manca una tabella dell'esecuzione lo schema e' piu' vecchio di questa "
+            "funzione: si aggiorna da solo al prossimo turno con un agente installato. "
+            "Verifica lo stato con `starkeno doctor`." % (database, errore.orig),
+            file=sys.stderr,
+        )
+        return 2
     finally:
         sessione.close()
         fabbrica.kw["bind"].dispose()

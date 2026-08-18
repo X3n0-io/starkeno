@@ -25,10 +25,16 @@ from starkeno.consuntivo import (
     totali,
     totali_per_modello,
 )
+from starkeno.config import MAX_PLAUSIBLE_TOKENS, TOKEN_COST_WEIGHTS
 from starkeno.preflight_schema import Blueprint
 from starkeno.preflight_simulate import simulate_blueprint
 
 INIZIO = datetime(2026, 8, 16, 10, 0, tzinfo=timezone.utc)
+
+# Le guardie di qualita' dati che le PORTE (`cli.py`, `mcp_server.py`) passano al
+# modulo puro. Qui i test fanno la stessa cosa delle porte, con gli stessi valori:
+# `consuntivo.py` non legge `config`, quindi qualcuno deve passarglieli.
+QUALITA = {"weights": TOKEN_COST_WEIGHTS, "max_plausible": MAX_PLAUSIBLE_TOKENS}
 
 
 def _riga(minuti, *, sessione="s1", modello="opus", totale=1000):
@@ -72,10 +78,19 @@ def _riga_grezza(totale, *, lettura, scrittura, uscita, modello="opus", azioni=1
 
 
 def test_totali_scompongono_le_quattro_classi_come_il_conto():
-    """`ingresso = totale - lettura - scrittura - uscita`, identico a calcola_conto."""
+    """`ingresso = totale - lettura - scrittura - uscita`, la stessa formula di
+    `calcola_conto` sul ramo in cui la scomposizione e' completa e coerente.
+
+    Il docstring diceva «identico a calcola_conto» e NON era vero: `calcola_conto`
+    rispetta tutti e quattro i rami di qualita' dati di `rules.effective_tokens`,
+    `totali` ne replicava uno solo, e i tre test qui sotto misurano cosa costava. Ora
+    l'identita' e' vera perche' entrambi passano dalla stessa funzione, ma vale la pena
+    dirlo con precisione: e' l'identita' delle GUARDIE, e i due contatori restano
+    separati dove `calcola_conto` ne tiene uno.
+    """
     righe = [_riga_grezza(1000, lettura=100, scrittura=50, uscita=200, azioni=3)]
 
-    risultato = totali(righe)
+    risultato = totali(righe, **QUALITA)
 
     assert risultato.chiamate == 1
     assert risultato.azioni == 3
@@ -85,6 +100,57 @@ def test_totali_scompongono_le_quattro_classi_come_il_conto():
     assert risultato.output_tokens == 200
     assert risultato.totale_tokens == 1000
     assert risultato.righe_non_scomposte == 0
+    assert risultato.righe_rifiutate == 0
+
+
+def test_una_somma_dei_componenti_sopra_il_totale_non_produce_ingresso_negativo():
+    """Misurato dalla revisione finale su questa riga esatta: `input_tokens == -1100`,
+    `righe_non_scomposte == 0`, nessun segnale di alcun tipo — mentre
+    `rules.effective_tokens` sulla stessa riga restituisce gia' `somma_supera_totale`.
+
+    Un conteggio di token NEGATIVO e' impossibile, e sparendo dentro un aggregato senza
+    contatore era esattamente «qualcosa si perde senza emettere un segnale»."""
+    righe = [_riga_grezza(1000, lettura=1000, scrittura=600, uscita=500)]
+
+    risultato = totali(righe, **QUALITA)
+
+    assert risultato.input_tokens == 0
+    assert risultato.output_tokens == 0
+    assert risultato.cache_read_tokens == 0
+    assert risultato.cache_write_tokens == 0
+    assert risultato.righe_rifiutate == 1
+    assert risultato.righe_non_scomposte == 0
+    # Il totale grezzo resta: una riga difettosa non deve sparire, deve dichiararsi.
+    assert risultato.totale_tokens == 1000
+
+
+def test_un_componente_negativo_non_entra_nelle_classi():
+    """L'altra meta' della stessa misura: `output_tokens == -40000` con
+    `righe_non_scomposte == 0`. E' la riga dell'esempio di `effective_tokens`
+    (tokens_used=60000, output=-40000), quella che il ramo `componente_negativo` esiste
+    apposta per catturare."""
+    righe = [_riga_grezza(60000, lettura=0, scrittura=0, uscita=-40000)]
+
+    risultato = totali(righe, **QUALITA)
+
+    assert risultato.output_tokens == 0
+    assert risultato.input_tokens == 0
+    assert risultato.righe_rifiutate == 1
+    assert risultato.totale_tokens == 60000
+
+
+def test_un_totale_implausibile_e_rifiutato_come_nel_conto():
+    """Il quarto ramo: oltre il tetto di plausibilita' non e' spesa, e' un bug del
+    chiamante (tipicamente un conteggio di byte). `calcola_conto` lo esclude dalle
+    attribuzioni marginali; `totali` faceva entrare i suoi componenti nelle classi."""
+    oltre = MAX_PLAUSIBLE_TOKENS + 1
+    righe = [_riga_grezza(oltre, lettura=0, scrittura=0, uscita=0)]
+
+    risultato = totali(righe, **QUALITA)
+
+    assert risultato.input_tokens == 0
+    assert risultato.righe_rifiutate == 1
+    assert risultato.totale_tokens == oltre
 
 
 def test_una_scomposizione_parziale_vale_come_nessuna_scomposizione():
@@ -92,7 +158,7 @@ def test_una_scomposizione_parziale_vale_come_nessuna_scomposizione():
     esattamente cio' che `record_action` documenta di non voler fare."""
     righe = [_riga_grezza(1000, lettura=100, scrittura=None, uscita=200)]
 
-    risultato = totali(righe)
+    risultato = totali(righe, **QUALITA)
 
     assert risultato.totale_tokens == 1000
     assert risultato.righe_non_scomposte == 1
@@ -106,7 +172,7 @@ def test_totali_per_modello_separano_i_modelli_e_ordinano_per_nome():
         _riga_grezza(2000, lettura=0, scrittura=0, uscita=200, modello="opus"),
     ]
 
-    risultato = totali_per_modello(righe)
+    risultato = totali_per_modello(righe, **QUALITA)
 
     assert [nome for nome, _ in risultato] == ["opus", "sonnet"]
     assert risultato[0][1].totale_tokens == 2000
@@ -305,7 +371,8 @@ def test_nodi_ordinati_per_scarto_assoluto_decrescente():
     righe = [_riga(5, totale=50), _riga(35, totale=500_000)]
     attribuzione = attribuisci(esecuzione, marcatori, righe)
 
-    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA)
 
     assert [nodo.node_id for nodo in consuntivo.nodi][0] == "review"
 
@@ -317,7 +384,8 @@ def test_un_nodo_senza_osservazioni_compare_a_zero_e_lo_dichiara():
     marcatori = [_marcatore("draft", 0, 1)]
     attribuzione = attribuisci(esecuzione, marcatori, [_riga(5)])
 
-    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA)
 
     review = [nodo for nodo in consuntivo.nodi if nodo.node_id == "review"]
     assert len(review) == 1
@@ -335,7 +403,8 @@ def test_il_join_col_nodo_stimato_usa_il_node_id():
     righe = [_riga(5, totale=300), _riga(10, totale=400), _riga(35, totale=100)]
     attribuzione = attribuisci(esecuzione, marcatori, righe)
 
-    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA)
 
     per_nodo = {nodo.node_id: nodo for nodo in consuntivo.nodi}
     draft, review = per_nodo["draft"], per_nodo["review"]
@@ -379,7 +448,8 @@ def test_uno_stato_non_ok_non_produce_nodi():
         [_riga(5, sessione="s1"), _riga(6, sessione="s2")],
     )
 
-    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA)
 
     assert consuntivo.stato == "ambigua"
     assert consuntivo.nodi == ()
@@ -399,7 +469,7 @@ def test_i_token_osservati_si_prezzano_col_listino_del_blueprint():
     blueprint = _blueprint(**PREZZI)
     righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
 
-    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint)
+    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint, **QUALITA)
 
     assert moneta is not None
     assert moneta.valuta == "USD"
@@ -412,7 +482,7 @@ def test_un_modello_non_mappato_conta_i_token_e_dichiara_la_moneta_ignota():
     blueprint = _blueprint(**PREZZI)
     righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="ignoto")]
 
-    moneta = calcola_moneta(righe, {}, blueprint)
+    moneta = calcola_moneta(righe, {}, blueprint, **QUALITA)
 
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
@@ -428,7 +498,7 @@ def test_un_modello_mappato_a_un_id_inesistente_dichiara_profilo_inesistente():
     blueprint = _blueprint(**PREZZI)
     righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
 
-    moneta = calcola_moneta(righe, {"opus-4": "id-che-non-esiste"}, blueprint)
+    moneta = calcola_moneta(righe, {"opus-4": "id-che-non-esiste"}, blueprint, **QUALITA)
 
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
@@ -454,7 +524,7 @@ def test_un_modello_mappato_a_un_listino_incompleto_dichiara_listino_incompleto(
     blueprint = Blueprint.model_validate(payload)
     righe = [_riga_grezza(1_000_000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
 
-    moneta = calcola_moneta(righe, {"opus-4": "incompleto"}, blueprint)
+    moneta = calcola_moneta(righe, {"opus-4": "incompleto"}, blueprint, **QUALITA)
 
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
@@ -477,7 +547,8 @@ def test_la_moneta_e_i_totali_leggono_le_stesse_righe():
     righe = [_riga(5), _riga(15)]
     attribuzione = attribuisci(esecuzione, marcatori, righe)
 
-    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA)
 
     # Precondizione: le righe finiscono davvero su entrambe le sponde.
     assert len(attribuzione.non_attribuite) == 1
@@ -491,7 +562,7 @@ def test_senza_prezzi_nel_blueprint_la_moneta_e_assente_non_zero():
     blueprint = _blueprint()
     righe = [_riga_grezza(1000, lettura=0, scrittura=0, uscita=0, modello="opus-4")]
 
-    assert calcola_moneta(righe, {"opus-4": "economy"}, blueprint) is None
+    assert calcola_moneta(righe, {"opus-4": "economy"}, blueprint, **QUALITA) is None
 
 
 def test_valute_diverse_fra_i_modelli_mappati_rendono_la_moneta_assente():
@@ -508,7 +579,7 @@ def test_valute_diverse_fra_i_modelli_mappati_rendono_la_moneta_assente():
         _riga_grezza(1000, lettura=0, scrittura=0, uscita=0, modello="b"),
     ]
 
-    assert calcola_moneta(righe, {"a": "economy", "b": "premium"}, blueprint) is None
+    assert calcola_moneta(righe, {"a": "economy", "b": "premium"}, blueprint, **QUALITA) is None
 
 
 def test_una_riga_non_scomposta_non_si_prezza():
@@ -516,7 +587,28 @@ def test_una_riga_non_scomposta_non_si_prezza():
     blueprint = _blueprint(**PREZZI)
     righe = [_riga_grezza(1_000_000, lettura=0, scrittura=None, uscita=0, modello="opus-4")]
 
-    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint)
+    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint, **QUALITA)
+
+    assert moneta is not None
+    assert moneta.osservata == Decimal("0")
+    assert moneta.token_non_prezzati == 1_000_000
+
+
+def test_una_riga_rifiutata_non_si_prezza_e_i_suoi_token_si_dichiarano():
+    """La parte peggiore della regressione: `calcola_moneta` prezzava
+    `totale.input_tokens` direttamente, quindi la riga corrotta entrava nei SOLDI e non
+    contribuiva a `token_non_prezzati`. Misurato prima della correzione: la stessa riga
+    dava `osservata = -3.30 USD` — un costo negativo — con `token_non_prezzati == 0`.
+
+    Il docstring di `Moneta` dice che un costo mancante presentato come costo basso e'
+    peggio di uno dichiarato ignoto: qui arrivava dalla porta di servizio."""
+    blueprint = _blueprint(**PREZZI)
+    righe = [
+        _riga_grezza(1_000_000, lettura=1_000_000, scrittura=600_000, uscita=500_000,
+                     modello="opus-4"),
+    ]
+
+    moneta = calcola_moneta(righe, {"opus-4": "economy"}, blueprint, **QUALITA)
 
     assert moneta is not None
     assert moneta.osservata == Decimal("0")
@@ -531,7 +623,8 @@ def test_la_resa_dichiara_lo_scarto_atteso_sulla_cache():
     esecuzione = _esecuzione()
     attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
 
-    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA))
 
     assert "cache" in testo.lower()
     assert "contesto a ogni turno" in testo
@@ -545,7 +638,8 @@ def test_la_resa_di_uno_stato_non_ok_dice_il_motivo_e_non_stampa_numeri():
         [_riga(5, sessione="s1"), _riga(6, sessione="s2")],
     )
 
-    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA))
 
     assert "ambigua" in testo
     assert "s1" in testo and "s2" in testo
@@ -570,7 +664,8 @@ def test_ogni_numero_dice_su_quante_chiamate_e_calcolato():
     attribuzione = attribuisci(esecuzione, marcatori, righe)
     assert _nodi(attribuzione) == {"draft": 2, "review": 3}  # precondizione sui secchi
 
-    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA))
 
     assert "su 2 chiamate" in testo  # la riga di `draft`
     assert "su 3 chiamate" in testo  # la riga di `review`
@@ -592,7 +687,8 @@ def test_la_resa_di_uno_stato_non_ok_conta_le_righe_senza_sessione_ma_non_altri_
     assert attribuzione.stato == "ambigua"
     assert len(attribuzione.senza_sessione) == 1  # precondizione: il secchio non e' vuoto
 
-    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint))
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA))
 
     assert "Righe senza sessione nella finestra: 1 (mai attribuite)" in testo
     assert "Per nodo" not in testo
@@ -608,7 +704,8 @@ def test_un_motivo_sconosciuto_in_moneta_non_fa_cadere_la_resa():
     blueprint = _blueprint()
     esecuzione = _esecuzione()
     attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
-    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint)
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                           **QUALITA)
     moneta_con_motivo_ignoto = Moneta(
         valuta="USD", osservata=Decimal("0"), token_non_prezzati=10,
         modelli_senza_prezzo=(("modello-x", 10, "motivo-inventato"),),
@@ -618,3 +715,161 @@ def test_un_motivo_sconosciuto_in_moneta_non_fa_cadere_la_resa():
     testo = rendi_testo(consuntivo)  # non deve sollevare
 
     assert "motivo-inventato" in testo
+
+
+def test_la_resa_dichiara_le_righe_con_scomposizione_incoerente():
+    """Il contatore non serve a niente se resta nel dataclass: `rendi_testo` deve dirlo,
+    e deve dirlo SEPARATO da «senza scomposizione». I due casi si rimediano in modo
+    diverso — una scomposizione assente e' la forma normale nell'SDK, una scomposizione
+    che si contraddice e' un difetto da guardare."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    corrotta = dataclasses.replace(
+        _riga(5), tokens_used=1000, cache_read_tokens=1000,
+        cache_write_tokens=600, output_tokens=500,
+    )
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [corrotta])
+
+    testo = rendi_testo(costruisci(esecuzione, attribuzione, _simulazione(blueprint),
+                                   blueprint, **QUALITA))
+
+    assert "1 chiamate con scomposizione incoerente" in testo
+    assert "mai prezzate" in testo
+    assert "senza scomposizione" not in testo
+
+
+# ============================================== i due motivi dell'assenza di moneta
+#
+# `calcola_moneta` torna None per due ragioni che il suo stesso docstring elenca
+# separate, e la resa ne stampava UNA per entrambe. Su un Blueprint con due modelli
+# prezzati per intero in USD e in EUR quella riga era semplicemente falsa, e il rimedio
+# che suggeriva («completa il listino») era quello sbagliato.
+
+
+def _blueprint_due_valute():
+    """Due modelli con listino COMPLETO, in valute diverse. Non manca nessun prezzo."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["models"][0].update(PREZZI)
+    secondo = json.loads(json.dumps(payload["models"][0]))
+    secondo.update({"id": "premium", "currency": "EUR"})
+    payload["models"].append(secondo)
+    return Blueprint.model_validate(payload)
+
+
+def test_la_moneta_assente_per_listino_incompleto_lo_dice_e_dice_come_rimediare():
+    blueprint = _blueprint()  # la fixture ha tutti e quattro i prezzi a null
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                            **QUALITA)
+    testo = rendi_testo(consuntivo)
+
+    assert consuntivo.moneta is None
+    assert consuntivo.motivo_moneta == "listino assente"
+    assert "non dichiara un listino completo" in testo
+    assert "valute diverse" not in testo
+
+
+def test_la_moneta_assente_per_valute_diverse_non_incolpa_il_listino():
+    """La riga falsa: qui i listini sono completissimi, e dire «il Blueprint non dichiara
+    un listino completo» manda a cercare un prezzo che c'e' gia'."""
+    blueprint = _blueprint_due_valute()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                            **QUALITA)
+    testo = rendi_testo(consuntivo)
+
+    assert consuntivo.moneta is None
+    assert consuntivo.motivo_moneta == "valute diverse"
+    assert "valute diverse" in testo
+    assert "una sola valuta" in testo
+    assert "non dichiara un listino completo" not in testo
+
+
+def test_un_motivo_di_moneta_assente_sconosciuto_non_fa_cadere_la_resa():
+    """Stessa guardia di `_RIMEDIO_PER_MOTIVO`: `Consuntivo` e' un dataclass pubblico e
+    congelato, e un motivo che il dizionario non conosce si dichiara invece di far
+    cadere la resa con un KeyError."""
+    blueprint = _blueprint()
+    esecuzione = _esecuzione()
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+    consuntivo = dataclasses.replace(
+        costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                   **QUALITA),
+        motivo_moneta="motivo-inventato",
+    )
+
+    testo = rendi_testo(consuntivo)  # non deve sollevare
+
+    assert "motivo-inventato" in testo
+
+
+# ================================== i buchi della stima, accanto a quelli dell'osservato
+
+
+def _blueprint_stima_non_prezzata():
+    """Un Blueprint con `economy` prezzato per intero e un secondo nodo su `premium`, che
+    non ha prezzi: il listino di `economy` basta a calcolare la moneta OSSERVATA, mentre
+    la simulazione mette `premium` in `unknown_prices`. E' l'unico modo di ottenere i due
+    lati con onesta' diversa, che e' esattamente cio' che la resa nascondeva."""
+    payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    payload["confirmed"] = True
+    payload["models"][0].update(PREZZI)
+    premium = json.loads(json.dumps(payload["models"][0]))
+    premium.update({
+        "id": "premium", "name": "Example Premium",
+        "input_price_per_million": None, "output_price_per_million": None,
+        "cache_read_price_per_million": None, "cache_write_price_per_million": None,
+    })
+    payload["models"].append(premium)
+    raffina = json.loads(json.dumps(payload["nodes"][0]))
+    raffina.update({"id": "refine", "model_id": "premium"})
+    payload["nodes"].append(raffina)
+    payload["transitions"] = [
+        {"source": "draft", "target": "refine", "activation": "always",
+         "probability": None, "parallel_group": None, "max_traversals": None},
+        {"source": "refine", "target": "review", "activation": "always",
+         "probability": None, "parallel_group": None, "max_traversals": None},
+    ]
+    return Blueprint.model_validate(payload)
+
+
+def test_la_stima_dichiara_i_modelli_che_non_ha_saputo_prezzare():
+    """`SimulationReport.unknown_prices` non veniva letto da nessuno: la resa poteva
+    mettere su righe adiacenti un numero onesto (l'osservato, che elenca i propri modelli
+    senza prezzo) e uno silenziosamente incompleto (lo stimato). Ora il lato stimato
+    dichiara i suoi buchi come li dichiara il lato osservato."""
+    blueprint = _blueprint_stima_non_prezzata()
+    simulazione = _simulazione(blueprint)
+    assert simulazione.unknown_prices == ("premium",)  # precondizione
+    esecuzione = dataclasses.replace(_esecuzione(), model_map={"opus": "economy"})
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+
+    consuntivo = costruisci(esecuzione, attribuzione, simulazione, blueprint, **QUALITA)
+    testo = rendi_testo(consuntivo)
+
+    assert consuntivo.stima_senza_prezzo == ("premium",)
+    assert "stima incompleta" in testo
+    assert "premium" in testo
+
+
+def test_la_stima_incompleta_non_sopprime_la_moneta_osservata():
+    """La regola che la specifica chiedeva — «moneta assente su ENTRAMBI i lati» quando
+    `unknown_prices` non e' vuoto — e' stata rifiutata, e questo test la tiene fuori.
+    `preflight_simulate` e' esplicito: «Uno scenario con costo valorizzato non ha usato le
+    categorie mancanti». Sopprimere la moneta butterebbe via un numero valido; dichiarare
+    il buco accanto costa una riga e non perde niente."""
+    blueprint = _blueprint_stima_non_prezzata()
+    esecuzione = dataclasses.replace(_esecuzione(), model_map={"opus": "economy"})
+    attribuzione = attribuisci(esecuzione, [_marcatore("draft", 0, 1)], [_riga(5)])
+
+    consuntivo = costruisci(esecuzione, attribuzione, _simulazione(blueprint), blueprint,
+                            **QUALITA)
+
+    assert consuntivo.moneta is not None
+    assert consuntivo.moneta.osservata > Decimal("0")
+    assert "Moneta osservata:" in rendi_testo(consuntivo)

@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from starkeno.db import get_agent_summaries
 import starkeno.mcp_server as mcp_server_module
 from starkeno.mcp_server import log_agent_action_impl
@@ -487,3 +489,90 @@ def test_blueprint_run_start_un_analisi_che_non_e_un_dict_torna_testo(
     session = session_factory()
     assert session.query(BlueprintRun).count() == 0, "ha registrato un'esecuzione"
     session.close()
+
+
+# ================================== una regola sola per il `model_map` dei due tool
+#
+# Il blocco di parsing era scritto DUE volte, in `blueprint_run_start_impl` e in
+# `blueprint_run_end_impl`: json.loads, isinstance(..., dict), raise ValueError, catch,
+# formattazione del messaggio. E' la stessa forma del difetto che ha gia' morso questo
+# ramo una volta — due copie di una regola scritte in due task diversi, divergute, e un
+# `KeyError` uscito da un tool documentato come «non solleva mai». Questi test uccidono la
+# divergenza invece di fidarsi che le due copie restino d'accordo.
+
+
+@pytest.mark.parametrize("mappa_non_valida", ['{"a": ', '["a", "b"]', '"testo"', "42"])
+def test_i_due_tool_rifiutano_lo_stesso_model_map_con_lo_stesso_testo(
+    session_factory, tmp_path, monkeypatch, mappa_non_valida
+):
+    """JSON rotto, JSON valido ma non un oggetto: `blueprint_run_start` e
+    `blueprint_run_end` devono accettare e rifiutare gli stessi input, con lo stesso
+    messaggio. Se una delle due copie cambia sola, questo test lo dice."""
+    from starkeno.db import BlueprintRun
+
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    analisi = _analisi_json(tmp_path)
+    avvio = mcp_server_module.blueprint_run_start_impl(str(analisi), "progetto")
+    chiave = avvio.split("run_key: ")[1].split()[0]
+
+    da_start = mcp_server_module.blueprint_run_start_impl(
+        str(analisi), "altro-progetto", mappa_non_valida)
+    da_end = mcp_server_module.blueprint_run_end_impl(chiave, mappa_non_valida)
+
+    assert da_start.startswith("model_map error, nothing was recorded: ")
+    assert da_start == da_end
+    session = session_factory()
+    try:
+        # «nothing was recorded» alla lettera: nessuna seconda esecuzione aperta, e
+        # quella esistente non e' stata chiusa.
+        assert session.query(BlueprintRun).count() == 1
+        assert session.query(BlueprintRun).one().ended_at is None
+    finally:
+        session.close()
+
+
+def test_un_model_map_valido_e_accettato_da_entrambi_i_tool(
+    session_factory, tmp_path, monkeypatch
+):
+    """Il rovescio: l'unica copia non deve essere piu' severa di quelle che sostituisce.
+    Un oggetto JSON passa da entrambe le porte, e in `blueprint_run_end` la mappatura
+    aggiornata arriva fino al confronto."""
+    monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
+    monkeypatch.chdir(tmp_path)
+    analisi = _analisi_json(tmp_path)
+
+    avvio = mcp_server_module.blueprint_run_start_impl(
+        str(analisi), "progetto", '{"opus-4": "economy"}')
+    chiave = avvio.split("run_key: ")[1].split()[0]
+    chiusura = mcp_server_module.blueprint_run_end_impl(chiave, '{"sonnet-4": "economy"}')
+
+    assert "run_key" in avvio
+    assert "Consuntivo" in chiusura
+    session = session_factory()
+    try:
+        run = session.query(mcp_server_module.db.BlueprintRun).one()
+        assert json.loads(run.model_map_json) == {"sonnet-4": "economy"}
+    finally:
+        session.close()
+
+
+def test_il_parsing_del_model_map_esiste_una_volta_sola():
+    """La guardia strutturale: il difetto era *due copie*, e un test sul comportamento
+    non impedisce a qualcuno di reintrodurne una terza. `json.loads` sul `model_map` deve
+    comparire in UN solo punto del modulo — l'helper — e nessuno dei due `_impl` deve
+    rifare il controllo `isinstance(..., dict)` per conto proprio."""
+    sorgente = Path(mcp_server_module.__file__).read_text(encoding="utf-8")
+
+    assert sorgente.count("model_map deve essere un oggetto JSON") == 1
+    assert sorgente.count("model_map error, nothing was recorded") == 1
+
+
+def test_non_esiste_piu_un_alias_di_validate_stored_analysis():
+    """`_carica_analisi_da_testo` era diventato `return validate_stored_analysis(testo)`
+    e basta: tre nomi per una sola operazione, di cui uno senza corpo. Un lettore futuro
+    lo scambia per una seconda implementazione e ne fa divergere una. Il corpo e' stato
+    inlineato nei due punti di chiamata; il nome non deve tornare."""
+    assert not hasattr(mcp_server_module, "_carica_analisi_da_testo")
+    # `_carica_analisi` resta: legge davvero il file, non e' un alias.
+    assert hasattr(mcp_server_module, "_carica_analisi")

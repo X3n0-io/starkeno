@@ -339,3 +339,54 @@ def test_consuntivo_non_trascina_mcp_server(tmp_path):
     )
 
     assert esito.returncode == 0, esito.stderr.decode("utf-8", "replace")
+
+
+def test_consuntivo_su_database_assente_dichiara_e_esce_2(tmp_path, monkeypatch, capsys):
+    """La regressione trovata dalla revisione finale: `make_readonly_session_factory`
+    apre SQLite con `mode=ro`, che FALLISCE invece di creare. Su un'installazione fresca
+    — lo stato di ogni lettore al giorno uno — il comando cadeva con
+    `sqlalchemy.exc.OperationalError: unable to open database file` fino al terminale.
+    Il precedente sta gia' in `report_conto.genera_report`, che guarda `database.exists()`
+    prima di costruire la stessa fabbrica."""
+    from starkeno import cli
+
+    percorso = tmp_path / "mai-esistito.db"
+    monkeypatch.setenv("STARKENO_DB_PATH", str(percorso))
+
+    codice = cli.main(["consuntivo", "--elenco"])
+
+    catturato = capsys.readouterr()
+    assert codice == 2
+    assert "mai-esistito.db" in catturato.err
+    assert "hook" in catturato.err.lower()
+    assert "Traceback" not in catturato.err
+
+
+def test_consuntivo_su_schema_precedente_alla_migrazione_dichiara_e_esce_2(
+    tmp_path, monkeypatch, capsys,
+):
+    """Il secondo modo di cadere: un database creato prima della migrazione `0006` non
+    ha `blueprint_runs`, e la lettura sollevava `no such table: blueprint_runs`. E' lo
+    stato di ogni utente esistente finche' il suo prossimo hook di fine turno non applica
+    `upgrade_head`. Il file qui e' un database SQLite vero e vuoto: nessuna tabella di
+    StarkEno, quindi la stessa condizione dello schema vecchio."""
+    import sqlite3
+
+    from starkeno import cli
+
+    percorso = tmp_path / "vecchio.db"
+    connessione = sqlite3.connect(str(percorso))
+    try:
+        connessione.execute("CREATE TABLE segnaposto (id INTEGER PRIMARY KEY)")
+        connessione.commit()
+    finally:
+        connessione.close()
+    monkeypatch.setenv("STARKENO_DB_PATH", str(percorso))
+
+    codice = cli.main(["consuntivo", "--elenco"])
+
+    catturato = capsys.readouterr()
+    assert codice == 2
+    assert "blueprint_runs" in catturato.err
+    assert "schema" in catturato.err.lower()
+    assert "Traceback" not in catturato.err

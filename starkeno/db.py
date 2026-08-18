@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from sqlalchemy import create_engine, event, Column, Integer, String, DateTime, Index, func, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.types import TypeDecorator
 
@@ -382,6 +382,14 @@ def make_readonly_session_factory(db_path: str) -> sessionmaker:
     percorso_uri = quote(assoluto, safe="/:")
     engine = create_engine(f"sqlite:///file:{percorso_uri}?mode=ro&uri=true")
     return sessionmaker(bind=engine)
+
+
+# L'errore che SQLite solleva quando il file non si apre (`mode=ro` FALLISCE invece di
+# creare) o quando una tabella non esiste ancora (schema piu' vecchio della migrazione
+# che l'ha introdotta). Ri-esportato QUI perche' `db.py` e' l'unico modulo che importa
+# SQLAlchemy: chi legge deve poterlo intercettare per dichiararlo all'utente senza
+# tirarsi dentro il pacchetto e senza sfondare l'invariante.
+ErroreLettura = OperationalError
 
 
 MAX_AGENT_NAME = 128
