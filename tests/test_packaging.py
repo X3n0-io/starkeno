@@ -15,10 +15,17 @@ RISORSE_RUNTIME = (
 RISORSE_PLUGIN_WHEEL = (
     "starkeno/plugin_bundle/.codex-plugin/plugin.json",
     "starkeno/plugin_bundle/hooks/hooks.json",
+    # Il bundle Claude Code non era verificato da nessuno: una skill che esiste solo in
+    # sviluppo e' la stessa forma di difetto gia' pagata due volte il 19/08/2026 —
+    # corretto nel repository, assente sulla macchina.
+    "starkeno/plugin_bundle/plugin-claude-code/hooks/hooks.json",
+    "starkeno/plugin_bundle/plugin-claude-code/skills/starkeno/SKILL.md",
 )
 RISORSE_PLUGIN_SDIST = (
     ".codex-plugin/plugin.json",
     "hooks/hooks.json",
+    "plugin-claude-code/hooks/hooks.json",
+    "plugin-claude-code/skills/starkeno/SKILL.md",
 )
 
 

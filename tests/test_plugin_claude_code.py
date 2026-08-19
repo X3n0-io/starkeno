@@ -226,3 +226,51 @@ def test_il_marketplace_espone_il_bundle_claude_code():
     assert voce["name"] == "starkeno"
     assert voce["source"] == "./plugin-claude-code"
     assert (RADICE / voce["source"] / ".claude-plugin" / "plugin.json").is_file()
+
+
+# ============================================ la skill: cosa fa, e quando invocarla
+#
+# Il plugin spediva due file, manifest e hook: a installazione perfettamente riuscita
+# l'agente non sapeva che StarkEno esistesse. La skill e' cio' che glielo dice, e il suo
+# `description` NON e' documentazione — e' l'unica cosa che l'agente legge per decidere
+# se invocarla. Misurato il 19/08/2026 che Codex consuma le `skills/` dei plugin nello
+# stesso formato di Claude Code, quindi questo file solo serve entrambi gli harness.
+
+
+SKILL = BUNDLE / "skills" / "starkeno" / "SKILL.md"
+
+
+def _frontmatter() -> str:
+    testo = SKILL.read_text(encoding="utf-8")
+    prima_riga = testo.splitlines()[0] if testo else ""
+    assert prima_riga == "---", "senza frontmatter la skill non viene caricata"
+    return testo.split("---", 2)[1]
+
+
+def test_la_skill_dichiara_i_momenti_in_cui_va_invocata():
+    """LA regressione: un `description` che descrive il PRODOTTO invece dei momenti
+    d'uso e' una skill che nessun agente invoca mai — installata, corretta e inutile.
+    Le frasi sono quelle con cui una persona chiede davvero questa cosa."""
+    descrizione = _frontmatter().lower()
+
+    for innesco in ("how much", "cost", "wasting", "bill", "expensive"):
+        assert innesco in descrizione, "il description non innesca su %r" % innesco
+    assert "collecting nothing" in descrizione, (
+        "non copre il caso in cui StarkEno sembra installato e non raccoglie: e' il "
+        "fallimento silenzioso che l'agente deve saper nominare"
+    )
+
+
+def test_la_skill_dichiara_il_nome_con_cui_viene_caricata():
+    assert "name: starkeno" in _frontmatter()
+
+
+def test_la_skill_vieta_di_inventare_numeri_e_di_usare_la_rete():
+    """Le due regole che un agente romperebbe per compiacere: dare comunque una cifra
+    quando non c'e', e cercarla fuori. Una cifra di costo sbagliata e' peggio di
+    «StarkEno non lo misura», e una chiamata di rete contraddice l'unica promessa che il
+    progetto fa a chi lo installa."""
+    corpo = SKILL.read_text(encoding="utf-8").lower()
+
+    assert "never invent" in corpo, "non vieta di inventare numeri"
+    assert "network" in corpo, "non dice che non si esce dalla macchina"
