@@ -121,9 +121,12 @@ Le ultime due righe sono quelle che gli altri strumenti non ti mostrano. Un nume
 puoi controllare vale meno di un numero più piccolo che puoi controllare, e la previsione
 vale solo quanto la misura contro cui viene giudicata.
 
-<!-- QUI VA LA GIF/SCREENSHOT DEL CONTO.
-     Sostituire questo commento con:  ![Il conto](docs/immagini/conto.gif)
-     Finche' l'immagine non esiste, meglio un commento che un link rotto. -->
+![Il conto locale di StarkEno: totale pesato, costo di lavoro, di caricamento e di rilettura, e la scomposizione per progetto](docs/immagini/conto.png)
+
+*Dati di nessuno, non i miei.* La pagina è generata dal transcript vero **già ripulito**
+che sta nel repository, con `python scripts/genera_immagine_conto.py`: il progetto è
+anonimizzato in `progetto-01`, e in questa esecuzione la rilettura è il **51%** del totale.
+Lo script rigenera l'immagine quando il conto cambia, così non invecchia in silenzio.
 
 Una forma d'esempio — *i tuoi numeri saranno diversi, ed è il rapporto la parte
 interessante*:

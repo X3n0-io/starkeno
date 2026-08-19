@@ -128,6 +128,14 @@ The last two rows are the ones other tools do not show you. A number you cannot 
 worth less than a smaller number you can, and the forecast is only as good as the
 measurement it is scored against.
 
+![StarkEno's local bill: weighted total, cost of work, of loading and of re-reading, and the per-project breakdown](docs/immagini/conto.png)
+
+*Nobody's data, not mine.* The page is generated from the **already-sanitised** real
+transcript that ships in this repository, with `python scripts/genera_immagine_conto.py`:
+the project is anonymised to `progetto-01`, and in this run re-reading is **51%** of the
+total. The script regenerates the image when the bill changes, so it cannot go stale
+quietly. Note the Italian labels — see the warning above.
+
 An illustrative shape — *your numbers will differ, and the ratio is the interesting part*:
 
 ```
