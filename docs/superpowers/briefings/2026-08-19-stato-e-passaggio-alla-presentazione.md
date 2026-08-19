@@ -6,14 +6,17 @@ marketizzazione**: sito, spiegazione della skill, materiale pubblico.
 
 ## Dove sta il codice
 
-`origin/main` è a `855aff1`, tag `v0.3.3` sullo stesso ramo. Suite a **698 passed,
-2 skipped** sotto `-W error`. Un commit locale **non pubblicato**: `8c40425`, che registra
-la verifica positiva della skill su Codex.
+Quando questo briefing è stato scritto `origin/main` era a `855aff1`, con un commit
+locale non pubblicato, e la suite a **698 passed, 2 skipped** sotto `-W error`. La
+sessione successiva, lo stesso giorno, ha pubblicato tutto. Il tag `v0.3.3` sta a
+`1370940`, non su `855aff1` come diceva la prima stesura di questa riga.
 
-**Il repository GitHub è PRIVATO.** È il fatto più importante per la prossima sessione:
-le istruzioni d'installazione nel README — `pip install git+https://…` e
-`claude plugin marketplace add X3n0-io/starkeno` — **non funzionano per nessuno tranne il
-proprietario** finché resta così. Anche la `description` del repository è vuota.
+**Il repository GitHub è PUBBLICO dal 19/08/2026**, insieme alla `description`. Quando
+questo briefing è stato scritto era ancora privato, e quello era il fatto che bloccava
+tutto: le istruzioni d'installazione nel README — `pip install git+https://…` e
+`claude plugin marketplace add X3n0-io/starkeno` — non funzionavano per nessuno tranne il
+proprietario. Ora funzionano: apertura verificata con una chiamata anonima all'API, che
+prima rispondeva 404 e adesso 200.
 
 ## Cosa è stato consegnato oggi
 
@@ -48,9 +51,12 @@ proprietario** finché resta così. Anche la `description` del repository è vuo
 
 ## Cosa resta aperto
 
-- **Rendere pubblico il repository.** Decisione dell'utente. Finché è privato, tutto il
-  materiale di presentazione punta a una porta chiusa.
-- **La `description` del repository è vuota**: è la prima riga che un visitatore legge.
+- ~~Rendere pubblico il repository~~ e ~~scrivere la `description`~~: **fatti il
+  19/08/2026**, dopo i gate `verifica_segreti.py --tracked` e `verifica_pubblicazione.py`.
+  Restano vuoti **homepage** e **topics**, che sono come il progetto si fa trovare.
+- **Aprire il repository ha pubblicato anche questi briefing.** Erano già tracciati. Non è
+  una fuga di dati — i gate passano e non c'è nulla di personale oltre alla firma
+  d'autore — ma da oggi le note interne, autocritiche comprese, si leggono da fuori.
 - **Più esecuzioni reali del consuntivo**, su lavori di forma diversa — uno lungo, uno
   con molte riletture, uno con ritentativi — per capire se lo scarto del simulatore è una
   costante moltiplicativa o dipende dalla forma. Se è una costante, il Passo 2 costa poco.
