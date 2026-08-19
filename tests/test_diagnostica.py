@@ -171,3 +171,84 @@ def test_isolated_round_trip_creates_writes_and_reads_only_a_temporary_database(
     assert controllo.codice == "round_trip"
     assert controllo.stato == "ok"
     assert controllo.dati == {"righe": 1, "revisione": revisione_head()}
+
+
+# ===================================== la copia installata puo' essere vecchia
+#
+# Misurato il 19/08/2026, ed e' costato quattro giorni di raccolta finita nel file
+# sbagliato. Correggere il bundle nel repository NON aggiorna la copia che l'harness
+# ha gia' installato: Claude Code la tiene in `plugins/cache/<mercato>/<plugin>/
+# <versione>/` e il suo registro fissa quel percorso. Il repository e la macchina
+# possono quindi divergere a tempo indefinito, e nessuno dei due lo dice, perche' gli
+# hook sono muti per l'invariante 12.
+
+
+def _copia_installata(claude_root: Path, comando: str) -> Path:
+    """Una copia del bundle Claude Code nel layout di cache osservato."""
+    percorso = (claude_root / "plugins" / "cache" / "mercato-locale"
+                / "starkeno" / "0.3.2" / "hooks" / "hooks.json")
+    percorso.parent.mkdir(parents=True, exist_ok=True)
+    percorso.write_text(
+        json.dumps({"hooks": {"Stop": [{"hooks": [
+            {"type": "command", "command": comando, "async": False, "timeout": 30}]}]}}),
+        encoding="utf-8",
+    )
+    return percorso
+
+
+def _bundle_spedito(radice: Path, comando: str) -> Path:
+    percorso = radice / "plugin-claude-code" / "hooks" / "hooks.json"
+    percorso.parent.mkdir(parents=True, exist_ok=True)
+    percorso.write_text(
+        json.dumps({"hooks": {"Stop": [{"hooks": [
+            {"type": "command", "command": comando, "async": False, "timeout": 30}]}]}},
+            indent=2),
+        encoding="utf-8",
+    )
+    return percorso
+
+
+def test_il_doctor_vede_la_copia_installata_piu_vecchia_del_pacchetto(tmp_path):
+    """LA regressione: il bundle corretto nel repository e la copia installata che
+    esegue ancora il comando vecchio. E' esattamente lo stato in cui la macchina e'
+    rimasta per quattro giorni raccogliendo nel database sbagliato."""
+    from starkeno.diagnostica import confronta_plugin_claude
+
+    claude = tmp_path / "home" / ".claude"
+    installata = _copia_installata(claude, "python -m starkeno.hook_ingestione")
+    _bundle_spedito(tmp_path / "pacchetto", "python -P -m starkeno.hook_ingestione")
+
+    controllo = confronta_plugin_claude(claude, tmp_path / "pacchetto")
+
+    assert controllo.stato == "attenzione", (
+        "la copia installata esegue codice diverso da quello del pacchetto"
+    )
+    assert str(installata) in controllo.dati["copie_divergenti"], "non dice QUALE copia"
+
+
+def test_una_copia_installata_allineata_non_allarma(tmp_path):
+    """Il rovescio, e ha una regressione propria: il confronto e' STRUTTURALE, non
+    testuale. Le due copie qui hanno lo stesso contenuto con indentazione diversa —
+    e su Windows differiscono anche di fine riga, perche' una la scrive l'harness e
+    l'altra esce da git. Un confronto fra stringhe direbbe `attenzione` a ogni
+    installazione sana, e si imparerebbe a ignorarlo."""
+    from starkeno.diagnostica import confronta_plugin_claude
+
+    claude = tmp_path / "home" / ".claude"
+    _copia_installata(claude, "python -P -m starkeno.hook_ingestione")
+    _bundle_spedito(tmp_path / "pacchetto", "python -P -m starkeno.hook_ingestione")
+
+    controllo = confronta_plugin_claude(claude, tmp_path / "pacchetto")
+
+    assert controllo.stato == "ok", "stesso contenuto, sola indentazione diversa"
+
+
+def test_senza_claude_code_il_controllo_tace(tmp_path):
+    """Chi usa solo Codex non deve vedere un avviso su un harness che non ha."""
+    from starkeno.diagnostica import confronta_plugin_claude
+
+    _bundle_spedito(tmp_path / "pacchetto", "python -P -m starkeno.hook_ingestione")
+
+    controllo = confronta_plugin_claude(tmp_path / "home" / ".claude", tmp_path / "pacchetto")
+
+    assert controllo.stato == "ok"

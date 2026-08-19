@@ -51,6 +51,11 @@ usa il versionamento semantico.
 
 ### Fixed
 
+- `starkeno doctor` dichiara quando la copia installata del plugin esegue codice diverso
+  dal pacchetto. Correggere il bundle nel repository non aggiorna cio' che gira: l'harness
+  copia il plugin nella propria cache, e quella copia e' ciò che esegue. Il confronto e'
+  strutturale sul JSON, non testuale, perche' indentazione e fine riga divergono fra la
+  copia scritta dall'harness e il sorgente uscito da git.
 - `starkeno doctor` dichiara quando uno storico ha righe più recenti del canonico. È la
   firma di una raccolta instradata male — l'hook raccoglie per intero, ma in un file che
   `report` e `consuntivo` non guardano — e il controllo rispondeva `ok` perché il

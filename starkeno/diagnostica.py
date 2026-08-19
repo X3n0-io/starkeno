@@ -114,6 +114,59 @@ def trova_plugin_codex(codex_root: Path) -> Controllo:
     )
 
 
+def confronta_plugin_claude(claude_root: Path, plugin_root: Path) -> Controllo:
+    """Se la copia installata del bundle Claude Code esegue ancora codice vecchio.
+
+    Correggere il bundle nel repository NON aggiorna cio' che gira sulla macchina.
+    Claude Code copia il plugin in `plugins/cache/<mercato>/<plugin>/<versione>/` e il
+    suo registro FISSA quel percorso: repository e installazione possono divergere a
+    tempo indefinito. Misurato il 19/08/2026 — quattro giorni di raccolta finita in un
+    database che nessun comando guardava — e non poteva emergere altrimenti, perche' un
+    hook e' muto per l'invariante 12 e uno instradato male raccoglie per intero.
+
+    Il confronto e' STRUTTURALE, sul JSON analizzato, non sul testo: la copia la scrive
+    l'harness e il sorgente esce da git, quindi indentazione e fine riga differiscono su
+    Windows anche quando le due sono la stessa cosa. Un confronto fra stringhe
+    allarmerebbe a ogni installazione sana.
+
+    Tace se Claude Code non c'e', o se non ha una copia di StarkEno: chi usa solo Codex
+    non deve vedere avvisi su un harness che non usa. Come `trova_plugin_codex`, guarda
+    SOLO il layout di cache osservato, e se non lo riconosce non trova niente invece di
+    inventarsi una risposta.
+    """
+    spedito = Path(plugin_root) / "plugin-claude-code" / "hooks" / "hooks.json"
+    try:
+        riferimento = json.loads(spedito.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return Controllo(
+            "plugin_claude_aggiornato", "errore",
+            "bundle Claude Code del pacchetto illeggibile",
+        )
+
+    cache = Path(claude_root) / "plugins" / "cache"
+    divergenti = []
+    if cache.is_dir():
+        for copia in cache.glob("*/starkeno/*/hooks/hooks.json"):
+            try:
+                installato = json.loads(copia.read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError):
+                divergenti.append(str(copia))
+                continue
+            if installato != riferimento:
+                divergenti.append(str(copia))
+
+    if divergenti:
+        return Controllo(
+            "plugin_claude_aggiornato", "attenzione",
+            "la copia installata del plugin esegue codice diverso dal pacchetto: "
+            "aggiornala da Claude Code",
+            {"copie_divergenti": divergenti},
+        )
+    return Controllo(
+        "plugin_claude_aggiornato", "ok", "copia installata allineata al pacchetto",
+    )
+
+
 # Dove ogni harness lascia traccia di essere installato, relativo alla home.
 SEGNI_HARNESS = {
     "codex": ".codex",
@@ -303,4 +356,5 @@ def esegui_diagnosi(
         _controllo_python(), _controllo_dipendenze(), _controllo_bundle(plugin_root),
         _controllo_round_trip(), database, schema, plugin, trust,
         _controllo_harness(Path(home)), raccolta,
+        confronta_plugin_claude(Path(home) / ".claude", plugin_root),
     )

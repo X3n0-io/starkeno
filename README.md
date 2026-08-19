@@ -36,9 +36,23 @@ indistinguishable from a defect.
 
 ## Install
 
-You need Python 3.12, 3.13 or 3.14 on your `PATH`. From the project root:
+StarkEno is **two separate things, and you need both**:
+
+1. the **Python package**, which does all the work;
+2. the **plugin** for your agent, which is only a manifest saying when to call it.
+
+Installing the plugin does **not** install the package. If the package is missing, the
+hooks still run, fail to import it, and exit `0` in silence — by design, because a hook
+must never break your turn. The result is an agent that looks instrumented and collects
+nothing, with no error anywhere. `starkeno doctor` is what tells you; run it after
+installing.
+
+You need Python 3.12, 3.13 or 3.14 on your `PATH`. There is no PyPI release yet, so
+install from a clone:
 
 ```bash
+git clone https://github.com/X3n0-io/starkeno.git
+cd starkeno
 pip install .
 ```
 
@@ -105,6 +119,38 @@ ones. That is not tidiness, it is measurement:
 model to show a single short line in the next useful message. It welcomes you when the
 database is missing or empty, and stays quiet once you have history. It creates no
 database and applies no migrations.
+
+## Updating
+
+**Correcting the code does not update what runs on your machine.** Agents install a
+plugin by *copying* it into their own cache, and that copy — not your working tree — is
+what executes. Fixing a hook in the repository, or even pulling a new version, changes
+nothing until the agent re-copies it.
+
+This is the single most important thing to know about running StarkEno, because it fails
+silently in both directions: the repository looks fixed, the machine keeps running the
+old code, and hooks are not allowed to complain.
+
+To update:
+
+```bash
+git pull
+pip install .
+```
+
+then update the plugin **through the agent itself** — its plugin command or panel — so it
+refreshes its copy. Do not delete the cached copy by hand: the agent records the install
+path, and removing the directory uninstalls the plugin rather than refreshing it.
+
+Then verify:
+
+```bash
+starkeno doctor
+```
+
+`plugin_claude_aggiornato` compares the installed copy against the package you have and
+says `attenzione` when they differ. It is the check that turns "I fixed it days ago" into
+something you can see.
 
 ## The bill
 
@@ -240,7 +286,42 @@ configuration with `/hooks` in the Codex CLI.
 > unrelated folder will not find the package unless it is installed; the entry points
 > include the bootstrap needed to work from the project folder opened in Codex.
 
+> The Claude Code hooks use `python -P -m`. The `-P` is not decoration: without it the
+> first entry of `sys.path` is the **session's working directory**, which takes
+> precedence over the installed package. Anyone working inside a checkout of StarkEno
+> would run *that* checkout's code instead of the installed one. Measured on 2026-08-19:
+> a session whose working directory was an older checkout collected every call correctly
+> and wrote them to that checkout's data path, so `report`, `doctor` and `consuntivo` saw
+> none of them — with no error and nothing on stderr, because a hook is not allowed to
+> produce either.
+
 ## Checking that it is collecting
+
+Start here:
+
+```bash
+starkeno doctor
+```
+
+Four of its checks answer four different questions, and each one has been the thing that
+was actually wrong at least once:
+
+| Check | Says |
+|---|---|
+| `raccolta` | whether anything has been collected recently at all |
+| `plugin_claude_aggiornato` | whether the installed plugin copy matches your package |
+| `inventario_storici` | whether some *other* database has newer rows than the canonical one — the signature of collection being written to the wrong file |
+| `schema` | whether the database has been migrated to the current revision |
+
+A misrouted collection does not look broken. The hook succeeds, the rows are complete,
+and they land in a file nothing else reads. `inventario_storici` exists because that
+happened, and went unnoticed for four days.
+
+**Calls are grouped by `project`, which is the last segment of the working directory the
+agent session was started in** — not the repository you happen to be editing. If you open
+your agent in one folder and work on code in another, the rows carry the first one.
+
+For the raw numbers:
 
 ```bash
 python -c "
@@ -272,6 +353,23 @@ for r in con.execute('SELECT project, COUNT(*), SUM(tokens_used) FROM agent_acti
 ```bash
 python -m pytest -q
 ```
+
+## What is not done yet
+
+Stated plainly, because a README that hides its gaps costs more than one that names them.
+
+- **No release to install from.** There is no PyPI package: you install from a clone.
+  The last tagged release is `0.2.0`; everything since is unreleased.
+- **The comparison has never been checked against real data.** `starkeno consuntivo` and
+  the three `blueprint_run_*` tools are covered by tests, but every one of those tests
+  runs on synthetic fixtures. Nothing has yet compared an estimate with a real execution
+  end to end. Until that happens, treat the predictive half as unproven.
+- **The bill reports, it does not forecast.** There is no spending cap and no alerting on
+  one: the page tells you what a run cost, never that a run is about to cost too much.
+- **Only two agents are measured.** Codex and Claude Code. Antigravity is recognised but
+  cannot be measured, because its transcript carries no token counts, and it reports zero
+  calls rather than a guess.
+- **Thresholds are reasoned, not measured** — see the note at the end of this file.
 
 ## Licence
 
