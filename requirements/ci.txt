@@ -254,7 +254,7 @@ uvicorn==0.52.1
     #   starkeno (pyproject.toml)
 watchfiles==1.2.0
     # via uvicorn
-websockets==16.1.1
+websockets==17.0.1
     # via
     #   starkeno (pyproject.toml)
     #   uvicorn

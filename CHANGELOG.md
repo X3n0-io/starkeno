@@ -25,6 +25,9 @@ usa il versionamento semantico.
 
 ### Changed
 
+- Dipendenze allineate: `actions/checkout` 4 -> 7, `actions/setup-python` 5 -> 7,
+  `websockets` 16.1.1 -> 17.0.1 con il vincolo in `pyproject.toml` alzato a `<18`.
+
 - Il README apre con la previsione invece che con il 60% di rilettura: quel numero è noto
   a chiunque segua il tema, mentre la previsione è l'unica cosa che il progetto tenta da
   solo. Il 60% resta, come spiegazione dello scarto.
