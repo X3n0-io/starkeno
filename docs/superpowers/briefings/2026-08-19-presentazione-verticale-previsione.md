@@ -28,6 +28,29 @@ strumento di previsione che nasconde il proprio errore non vale niente.**
 
 Il 60% resta, come spiegazione del meccanismo. Non è più il titolo.
 
+## La correzione di mira, arrivata tardi e che conta
+
+Il verticale chiesto dall'utente era **la simulazione**, e per mezza sessione l'ho
+trattata come sinonimo di «previsione», vendendone il *fallimento* — lo scarto 9x — senza
+accorgermi che **il simulatore funziona già, da riga di comando, oggi**.
+
+Stava sepolto sotto «Preflight sperimentale» in fondo al README, e il riquadro sul «non
+spedito» faceva credere che servisse il server MCP anche per lui. Era un difetto di
+**accuratezza** prima che di presentazione: non è spedito il *confronto* fra stima ed
+esecuzione vera, non la stima.
+
+E guardando finalmente il suo output, la cosa che avevo mancato: **il simulatore non dà un
+numero.** Dà quattro scenari (`optimistic`/`typical`/`prudent`/`maximum`), dichiara la
+confidenza, e tagga ogni stima con la provenienza — `declared`, `default`, `inferred` —
+nominando i prezzi che non ha saputo valorizzare invece di metterli a zero. È lo stesso
+principio del conto applicato alla metà predittiva, ed era invisibile.
+
+Il 331.500 si chiarisce da solo una volta mostrato: è lo scenario `maximum`. Il caso
+peggiore che il simulatore sapeva immaginare era ancora nove volte sotto.
+
+Adesso i due README aprono con **due comandi che chiunque può lanciare**, su una fixture
+già nel repository, senza plugin né hook.
+
 ## La mossa che vale più di tutte
 
 **La domanda aperta è l'invito.** Con n=1 non si distingue una costante moltiplicativa da
@@ -85,6 +108,12 @@ mascherare.
   `git diff --check`. Prima di pubblicare, anche i due scanner.
 
 ## Cosa ha insegnato questa sessione
+
+**Non vendere il fallimento di una cosa senza prima averla eseguita.** Avevo costruito
+un'intera presentazione attorno allo scarto 9x del simulatore senza mai lanciarlo. Quando
+finalmente l'ho fatto — due comandi — ho trovato che gira senza niente installato e che il
+suo output porta banda, confidenza e provenienza. Avevo raccontato bene la parte sbagliata.
+
 
 Due difetti trovati **eseguendo**, ancora: la chiave AWS piantata che passava, e lo script
 delle fixture che ignora `--help` ed esegue.
