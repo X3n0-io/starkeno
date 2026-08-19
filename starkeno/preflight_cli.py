@@ -38,6 +38,10 @@ def _parser() -> argparse.ArgumentParser:
     parser = _ArgumentParser(prog="starkeno preflight")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    esempio = commands.add_parser(
+        "esempio", help="scrive un Blueprint d'esempio da cui partire")
+    esempio.add_argument("--output", type=Path, required=True)
+
     draft = commands.add_parser("draft", help="valida e normalizza un Draft Blueprint")
     _add_input_arguments(draft)
     draft.add_argument("--format", choices=("json", "yaml"), required=True)
@@ -60,6 +64,27 @@ def _add_input_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--input-format", choices=("json", "yaml"))
 
 
+def _run_esempio(arguments: argparse.Namespace) -> int:
+    """Scrive su disco il Blueprint d'esempio spedito col pacchetto.
+
+    Rifiuta di sovrascrivere: chi rilancia il comando del README dopo aver modificato
+    l'esempio perderebbe il proprio lavoro senza un segnale, ed e' la forma di difetto
+    che questo progetto continua a pagare.
+    """
+    from starkeno.preflight_esempio import leggi_esempio
+
+    destinazione: Path = arguments.output
+    if destinazione.exists():
+        raise _UsageError(
+            "%s esiste gia': indica un altro percorso, oppure cancellalo tu"
+            % destinazione
+        )
+    destinazione.parent.mkdir(parents=True, exist_ok=True)
+    destinazione.write_text(leggi_esempio(), encoding="utf-8")
+    print("Esempio scritto: %s" % destinazione)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Esegue la CLI senza propagare le normali uscite di argparse al chiamante."""
     try:
@@ -74,6 +99,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     try:
+        if arguments.command == "esempio":
+            return _run_esempio(arguments)
         if arguments.command == "draft":
             return _run_draft(arguments)
         return _run_analyze(arguments)

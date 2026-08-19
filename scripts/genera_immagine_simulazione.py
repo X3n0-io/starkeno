@@ -4,9 +4,9 @@ E' la meta' del progetto su cui si regge la presentazione, ed era l'unica senza
 un'immagine: il lettore doveva credere sulla parola che il simulatore producesse
 qualcosa.
 
-La sorgente e' `tests/fixtures/preflight/medium.json`, una fixture gia' nel repository:
-nessun dato di nessuno, e il lettore puo' riprodurre esattamente questa schermata con i
-due comandi che il README gli mostra.
+La sorgente e' il Blueprint d'esempio SPEDITO COL PACCHETTO, lo stesso che il README
+fa scrivere con `preflight esempio`: cosi' il lettore riproduce esattamente questa
+schermata, e non una simile. Se le due sorgenti divergessero, l'immagine mentirebbe.
 
 Serve Chrome o Edge. Non gira in CI di proposito, per lo stesso motivo dell'altra.
 """
@@ -22,7 +22,7 @@ from typing import Sequence
 from genera_immagine_conto import _browser
 
 RADICE = Path(__file__).resolve().parent.parent
-BLUEPRINT = RADICE / "tests" / "fixtures" / "preflight" / "medium.json"
+BLUEPRINT = RADICE / "starkeno" / "esempi" / "catalogo.json"
 DESTINAZIONE = RADICE / "docs" / "immagini" / "simulazione.png"
 
 # Misurate: taglia dopo «Provenance delle stime», che e' la riga che distingue questo

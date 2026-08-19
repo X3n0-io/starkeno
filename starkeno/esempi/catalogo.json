@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0",
+  "revision": 2,
+  "parent_revision": 1,
+  "confirmed": false,
+  "goal": {
+    "id": "goal-catalog",
+    "description": "Preparare una scheda sintetica da un catalogo fittizio.",
+    "deliverable": "Scheda validata con titolo e descrizione.",
+    "success_criteria": ["Il gate conferma la presenza di titolo e descrizione."]
+  },
+  "agents": [
+    {
+      "id": "editor",
+      "responsibility": "Redige e corregge la scheda.",
+      "inputs": ["Record sintetico"],
+      "output": "Scheda strutturata.",
+      "model_id": "synthetic-model",
+      "tool_ids": ["catalog-reader"],
+      "skill_ids": []
+    }
+  ],
+  "tools": [
+    {
+      "id": "catalog-reader",
+      "name": "Synthetic catalog reader",
+      "description": "Restituisce un record fittizio incorporato nella fixture."
+    }
+  ],
+  "skills": [],
+  "contexts": [],
+  "nodes": [
+    {
+      "id": "compose",
+      "kind": "llm",
+      "description": "Compone la scheda sintetica.",
+      "agent_id": "editor",
+      "model_id": "synthetic-model",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 20, "typical": 30, "max": 40, "provenance": "declared", "confidence": "high", "reason": "Istruzioni sintetiche stabili."},
+        "dynamic_context": {"min": 20, "typical": 50, "max": 80, "provenance": "declared", "confidence": "medium", "reason": "Record sintetico delimitato."},
+        "output": {"min": 40, "typical": 70, "max": 120, "provenance": "inferred", "confidence": "medium", "reason": "Scheda di due campi."},
+        "cacheable_fraction": {"min": 0.1, "typical": 0.3, "max": 0.5, "provenance": "inferred", "confidence": "low", "reason": "Quota sintetica."},
+        "latency_ms": {"min": 40, "typical": 80, "max": 160, "provenance": "default", "confidence": "low", "reason": "Valore sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.2, "max": 0.4, "provenance": "declared", "confidence": "medium", "reason": "Retry controllato del corpus."},
+        "max_retries": 2
+      }
+    },
+    {
+      "id": "read-record",
+      "kind": "tool",
+      "description": "Legge il record fittizio.",
+      "agent_id": "editor",
+      "model_id": null,
+      "tool_id": "catalog-reader",
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Operazione tool senza prompt LLM."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun contesto LLM."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Token LLM non applicabili."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Cache LLM non applicabile."},
+        "latency_ms": {"min": 5, "typical": 10, "max": 20, "provenance": "declared", "confidence": "high", "reason": "Durata sintetica del tool."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry del tool."},
+        "max_retries": 0,
+        "fixed_tool_cost": {"min": "0", "typical": "0", "max": "0", "currency": "USD", "provenance": "declared", "confidence": "high", "reason": "Tool locale sintetico esplicitamente gratuito."}
+      }
+    },
+    {
+      "id": "validate",
+      "kind": "gate",
+      "description": "Verifica titolo e descrizione.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Gate deterministico."},
+        "latency_ms": {"min": 1, "typical": 2, "max": 4, "provenance": "declared", "confidence": "high", "reason": "Controllo sintetico."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Retry espresso dal grafo."},
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "approved",
+      "kind": "human",
+      "description": "Approva la scheda valida.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun prompt."},
+        "dynamic_context": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun contesto."},
+        "output": {"min": 0, "typical": 0, "max": 0, "provenance": "declared", "confidence": "high", "reason": "Nessun output LLM."},
+        "cacheable_fraction": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessuna cache."},
+        "latency_ms": {"min": 20, "typical": 40, "max": 80, "provenance": "declared", "confidence": "medium", "reason": "Approvazione sintetica."},
+        "retry_probability": {"min": 0.0, "typical": 0.0, "max": 0.0, "provenance": "declared", "confidence": "high", "reason": "Nessun retry."},
+        "max_retries": 0
+      }
+    }
+  ],
+  "transitions": [
+    {"source": "read-record", "target": "compose", "activation": "always", "probability": null, "parallel_group": null, "max_traversals": null},
+    {"source": "compose", "target": "validate", "activation": "always", "probability": null, "parallel_group": null, "max_traversals": null},
+    {"source": "validate", "target": "approved", "activation": "choice", "probability": {"min": 0.7, "typical": 0.8, "max": 0.9, "provenance": "declared", "confidence": "medium", "reason": "Esito sintetico del gate."}, "parallel_group": null, "max_traversals": null},
+    {"source": "validate", "target": "compose", "activation": "choice", "probability": {"min": 0.1, "typical": 0.2, "max": 0.3, "provenance": "declared", "confidence": "medium", "reason": "Revisione sintetica controllata."}, "parallel_group": null, "max_traversals": 1}
+  ],
+  "models": [
+    {
+      "id": "synthetic-model",
+      "provider": "synthetic",
+      "name": "Synthetic model profile",
+      "input_price_per_million": null,
+      "output_price_per_million": null,
+      "cache_read_price_per_million": null,
+      "cache_write_price_per_million": null,
+      "currency": "USD",
+      "price_verified_at": null,
+      "source": "synthetic fixture; prices intentionally unknown"
+    }
+  ],
+  "entry_node_ids": ["read-record"]
+}

@@ -50,13 +50,18 @@ question.
 
 ## Try the simulation, right now
 
-Two commands, a fixture that already ships in this repository, **nothing to install
-beyond the package**: no plugin, no hooks, no MCP server.
+Three commands, **nothing to install beyond the package**: no plugin, no hooks, no MCP
+server, and no network. The example Blueprint travels inside the package, so this works
+even if you never cloned the repository.
 
 ```bash
-python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json --format yaml --output bozza.yaml
+python -m starkeno preflight esempio --output esempio.json
+python -m starkeno preflight draft --input esempio.json --format yaml --output bozza.yaml
 python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 --format html --output report.html
 ```
+
+It is the same Blueprint the image below is generated from: you will see that screen, not
+a similar one. Open it and edit it — that is where describing your own starts.
 
 ![Preflight report: four scenarios with tokens, LLM calls, tool calls and latency; overall confidence and the provenance of every estimate](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png)
 

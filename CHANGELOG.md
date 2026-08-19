@@ -7,6 +7,12 @@ usa il versionamento semantico.
 
 ## [0.4.0] - 2026-08-19
 
+### Added
+- **`starkeno preflight esempio`**: scrive su disco il Blueprint d'esempio spedito col
+  pacchetto. I tre comandi in cima al README puntavano a `tests/fixtures/`, che chi
+  installa con `pip` non ha: la porta d'ingresso della metà predittiva falliva per
+  chiunque non avesse clonato il repository. Rifiuta di sovrascrivere un file esistente.
+
 ### Removed
 
 - **La dipendenza `anthropic`**, mai importata da nessun file del repository. Era stata

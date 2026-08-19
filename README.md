@@ -48,13 +48,18 @@ onesto del progetto: una misura, un meccanismo noto, e una domanda senza rispost
 
 ## Prova la simulazione, adesso
 
-Due comandi, una fixture che è già nel repository, **niente da installare oltre al
-pacchetto**: né plugin, né hook, né server MCP.
+Tre comandi, **niente da installare oltre al pacchetto**: né plugin, né hook, né server
+MCP, e nessuna rete. Il Blueprint d'esempio viaggia dentro il pacchetto, quindi funziona
+anche se non hai clonato il repository.
 
 ```bash
-python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json --format yaml --output bozza.yaml
+python -m starkeno preflight esempio --output esempio.json
+python -m starkeno preflight draft --input esempio.json --format yaml --output bozza.yaml
 python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 --format html --output report.html
 ```
+
+È lo stesso Blueprint da cui è generata l'immagine qui sotto: vedrai quella schermata,
+non una simile. Aprilo e modificalo — è da lì che si parte per descrivere il proprio.
 
 ![Report Preflight: quattro scenari con token, chiamate LLM, tool e latenza; confidenza complessiva e provenienza di ogni stima](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png)
 
