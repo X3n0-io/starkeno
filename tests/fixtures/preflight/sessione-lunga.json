@@ -1,0 +1,281 @@
+{
+  "schema_version": "1.0",
+  "revision": 1,
+  "parent_revision": null,
+  "confirmed": false,
+  "goal": {
+    "id": "goal-sessione",
+    "description": "Una sessione lunga di lavoro su codice con un agente.",
+    "deliverable": "Modifiche al repository, documentate e verificate.",
+    "success_criteria": [
+      "La suite passa",
+      "Le modifiche sono pubblicate"
+    ]
+  },
+  "agents": [
+    {
+      "id": "operatore",
+      "responsibility": "Modifica il codice e verifica.",
+      "inputs": [
+        "Richiesta dell'utente"
+      ],
+      "output": "Modifiche verificate.",
+      "model_id": "principale",
+      "tool_ids": [],
+      "skill_ids": []
+    }
+  ],
+  "tools": [],
+  "skills": [],
+  "contexts": [
+    {
+      "id": "materiale",
+      "description": "File e output di comando del turno.",
+      "source": "declared"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "turno",
+      "kind": "llm",
+      "description": "Un turno dell'agente: legge il necessario, produce una modifica.",
+      "agent_id": "operatore",
+      "model_id": "principale",
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [
+        "materiale"
+      ],
+      "budget": {
+        "instructions": {
+          "min": 400,
+          "typical": 800,
+          "max": 1500,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Istruzioni di sistema e regole del progetto."
+        },
+        "dynamic_context": {
+          "min": 2000,
+          "typical": 8000,
+          "max": 20000,
+          "provenance": "declared",
+          "confidence": "medium",
+          "reason": "I file e l'output di comando che il turno usa davvero."
+        },
+        "output": {
+          "min": 200,
+          "typical": 950,
+          "max": 3000,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Media osservata su lavoro simile."
+        },
+        "cacheable_fraction": {
+          "min": 0.5,
+          "typical": 0.8,
+          "max": 0.95,
+          "provenance": "declared",
+          "confidence": "medium",
+          "reason": "Istruzioni e file stabili."
+        },
+        "latency_ms": {
+          "min": 1000,
+          "typical": 6000,
+          "max": 30000,
+          "provenance": "default",
+          "confidence": "low",
+          "reason": "Profilo locale."
+        },
+        "retry_probability": {
+          "min": 0.0,
+          "typical": 0.05,
+          "max": 0.2,
+          "provenance": "declared",
+          "confidence": "medium",
+          "reason": "Comandi che falliscono e si ritentano."
+        },
+        "max_retries": 2
+      }
+    },
+    {
+      "id": "cancello",
+      "kind": "gate",
+      "description": "Il lavoro e' finito?",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun prompt."
+        },
+        "dynamic_context": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun contesto."
+        },
+        "output": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun output LLM."
+        },
+        "cacheable_fraction": {
+          "min": 0.0,
+          "typical": 0.0,
+          "max": 0.0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessuna cache."
+        },
+        "latency_ms": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Istantaneo."
+        },
+        "retry_probability": {
+          "min": 0.0,
+          "typical": 0.0,
+          "max": 0.0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun retry."
+        },
+        "max_retries": 0
+      }
+    },
+    {
+      "id": "fine",
+      "kind": "human",
+      "description": "Chiusura della sessione.",
+      "agent_id": null,
+      "model_id": null,
+      "tool_id": null,
+      "skill_ids": [],
+      "context_ids": [],
+      "budget": {
+        "instructions": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun prompt."
+        },
+        "dynamic_context": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun contesto."
+        },
+        "output": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun output LLM."
+        },
+        "cacheable_fraction": {
+          "min": 0.0,
+          "typical": 0.0,
+          "max": 0.0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessuna cache."
+        },
+        "latency_ms": {
+          "min": 0,
+          "typical": 0,
+          "max": 0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Istantaneo."
+        },
+        "retry_probability": {
+          "min": 0.0,
+          "typical": 0.0,
+          "max": 0.0,
+          "provenance": "declared",
+          "confidence": "high",
+          "reason": "Nessun retry."
+        },
+        "max_retries": 0
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "source": "turno",
+      "target": "cancello",
+      "activation": "always",
+      "probability": null,
+      "parallel_group": null,
+      "max_traversals": null
+    },
+    {
+      "source": "cancello",
+      "target": "turno",
+      "activation": "choice",
+      "probability": {
+        "min": 0.95,
+        "typical": 0.99,
+        "max": 1.0,
+        "provenance": "declared",
+        "confidence": "medium",
+        "reason": "La sessione prosegue."
+      },
+      "parallel_group": null,
+      "max_traversals": 585
+    },
+    {
+      "source": "cancello",
+      "target": "fine",
+      "activation": "choice",
+      "probability": {
+        "min": 0.0,
+        "typical": 0.01,
+        "max": 0.05,
+        "provenance": "declared",
+        "confidence": "medium",
+        "reason": "La sessione si chiude."
+      },
+      "parallel_group": null,
+      "max_traversals": null
+    }
+  ],
+  "models": [
+    {
+      "id": "principale",
+      "provider": "example",
+      "name": "Modello principale",
+      "input_price_per_million": null,
+      "output_price_per_million": null,
+      "cache_read_price_per_million": null,
+      "cache_write_price_per_million": null,
+      "currency": "USD",
+      "price_verified_at": null,
+      "source": null
+    }
+  ],
+  "entry_node_ids": [
+    "turno"
+  ]
+}

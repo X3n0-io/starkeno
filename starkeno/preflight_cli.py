@@ -110,6 +110,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, UnicodeError):
         _print_user_error(_UsageError("operazione I/O locale non riuscita"))
         return 2
+    except RecursionError:
+        # Il lookahead di `preflight_simulate` ricorre a ogni passaggio del ciclo, e
+        # oltre un certo numero di traversate sfonda lo stack. E' un limite noto: va
+        # detto, non presentato come un errore interno. Misurato il 19/08/2026: regge
+        # fino a 150 passaggi, si rompe fra 150 e 200.
+        _print_user_error(_UsageError(
+            "il Blueprint contiene un ciclo troppo lungo per il simulatore "
+            "(`max_traversals` oltre circa 150). Abbassa il limite del ciclo, oppure "
+            "descrivi il lavoro con meno passaggi ripetuti."
+        ))
+        return 2
     except Exception:
         print("Errore interno durante preflight.", file=sys.stderr)
         return 1

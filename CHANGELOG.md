@@ -5,6 +5,21 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+### Added
+
+- **La seconda misura dello scarto**, e con due punti l'ipotesi della costante
+  moltiplicativa cade: 9,15x contro 3,1x. Registrata in `docs/lo-scarto-9x.md` con i
+  propri limiti dichiarati — non è un consuntivo attribuito ai nodi, e il Blueprint è
+  stato scritto dopo.
+- `tests/fixtures/preflight/sessione-lunga.json`, il Blueprint che descrive una sessione
+  lunga di lavoro con un agente.
+
+### Fixed
+
+- **Un ciclo lungo non produce più «Errore interno».** Oltre circa 150 passaggi il
+  lookahead ricorsivo del simulatore sfonda lo stack; ora il limite si dichiara, con il
+  rimedio, ed esce 2 invece di 1. Il limite resta: è la ricorsione a doverlo perdere.
+
 ## [0.4.0] - 2026-08-19
 
 ### Added

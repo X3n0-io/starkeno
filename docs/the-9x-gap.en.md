@@ -1,6 +1,6 @@
 # The 9x gap
 
-*Last updated: 2026-08-19. Measurements: 1.*
+*Last updated: 2026-08-19. Measurements: 2.*
 
 *Read this in [Italian](lo-scarto-9x.md) — Italian is the project's language.*
 
@@ -119,8 +119,46 @@ Every measurement received goes into the table below, credited to whoever sent i
 | # | Date | Harness | Shape of the work | Predicted | Observed | Gap | From |
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-08-18 | Codex | 7 nodes, linear, no retries | 331,500 | 3,035,535 | **9.15x** | the author |
+| 2 | 2026-08-19 | Claude Code | long session, 150 turns, loop with retries | 11,098,500 | 34,303,668 | **3.1x** | the author |
 
-One row. That is the point of this page.
+## What two points say
+
+Two measurements do not make a curve, but they are **enough to rule something out**:
+9.15x and 3.1x are not the same number. The gap is **not a multiplicative constant**, and
+hypothesis A — the one that would have made the fix a single number — is the less likely
+of the two.
+
+Which means the work ahead is the large one: finding out **what** it depends on. The two
+measurements differ in everything — harness, shape, presence of retries, length — so they
+isolate no variable yet.
+
+Other numbers from measurement 2, worth more than the ratio itself:
+
+- **Observed re-reading is 97.0% of the spend.** Not 60%: in a long session the
+  accumulated context eats everything. The 60% was a week's average, mixing short
+  sessions with long ones.
+- **On re-reading alone the gap is 5.4x** (33,273,660 observed against 6,168,350
+  estimated), while on the total it is 3.1x. The simulator is *most* wrong precisely on
+  the line item that weighs most.
+- **Against the `typical` scenario the gap is 44x.** Anyone reading the typical instead of
+  the maximum would be off by nearly two orders of magnitude.
+
+### What this measurement is not, said before anyone asks
+
+- **It is not a node-attributed `consuntivo`.** It compares totals: no
+  `blueprint_run_node` markers, no attribution. Measurement 1 is the stronger of the two.
+- **The Blueprint was written afterwards**, describing the shape of the session. The
+  per-turn budgets are what a planner would write — the material one turn uses — not the
+  accumulated context, which is the consequence the simulator fails to model. It remains
+  an after-the-fact description, and someone redoing it with different numbers gets
+  different ratios.
+- **The window contained two sessions.** A real `consuntivo` would have refused to
+  attribute, and would have been right.
+
+What is needed is a measurement done properly — Blueprint written **first**, markers on
+the nodes — and done by someone who is not the author.
+
+
 
 ---
 

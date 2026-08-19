@@ -1,6 +1,6 @@
 # Lo scarto 9x
 
-*Ultimo aggiornamento: 19/08/2026. Misure: 1.*
+*Ultimo aggiornamento: 19/08/2026. Misure: 2.*
 
 *Read this in [English](the-9x-gap.en.md).*
 
@@ -136,8 +136,44 @@ Ogni misura ricevuta finisce nella tabella qui sotto, con il credito a chi l'ha 
 | # | Data | Harness | Forma del lavoro | Previsto | Osservato | Scarto | Da |
 |---|---|---|---|---|---|---|---|
 | 1 | 18/08/2026 | Codex | 7 nodi, lineare, senza ritentativi | 331.500 | 3.035.535 | **9,15x** | l'autore |
+| 2 | 19/08/2026 | Claude Code | sessione lunga, 150 turni, ciclo con ritentativi | 11.098.500 | 34.303.668 | **3,1x** | l'autore |
 
-Una riga. È il punto della pagina.
+## Cosa dicono due punti
+
+Due misure non fanno una curva, ma **bastano a escludere qualcosa**: 9,15x e 3,1x non
+sono lo stesso numero. Lo scarto **non è una costante moltiplicativa**, e l'ipotesi A —
+quella che avrebbe reso la correzione un numero solo — è la meno probabile delle due.
+
+Il che significa che il lavoro davanti è quello grande: capire **da cosa** dipende. Le
+due misure differiscono in tutto — harness, forma, presenza di ritentativi, lunghezza —
+quindi non isolano ancora nessuna variabile.
+
+Altri numeri della misura 2, che valgono più del rapporto:
+
+- **La rilettura osservata è il 97,0% della spesa.** Non il 60%: in una sessione lunga il
+  contesto accumulato divora tutto. Il 60% era la media di una settimana, e mescolava
+  sessioni corte e lunghe.
+- **Sulla sola rilettura lo scarto è 5,4x** (33.273.660 osservati contro 6.168.350
+  stimati), mentre sul totale è 3,1x. Il simulatore sbaglia *di più* proprio sulla voce
+  che pesa di più.
+- **Rispetto allo scenario `typical` lo scarto è 44x.** Chi guardasse il tipico invece
+  del massimo sbaglierebbe di quasi due ordini di grandezza.
+
+### Cosa NON è questa misura, detto prima che lo chieda qualcuno
+
+- **Non è un `consuntivo` attribuito ai nodi.** È un confronto fra totali: nessun
+  marcatore `blueprint_run_node`, nessuna attribuzione. La misura 1 è più forte.
+- **Il Blueprint è stato scritto dopo**, descrivendo la forma della sessione. I budget per
+  turno sono quelli che scriverebbe chi pianifica — il materiale che un turno usa — non
+  il contesto accumulato, che è la conseguenza che il simulatore non modella. Ma resta una
+  descrizione a posteriori, e chi la rifà con numeri diversi ottiene rapporti diversi.
+- **La finestra conteneva due sessioni.** Un `consuntivo` vero si sarebbe rifiutato di
+  attribuire, e avrebbe avuto ragione.
+
+Serve una misura fatta come si deve — Blueprint scritto **prima**, marcatori sui nodi — e
+serve da qualcuno che non sia l'autore.
+
+
 
 ---
 
