@@ -48,7 +48,8 @@ def test_il_readme_non_promette_gli_harness_non_supportati():
         if nome in testo:
             posizione = testo.index(nome)
             contesto = testo[max(0, posizione - 200):posizione + 200].lower()
-            assert "not yet" in contesto or "not supported" in contesto, (
+            # Il README e' in italiano dal 19/08/2026: i marcatori sono quelli.
+            assert "non ancora" in contesto or "non supportat" in contesto, (
                 "%s compare senza dire che non e' supportato" % nome
             )
 

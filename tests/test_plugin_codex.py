@@ -98,15 +98,19 @@ def test_configurazione_runtime_non_dipende_da_variabili_claude():
 
 
 def test_readme_documenta_il_comportamento_reale_degli_hook():
-    """Il README e' in inglese e nomina Claude Code.
+    """Il README e' in ITALIANO e nomina Claude Code.
 
     Prima vietava quel nome, ed era giusto: il plugin non esisteva. Il divieto e' caduto
     quando Claude Code e' diventato installabile e la raccolta e' stata verificata su
     turni veri.
+
+    La lingua e' passata dall'inglese all'italiano il 19/08/2026, per coerenza con il
+    conto: il prodotto parlava italiano e la vetrina inglese, e chi installava trovava
+    un'interfaccia in una lingua che il README non aveva mai usato.
     """
     readme = (RADICE / "README.md").read_text(encoding="utf-8")
 
-    assert "Phase 2" in readme
+    assert "Fase 2" in readme
     assert "starkeno report" in readme
     assert "starkeno doctor" in readme
     assert "/plugins" in readme and "/hooks" in readme
@@ -120,7 +124,7 @@ def test_il_readme_distingue_gli_hook_dei_due_harness():
     Code e' sincrono perche' il processo staccato non sopravvive."""
     readme = (RADICE / "README.md").read_text(encoding="utf-8")
 
-    assert "synchronous" in readme.lower()
+    assert "sincron" in readme.lower()
     assert "SessionEnd" in readme, (
         "senza SessionEnd l'ultimo turno di ogni sessione Claude Code si perde"
     )

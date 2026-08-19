@@ -253,9 +253,15 @@ def test_la_skill_dichiara_i_momenti_in_cui_va_invocata():
     Le frasi sono quelle con cui una persona chiede davvero questa cosa."""
     descrizione = _frontmatter().lower()
 
+    # Il progetto e' in italiano dal 19/08/2026, ma il `description` resta BILINGUE di
+    # proposito: e' la superficie con cui l'agente decide se invocare la skill, e una
+    # domanda posta in inglese deve continuare a farla partire. Le due liste sono
+    # entrambe sorvegliate perche' la tentazione, traducendo, e' cancellare l'altra.
     for innesco in ("how much", "cost", "wasting", "bill", "expensive"):
         assert innesco in descrizione, "il description non innesca su %r" % innesco
-    assert "collecting nothing" in descrizione, (
+    for innesco in ("quanto e' costato", "sprecando", "conto", "caro"):
+        assert innesco in descrizione, "il description non innesca su %r" % innesco
+    assert "non sta raccogliendo niente" in descrizione, (
         "non copre il caso in cui StarkEno sembra installato e non raccoglie: e' il "
         "fallimento silenzioso che l'agente deve saper nominare"
     )
@@ -272,5 +278,5 @@ def test_la_skill_vieta_di_inventare_numeri_e_di_usare_la_rete():
     progetto fa a chi lo installa."""
     corpo = SKILL.read_text(encoding="utf-8").lower()
 
-    assert "never invent" in corpo, "non vieta di inventare numeri"
-    assert "network" in corpo, "non dice che non si esce dalla macchina"
+    assert "non inventare mai" in corpo, "non vieta di inventare numeri"
+    assert "chiamata di rete" in corpo, "non dice che non si esce dalla macchina"

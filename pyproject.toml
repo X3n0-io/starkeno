@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "starkeno"
 dynamic = ["version"]
-description = "Local observability for coding-agent workflows"
+description = "Osservabilita' locale per il lavoro con gli agenti di codice"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
 license = { file = "LICENSE" }
