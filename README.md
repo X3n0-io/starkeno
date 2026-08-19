@@ -394,7 +394,7 @@ for r in con.execute('SELECT project, COUNT(*), SUM(tokens_used) FROM agent_acti
 | `starkeno/hook_avvia_ingestione.py` | Non-blocking launcher, for Codex |
 | `starkeno/hook_ingestione.py` | Idempotent end-of-turn ingestion |
 | `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook; states one measured fact after a break |
-| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when. Read by Claude Code and Codex alike |
+| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when. Loaded by Claude Code; Codex consumes plugin skills in the same format, but this one has not been observed being invoked there yet |
 | `starkeno/conto.py` | Pure model of the bill |
 | `starkeno/consuntivo.py` | Pure model of estimate against execution |
 | `starkeno/report_conto.py` | Static HTML page generator |
@@ -422,6 +422,10 @@ Stated plainly, because a README that hides its gaps costs more than one that na
   end to end. Until that happens, treat the predictive half as unproven.
 - **The bill reports, it does not forecast.** There is no spending cap and no alerting on
   one: the page tells you what a run cost, never that a run is about to cost too much.
+- **The skill is verified on Claude Code only.** Codex stores plugin skills in the same
+  format and the same layout, so it should pick this one up — but "should" is not a
+  measurement, and it has not been watched invoking it. Collection itself is verified on
+  both.
 - **Only two agents are measured.** Codex and Claude Code. Antigravity is recognised but
   cannot be measured, because its transcript carries no token counts, and it reports zero
   calls rather than a guess.
