@@ -1,5 +1,7 @@
 # StarkEno
 
+*Read this in [English](README.en.md).*
+
 **Quanto costerà questo lavoro dell'agente — prima di lanciarlo?**
 
 Tutti gli altri strumenti rispondono dopo. Leggono gli stessi transcript locali che il tuo

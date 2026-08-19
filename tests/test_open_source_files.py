@@ -84,3 +84,72 @@ def test_issue_forms_are_valid_and_require_privacy_confirmation(nome):
 
     assert form["name"] and form["description"]
     assert any(blocco.get("id") == "privacy" for blocco in form["body"])
+
+
+# ============================ le due lingue del README non devono divergere
+#
+# Questo progetto ha gia' pagato DUE volte per due copie di una regola che divergono, e la
+# skill esiste in doppia copia solo perche' un test le tiene identiche. README.md e
+# README.en.md sono la stessa trappola in forma nuova: non si possono confrontare byte per
+# byte, quindi si confronta cio' che una traduzione non ha il diritto di cambiare.
+
+def _readme_it() -> str:
+    return Path("README.md").read_text(encoding="utf-8")
+
+
+def _readme_en() -> str:
+    return Path("README.en.md").read_text(encoding="utf-8")
+
+
+def _intestazioni(testo: str) -> int:
+    return sum(1 for riga in testo.splitlines() if riga.startswith(("## ", "### ")))
+
+
+def _blocchi_codice(testo: str) -> int:
+    return sum(1 for riga in testo.splitlines() if riga.startswith("```"))
+
+
+def test_le_due_lingue_del_readme_si_rimandano():
+    """Una traduzione che non si annuncia e' una traduzione che nessuno trova, e la
+    versione italiana resta quella autoritativa: va detto, non lasciato dedurre."""
+    assert "README.en.md" in _readme_it(), "l'italiano non rimanda all'inglese"
+    assert "README.md" in _readme_en(), "l'inglese non rimanda all'italiano"
+
+
+def test_le_due_lingue_del_readme_hanno_la_stessa_struttura():
+    """La deriva realistica non e' una parola tradotta male: e' una SEZIONE aggiunta a una
+    sola delle due, che rende la traduzione una promessa diversa dall'originale."""
+    it, en = _intestazioni(_readme_it()), _intestazioni(_readme_en())
+    assert it == en, (
+        "README.md ha %d intestazioni e README.en.md ne ha %d: una sezione e' stata "
+        "aggiunta o tolta da una sola delle due" % (it, en)
+    )
+
+
+def test_le_due_lingue_del_readme_danno_gli_stessi_comandi():
+    """I comandi non sono prosa e non si traducono. Un'installazione che diverge fra le
+    due pagine manda meta' dei lettori contro un comando che non esiste."""
+    it, en = _readme_it(), _readme_en()
+
+    for comando in (
+        "pip install git+https://github.com/X3n0-io/starkeno.git",
+        "claude plugin marketplace add X3n0-io/starkeno",
+        "claude plugin install starkeno@starkeno-local",
+        "starkeno doctor",
+        "starkeno consuntivo --elenco",
+    ):
+        assert comando in it, "manca da README.md: %s" % comando
+        assert comando in en, "manca da README.en.md: %s" % comando
+
+    assert _blocchi_codice(it) == _blocchi_codice(en), (
+        "le due pagine non hanno lo stesso numero di blocchi di codice"
+    )
+
+
+def test_la_versione_inglese_avverte_che_il_prodotto_e_in_italiano():
+    """Il difetto che questa pagina rischiava di reintrodurre: un lettore inglese che
+    installa e scopre un conto in italiano. E' la stessa incoerenza appena sanata, solo
+    rivolta all'altro pubblico."""
+    assert "speaks Italian" in _readme_en(), (
+        "README.en.md non avverte che l'output dello strumento e' in italiano"
+    )
