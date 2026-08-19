@@ -5,7 +5,7 @@ or Codex actually costs you — and, far more usefully, *where that cost is goin
 
 On the machine it was built on, the answer was blunt:
 
-> **61% of everything spent in the last seven days was re-reading context.**
+> **60% of everything spent in the last seven days was re-reading context.**
 > Not thinking. Re-reading.
 
 That is the kind of number StarkEno exists to produce. Tokens are the unit, not the
