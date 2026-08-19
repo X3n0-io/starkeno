@@ -1,40 +1,96 @@
 # StarkEno
 
-Finds waste and errors in how you work with coding agents, and tells you what to do
-about it.
+**Local observability for coding-agent work.** It tells you what working with Claude Code
+or Codex actually costs you — and, far more usefully, *where that cost is going*.
 
-**What it observes:** the API calls your agent already makes. StarkEno does not watch you
-type and does not wrap your agent — it re-reads the transcripts the agent writes by
-itself, and reconstructs what your way of working costs, broken down by project, model,
-session, skill, plugin and MCP server.
+On the machine it was built on, the answer was blunt:
 
-**How it gets there:** one end-of-turn hook. It is fail-open and silent — it exits `0`
-whatever happens and never writes to stderr, because a problem in StarkEno must not cost
-you a turn.
+> **61% of everything spent in the last seven days was re-reading context.**
+> Not thinking. Re-reading.
 
-**Why tokens are not the point:** they are the unit that waste and error are measured in,
-not the product. A re-read file, a retried command, a task that took three attempts —
-tokens are how you see them and how you compare them.
+That is the kind of number StarkEno exists to produce. Tokens are the unit, not the
+point: a file re-opened ten times, a task that took three attempts, a context resent on
+every turn — tokens are how you see those and how you compare them.
 
-> **Status: Phase 2.** Collection is automatic and the local bill is available as a
-> generated HTML page. The five measured signals arrive in Phase 3; the old R1–R4 alerts
-> are not shown at startup.
+**How it works.** One end-of-turn hook re-reads the transcript your agent already writes,
+and records each API call in a local SQLite database. StarkEno never watches you type and
+never wraps your agent.
 
-## Supported agents
+**Nothing leaves your machine.** No network call, no account, no telemetry. The bill is a
+static HTML file on your disk.
 
-| Agent | Status |
-|---|---|
-| Codex | Supported. Installable as a plugin, reads the event-based transcript. |
-| Claude Code | Supported. Installable as a plugin, reads the message-based transcript. |
-| Antigravity | Detected and reported, **not measurable**. Its transcript contains no token counts anywhere in its data folder — checked by file name and by content, including Gemini's native `promptTokenCount`, `candidatesTokenCount` and `cachedContentTokenCount` keys. |
-| Cursor, OpenCode, OpenClaw | Not yet. No real transcript to read a schema from. |
+**It cannot cost you a turn.** The hooks exit `0` whatever happens and never write to
+stderr. If StarkEno breaks, your work does not — which is also why a broken StarkEno is
+invisible, and why `starkeno doctor` exists.
 
-An agent that is recognised but not measurable produces **zero calls, never an estimate**.
-`starkeno doctor` lists what it found on your machine and, for anything it cannot measure,
-says why — because the hooks must stay silent, and zero rows with no explanation is
-indistinguishable from a defect.
+> **Status: Phase 2.** Collection works and the local bill is real. The predictive half —
+> estimating a workflow before running it — is built but has been checked against a real
+> execution exactly once; see [What is not done yet](#what-is-not-done-yet).
 
-## Install with your coding agent
+## Quick start
+
+Paste this to Claude Code or Codex:
+
+> Install StarkEno from https://github.com/X3n0-io/starkeno on this machine, then verify
+> it is collecting.
+
+Or do it yourself. **Two steps, and both are required** — the plugin is only a manifest,
+and without the package the hooks run, import nothing, and exit `0` in silence:
+
+```bash
+pip install git+https://github.com/X3n0-io/starkeno.git
+```
+
+```bash
+claude plugin marketplace add X3n0-io/starkeno
+claude plugin install starkeno@starkeno-local
+```
+
+Restart the agent, approve the hooks, work one normal turn, then:
+
+```bash
+starkeno doctor     # is it actually collecting?
+starkeno report     # the bill
+```
+
+If `doctor` is not green, believe `doctor` — not the absence of errors. A silent StarkEno
+looks exactly like a working one.
+
+## The bill
+
+```bash
+starkeno report                                          # generates and opens it
+starkeno report --output bill.html --no-open             # or just write the file
+```
+
+A static HTML page on your disk. It starts no server, makes no network call and does not
+touch the database. What it shows, and why each column is there:
+
+| Column | What it counts | Why you care |
+|---|---|---|
+| **Cost of work** | tokens the model actually produced | the only part that is the job |
+| **Cost of loading** | context written into the cache | the price of setting the job up |
+| **Cost of re-reading** | context read back on later turns | paid again on every turn, for the same material |
+| Unknown outcomes | calls whose success could not be determined | how much of the picture is guesswork |
+| Unclassifiable rows | calls whose token breakdown contradicts itself | how much to distrust |
+
+An illustrative shape — *your numbers will differ, and the ratio is the interesting part*:
+
+```
+1 678 calls, 2 036 actions
+
+  cost of work         10 500 000     15%
+  cost of loading      20 150 000     28%
+  cost of re-reading   41 750 000     58%   <-- the same context, again and again
+```
+
+The same totals are broken down by project, model, session, skill, plugin and MCP
+server, plus the local rhythm of the last seven days. **The skill, plugin and MCP labels
+overlap and must never be summed** — one call can carry all three.
+
+## Install
+
+### Let your agent do it
 
 Paste this to Claude Code or Codex:
 
@@ -78,7 +134,7 @@ import anything, and exit `0` in silence.
 Do not report success until `starkeno doctor` shows a recent collection. A silent
 StarkEno looks exactly like a working one.
 
-## Install
+### Do it yourself
 
 StarkEno is **two separate things, and you need both**:
 
@@ -91,14 +147,22 @@ must never break your turn. The result is an agent that looks instrumented and c
 nothing, with no error anywhere. `starkeno doctor` is what tells you; run it after
 installing.
 
-You need Python 3.12, 3.13 or 3.14 on your `PATH`. There is no PyPI release yet, so
-install from a clone:
+You need Python 3.12, 3.13 or 3.14 on your `PATH`. There is no PyPI release yet, so the
+package comes straight from git:
+
+```bash
+pip install git+https://github.com/X3n0-io/starkeno.git
+```
+
+Or from a clone, if you want the source to hand:
 
 ```bash
 git clone https://github.com/X3n0-io/starkeno.git
 cd starkeno
 pip install .
 ```
+
+Then install the plugin for your agent — Codex below, Claude Code after it.
 
 ### Codex
 
@@ -147,22 +211,44 @@ ones. That is not tidiness, it is measurement:
   but the last turn of a session would never get a next turn. `SessionEnd` runs with the
   transcript closed.
 
-### What the hooks do, and what they do not
+## Checking that it is collecting
 
-- On Codex, `Stop` uses a launcher that returns control immediately and leaves ingestion
-  running in the background. It works even on Codex runtimes that document `async` but
-  still skip it as unsupported. Full ingestion took 1.2–1.7 s on the largest transcript
-  found (68.6 MB), and the turn does not wait for it.
-- All of them exit `0` whatever happens and never write to stderr. A problem in StarkEno
-  must not break your work.
-- **No data leaves your machine.** Calls are stored in local SQLite.
-- Ingestion is idempotent. If it misses a turn, the next one re-reads the same transcript
-  without duplicating calls that are already recorded.
+Start here:
 
-`SessionStart` does not write to the interface directly. Its `additionalContext` tells the
-model to show a single short line in the next useful message. It welcomes you when the
-database is missing or empty, and stays quiet once you have history. It creates no
-database and applies no migrations.
+```bash
+starkeno doctor
+```
+
+Four of its checks answer four different questions, and each one has been the thing that
+was actually wrong at least once:
+
+| Check | Says |
+|---|---|
+| `raccolta` | whether anything has been collected recently at all |
+| `plugin_claude_aggiornato` | whether the installed plugin copy matches your package |
+| `inventario_storici` | whether some *other* database has newer rows than the canonical one — the signature of collection being written to the wrong file |
+| `schema` | whether the database has been migrated to the current revision |
+
+A misrouted collection does not look broken. The hook succeeds, the rows are complete,
+and they land in a file nothing else reads. `inventario_storici` exists because that
+happened, and went unnoticed for four days.
+
+**Calls are grouped by `project`, which is the last segment of the working directory the
+agent session was started in** — not the repository you happen to be editing. If you open
+your agent in one folder and work on code in another, the rows carry the first one.
+
+For the raw numbers:
+
+```bash
+python -c "
+import sqlite3, starkeno.config as c
+con = sqlite3.connect(c.DB_PATH)
+print('database:', c.DB_PATH)
+print('calls:', con.execute('SELECT COUNT(*) FROM agent_actions').fetchone()[0])
+for r in con.execute('SELECT project, COUNT(*), SUM(tokens_used) FROM agent_actions GROUP BY project ORDER BY 2 DESC'):
+    print('  %-28s %5d calls  %12d tokens' % r)
+"
+```
 
 ## Updating
 
@@ -196,52 +282,49 @@ starkeno doctor
 says `attenzione` when they differ. It is the check that turns "I fixed it days ago" into
 something you can see.
 
-## The bill
+## Supported agents
 
-Generates the page and opens it in your default browser:
+| Agent | Status |
+|---|---|
+| Codex | Supported. Installable as a plugin, reads the event-based transcript. |
+| Claude Code | Supported. Installable as a plugin, reads the message-based transcript. |
+| Antigravity | Detected and reported, **not measurable**. Its transcript contains no token counts anywhere in its data folder — checked by file name and by content, including Gemini's native `promptTokenCount`, `candidatesTokenCount` and `cachedContentTokenCount` keys. |
+| Cursor, OpenCode, OpenClaw | Not yet. No real transcript to read a schema from. |
+
+An agent that is recognised but not measurable produces **zero calls, never an estimate**.
+`starkeno doctor` lists what it found on your machine and, for anything it cannot measure,
+says why — because the hooks must stay silent, and zero rows with no explanation is
+indistinguishable from a defect.
+
+## Where the data lives
+
+The database does not live in the plugin folder: updates cannot erase your history.
+
+| System | Path |
+|---|---|
+| Windows | `%USERPROFILE%\.starkeno\starkeno.db` |
+| macOS | `~/Library/Application Support/StarkEno/starkeno.db` |
+| Linux | `$XDG_DATA_HOME/starkeno/starkeno.db`, otherwise `~/.local/share/starkeno/starkeno.db` |
+
+`STARKENO_DB_PATH` takes precedence over these paths.
+
+On Windows the database is deliberately **not** under `%LOCALAPPDATA%`, even though that
+is the platform convention. A process launched by an MSIX-packaged host writes there into
+the package's private overlay: measured, the same script counted 12 rows when run from the
+hook and 699 from a shell, at the same path. Collection would be written to a database
+that `report` and `doctor` never look at, without a single error. If you are upgrading
+from an earlier version, `starkeno doctor` reports the old history as recoverable.
+
+`starkeno doctor` takes a read-only inventory of the canonical path, of `starkeno.db` next
+to the code, and of any `starkeno.db.trasferito`. No hook moves or renames your history.
+Recovery always requires an explicit path and confirmation:
 
 ```bash
-starkeno report
+starkeno doctor --repair-from ./starkeno.db.trasferito --confirm-repair
 ```
 
-To choose the file, or not open the browser:
-
-```bash
-starkeno report --output starkeno-bill.html --no-open
-```
-
-The page is a static HTML file: it starts no server and does not modify the database. It
-shows actions and calls, weighted total, cost of work, loading and re-reading, unknown
-outcomes, partitions and the local rhythm of the last seven days. The skill/plugin/MCP
-labels overlap and must not be summed.
-
-## Experimental Preflight
-
-Preflight currently exposes a local, structured core. `draft` validates and normalises a
-JSON or YAML Blueprint without simulating it. `analyze` requires the literal `--confirmed`
-flag: that explicit confirmation creates a new revision, and only then runs lint and
-simulation.
-
-JSON in, JSON out:
-
-```bash
-python -m starkeno preflight draft --input tests/fixtures/preflight/simple.json --format json --output preflight-draft.json
-```
-
-YAML in, HTML report out:
-
-```bash
-python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json --format yaml --output preflight-draft.yaml
-python -m starkeno preflight analyze --input preflight-draft.yaml --confirmed --samples 50 --format html --output preflight-report.html
-```
-
-The core does not yet interpret natural-language descriptions and does not execute the
-workflow: it analyses already-structured Blueprints only. The natural `design` and
-`review` surfaces, the Codex skill/plugin and the public site are later increments, not
-capabilities included in this experimental version.
-
-Missing tool costs stay unknown: a free tool must explicitly declare a fixed cost of zero.
-Costs in different currencies are not converted or summed.
+The source is left intact; if the destination exists it is backed up to a timestamped copy
+first. Recovery migrates and verifies the copy before adopting it.
 
 ## Estimate against execution
 
@@ -295,37 +378,58 @@ turn. Observed cache reads will be much larger than estimated ones, systematical
 output says so, because the first person to see it will think they got a subtraction
 wrong.
 
-## Where the data lives
+## Experimental Preflight
 
-The database does not live in the plugin folder: updates cannot erase your history.
+Preflight currently exposes a local, structured core. `draft` validates and normalises a
+JSON or YAML Blueprint without simulating it. `analyze` requires the literal `--confirmed`
+flag: that explicit confirmation creates a new revision, and only then runs lint and
+simulation.
 
-| System | Path |
-|---|---|
-| Windows | `%USERPROFILE%\.starkeno\starkeno.db` |
-| macOS | `~/Library/Application Support/StarkEno/starkeno.db` |
-| Linux | `$XDG_DATA_HOME/starkeno/starkeno.db`, otherwise `~/.local/share/starkeno/starkeno.db` |
-
-`STARKENO_DB_PATH` takes precedence over these paths.
-
-On Windows the database is deliberately **not** under `%LOCALAPPDATA%`, even though that
-is the platform convention. A process launched by an MSIX-packaged host writes there into
-the package's private overlay: measured, the same script counted 12 rows when run from the
-hook and 699 from a shell, at the same path. Collection would be written to a database
-that `report` and `doctor` never look at, without a single error. If you are upgrading
-from an earlier version, `starkeno doctor` reports the old history as recoverable.
-
-`starkeno doctor` takes a read-only inventory of the canonical path, of `starkeno.db` next
-to the code, and of any `starkeno.db.trasferito`. No hook moves or renames your history.
-Recovery always requires an explicit path and confirmation:
+JSON in, JSON out:
 
 ```bash
-starkeno doctor --repair-from ./starkeno.db.trasferito --confirm-repair
+python -m starkeno preflight draft --input tests/fixtures/preflight/simple.json --format json --output preflight-draft.json
 ```
 
-The source is left intact; if the destination exists it is backed up to a timestamped copy
-first. Recovery migrates and verifies the copy before adopting it.
+YAML in, HTML report out:
 
-## Installing the hooks by hand
+```bash
+python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json --format yaml --output preflight-draft.yaml
+python -m starkeno preflight analyze --input preflight-draft.yaml --confirmed --samples 50 --format html --output preflight-report.html
+```
+
+The core does not yet interpret natural-language descriptions and does not execute the
+workflow: it analyses already-structured Blueprints only. The natural `design` and
+`review` surfaces, the Codex skill/plugin and the public site are later increments, not
+capabilities included in this experimental version.
+
+Missing tool costs stay unknown: a free tool must explicitly declare a fixed cost of zero.
+Costs in different currencies are not converted or summed.
+
+## How it is built, and why
+
+The decisions below are all measured, and the
+measurement is written next to each one. They are here rather than in the install
+instructions because you do not need them to use StarkEno — only to change it.
+
+### What the hooks do, and what they do not
+
+- On Codex, `Stop` uses a launcher that returns control immediately and leaves ingestion
+  running in the background. It works even on Codex runtimes that document `async` but
+  still skip it as unsupported. Full ingestion took 1.2–1.7 s on the largest transcript
+  found (68.6 MB), and the turn does not wait for it.
+- All of them exit `0` whatever happens and never write to stderr. A problem in StarkEno
+  must not break your work.
+- **No data leaves your machine.** Calls are stored in local SQLite.
+- Ingestion is idempotent. If it misses a turn, the next one re-reads the same transcript
+  without duplicating calls that are already recorded.
+
+`SessionStart` does not write to the interface directly. Its `additionalContext` tells the
+model to show a single short line in the next useful message. It welcomes you when the
+database is missing or empty, and stays quiet once you have history. It creates no
+database and applies no migrations.
+
+### Installing the hooks by hand
 
 The Codex plugin ships `.codex-plugin/plugin.json` and `hooks/hooks.json`, whose commands
 use `PLUGIN_ROOT` and the dedicated Windows variants. The Claude Code plugin ships
@@ -345,66 +449,6 @@ configuration with `/hooks` in the Codex CLI.
 > and wrote them to that checkout's data path, so `report`, `doctor` and `consuntivo` saw
 > none of them — with no error and nothing on stderr, because a hook is not allowed to
 > produce either.
-
-## Checking that it is collecting
-
-Start here:
-
-```bash
-starkeno doctor
-```
-
-Four of its checks answer four different questions, and each one has been the thing that
-was actually wrong at least once:
-
-| Check | Says |
-|---|---|
-| `raccolta` | whether anything has been collected recently at all |
-| `plugin_claude_aggiornato` | whether the installed plugin copy matches your package |
-| `inventario_storici` | whether some *other* database has newer rows than the canonical one — the signature of collection being written to the wrong file |
-| `schema` | whether the database has been migrated to the current revision |
-
-A misrouted collection does not look broken. The hook succeeds, the rows are complete,
-and they land in a file nothing else reads. `inventario_storici` exists because that
-happened, and went unnoticed for four days.
-
-**Calls are grouped by `project`, which is the last segment of the working directory the
-agent session was started in** — not the repository you happen to be editing. If you open
-your agent in one folder and work on code in another, the rows carry the first one.
-
-For the raw numbers:
-
-```bash
-python -c "
-import sqlite3, starkeno.config as c
-con = sqlite3.connect(c.DB_PATH)
-print('database:', c.DB_PATH)
-print('calls:', con.execute('SELECT COUNT(*) FROM agent_actions').fetchone()[0])
-for r in con.execute('SELECT project, COUNT(*), SUM(tokens_used) FROM agent_actions GROUP BY project ORDER BY 2 DESC'):
-    print('  %-28s %5d calls  %12d tokens' % r)
-"
-```
-
-## What is inside
-
-| | |
-|---|---|
-| `starkeno/harness.py` | Which agents are recognised, and which can be measured |
-| `starkeno/transcript.py` | From `.jsonl` to API calls; a pure module |
-| `starkeno/hook_avvia_ingestione.py` | Non-blocking launcher, for Codex |
-| `starkeno/hook_ingestione.py` | Idempotent end-of-turn ingestion |
-| `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook; states one measured fact after a break |
-| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when. Loaded by Claude Code; Codex consumes plugin skills in the same format, but this one has not been observed being invoked there yet |
-| `starkeno/conto.py` | Pure model of the bill |
-| `starkeno/consuntivo.py` | Pure model of estimate against execution |
-| `starkeno/report_conto.py` | Static HTML page generator |
-| `starkeno/percorsi.py` | Per-platform data paths |
-| `starkeno/db.py` | Models and queries; the only module that talks to SQLAlchemy |
-| `migrations/` | Alembic chain, the single authority on the schema |
-
-```bash
-python -m pytest -q
-```
 
 ## What is not done yet
 
@@ -430,6 +474,27 @@ Stated plainly, because a README that hides its gaps costs more than one that na
   cannot be measured, because its transcript carries no token counts, and it reports zero
   calls rather than a guess.
 - **Thresholds are reasoned, not measured** — see the note at the end of this file.
+
+## What is inside
+
+| | |
+|---|---|
+| `starkeno/harness.py` | Which agents are recognised, and which can be measured |
+| `starkeno/transcript.py` | From `.jsonl` to API calls; a pure module |
+| `starkeno/hook_avvia_ingestione.py` | Non-blocking launcher, for Codex |
+| `starkeno/hook_ingestione.py` | Idempotent end-of-turn ingestion |
+| `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook; states one measured fact after a break |
+| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when. Loaded by Claude Code; Codex consumes plugin skills in the same format, but this one has not been observed being invoked there yet |
+| `starkeno/conto.py` | Pure model of the bill |
+| `starkeno/consuntivo.py` | Pure model of estimate against execution |
+| `starkeno/report_conto.py` | Static HTML page generator |
+| `starkeno/percorsi.py` | Per-platform data paths |
+| `starkeno/db.py` | Models and queries; the only module that talks to SQLAlchemy |
+| `migrations/` | Alembic chain, the single authority on the schema |
+
+```bash
+python -m pytest -q
+```
 
 ## Licence
 
