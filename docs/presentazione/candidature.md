@@ -31,8 +31,9 @@ Cosa dichiarare:
 - **URL:** https://github.com/X3n0-io/starkeno
 - **Categoria:** tooling / plugin
 - **Licenza:** MIT
-- **Descrizione (una riga):** Conto locale di quanto costa lavorare con Claude Code e
-  Codex, e un tentativo — dichiaratamente immaturo — di prevederlo prima di lanciare.
+- **Descrizione (una riga):** Simula quanto costerà un workflow prima di lanciarlo — in
+  due comandi, senza plugin — e tiene il conto locale di quanto è costato davvero, per
+  poterli confrontare.
 
 Le altre, indipendenti, che accettano PR normali:
 [subinium](https://github.com/subinium/awesome-claude-code) ·
@@ -50,13 +51,17 @@ segnalazione fuori formato viene chiusa senza discussione.
 **Manda il pezzo sullo scarto, non il repository.** Un altro strumento di costi non
 interessa nessuno; un forecaster che pubblica il proprio errore sì.
 
-Titolo — questo funziona perché è specifico, verificabile e non vende niente:
+Titolo — specifico, verificabile, non vende niente:
 
 ```
-Show HN: My cost forecaster for coding agents was wrong by 9x. Here is why
+Show HN: My cost simulator for coding agents was 9x under. Here is why, and you can run it
 ```
 
 Link: `https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md`
+
+> **«Show HN» richiede qualcosa che si possa provare**, ed è il motivo per cui il titolo
+> lo dice: il simulatore gira in due comandi, senza plugin né hook. Un «Show HN» che si
+> apre su un articolo e basta viene ripreso nei commenti, e giustamente.
 
 Primo commento, da scrivere subito dopo aver postato:
 
@@ -64,15 +69,25 @@ Primo commento, da scrivere subito dopo aver postato:
 I build a local tool that reads the transcripts Claude Code and Codex already write
 and reconstructs what a session cost. That half works.
 
-The other half tries to forecast a run before it starts. I finally scored it against
-a real execution: it predicted 331,500 tokens and the run cost 3,035,535. Nine times
-off.
+The other half simulates a workflow before you run it. You can try it in two commands
+on a fixture that ships in the repo -- no plugin, no hooks, no MCP server:
 
-The cause turned out to be structural rather than arithmetic. My simulator counted
-context read back from cache only on retries, the way a single model call behaves.
-A real agent has no memory between turns, so it resends its whole context every turn.
-On my machine that re-reading was 60% of a week's spend, and it was the exact quantity
-I was not counting.
+  python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json \
+      --format yaml --output bozza.yaml
+  python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
+      --format html --output report.html
+
+It deliberately does not give you a number. It gives four scenarios, declares its own
+confidence, and tags every estimate with where it came from: declared, default or
+inferred. Missing prices are named, never silently zeroed.
+
+Then I finally scored it against a real execution. Its own `maximum` scenario said
+331,500 tokens. The run cost 3,035,535. Nine times under its worst case.
+
+The cause was structural, not arithmetic. I counted context read back from cache only
+on retries, the way a single model call behaves. A real agent has no memory between
+turns, so it resends its whole context every turn. On my machine that re-reading was
+60% of a week's spend -- the exact quantity I was not counting.
 
 I do not know yet whether the gap is a multiplicative constant or depends on the shape
 of the work, because I have one measurement and one point does not determine a slope.
@@ -88,7 +103,7 @@ Regole di Hacker News che costano caro se ignorate:
 - **Niente superlativi.** «Rivoluzionario», «potente», «game-changer» affondano un post
   su HN più in fretta di un difetto ammesso.
 - **Rispondi a tutti**, soprattutto a chi ti dice che esiste già `ccusage`. La risposta
-  vera è: sì, e per il consuntivo è migliore — questo prova a fare l'altra metà.
+  vera è: sì, e per il consuntivo è migliore — questo simula il lavoro *prima*.
 - **Posta quando sei disponibile** per le due ore successive. Un thread abbandonato muore.
 
 ---
@@ -116,9 +131,11 @@ in molti subreddit un post che è solo un link viene rimosso.
 
 ## Cosa NON fare
 
-- **Non promettere la previsione come funzione pronta.** Non lo è: il plugin non registra
-  i tool MCP, il server va montato a mano, Preflight non legge prosa. Il README lo dice in
-  un riquadro, e un post che lo tace verrebbe smentito dal primo che prova.
+- **Distingui il simulatore dal confronto.** Il simulatore gira oggi in due comandi e si
+  può mostrare senza riserve. Quello che NON è spedito è il confronto fra la sua stima e
+  un'esecuzione vera: lì il plugin non registra i tool MCP, il server va montato a mano,
+  e Preflight non legge prosa. Confonderli è il modo più rapido per essere smentiti dal
+  primo che prova.
 - **Non citare il 61%.** La cifra pubblica è 60%, arrotondata per difetto. Due numeri
   diversi per la stessa misura sono l'unica cosa che toglie credibilità a tutto il resto.
 - **Non mandare screenshot del tuo conto vero.** Contengono i nomi dei tuoi progetti e
