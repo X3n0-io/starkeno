@@ -2,7 +2,7 @@
 
 ## Versioni supportate
 
-La linea supportata è `0.3.x`. Le versioni precedenti sono prototipi e non ricevono
+La linea supportata è `0.4.x`. Le versioni precedenti sono prototipi e non ricevono
 correzioni di sicurezza.
 
 ## Segnalare una vulnerabilità

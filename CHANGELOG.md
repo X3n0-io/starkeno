@@ -5,6 +5,8 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-19
+
 ### Added
 
 - **Il simulatore si prova in due comandi**, in cima a entrambi i README, con l'immagine

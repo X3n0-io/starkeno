@@ -23,7 +23,7 @@ def test_security_and_contributing_docs_contain_actionable_contracts():
     security = Path("SECURITY.md").read_text(encoding="utf-8")
     contributing = Path("CONTRIBUTING.md").read_text(encoding="utf-8")
 
-    assert "0.3.x" in security
+    assert "0.4.x" in security
     assert "Report a vulnerability" in security
     assert "transcript" in security.lower()
     assert "pytest -q -W error" in contributing

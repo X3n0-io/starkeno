@@ -1,0 +1,151 @@
+# Pubblica su PyPI SENZA token, via Trusted Publishing (OIDC).
+#
+# Un token API in un segreto e' una credenziale che puo' uscire, e questo repository ha
+# uno scanner apposta perche' e' un difetto che si paga caro. Qui non ce n'e' nessuno:
+# PyPI si fida di questo workflow, di questo repository e di questo environment, e
+# GitHub firma la richiesta al momento.
+#
+# CONFIGURAZIONE, una volta sola, su https://pypi.org/manage/account/publishing/
+#   PyPI Project Name : starkeno
+#   Owner             : X3n0-io
+#   Repository name   : starkeno
+#   Workflow name     : release.yml
+#   Environment name  : pypi          (per TestPyPI: testpypi)
+#
+# METTI UN REVISORE sull'environment `pypi` in Settings -> Environments: il job resta in
+# attesa finche' un umano non approva. E' la regola del progetto — nessuna pubblicazione
+# senza consenso esplicito — resa esecutiva invece che scritta.
+#
+# Su PyPI una versione NON si sostituisce e NON si ricarica. Per questo i cancelli girano
+# qui dentro, prima del caricamento, invece di essere una cosa che si spera sia stata
+# fatta prima.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      destinazione:
+        description: "Dove pubblicare"
+        required: true
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+permissions:
+  contents: read
+
+jobs:
+  cancelli:
+    name: cancelli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/ci.txt
+      - run: python -m pip install -c requirements/ci.txt -e ".[dev]"
+      - run: python -m pytest -q -W error
+      - run: python scripts/verifica_segreti.py --tracked
+      - run: python scripts/verifica_pubblicazione.py
+      - name: La versione e' la stessa nei tre punti che la dichiarano
+        run: |
+          python - <<'PY'
+          import json, pathlib, re
+          init = pathlib.Path("starkeno/__init__.py").read_text(encoding="utf-8")
+          versione = re.search(r'__version__ = "([^"]+)"', init).group(1)
+          for manifest in (".codex-plugin/plugin.json",
+                           "plugin-claude-code/.claude-plugin/plugin.json"):
+              trovata = json.loads(pathlib.Path(manifest).read_text(encoding="utf-8"))["version"]
+              assert trovata == versione, "%s dice %s, il pacchetto %s" % (manifest, trovata, versione)
+          print("versione coerente:", versione)
+          PY
+      - name: Il tag corrisponde alla versione del pacchetto
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          python - <<'PY'
+          import os, pathlib, re
+          init = pathlib.Path("starkeno/__init__.py").read_text(encoding="utf-8")
+          versione = re.search(r'__version__ = "([^"]+)"', init).group(1)
+          tag = os.environ["GITHUB_REF_NAME"]
+          assert tag == "v" + versione, "il tag %s non corrisponde alla versione %s" % (tag, versione)
+          print("tag e versione coincidono:", tag)
+          PY
+
+  costruisci:
+    name: costruisci
+    needs: cancelli
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade build twine
+      - run: python -m build --outdir dist
+      - run: python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    name: TestPyPI
+    needs: costruisci
+    if: github.event_name == 'workflow_dispatch' && inputs.destinazione == 'testpypi'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/starkeno
+    permissions:
+      id-token: write        # l'unica credenziale: un token OIDC di durata brevissima
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    name: PyPI
+    needs: costruisci
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.destinazione == 'pypi')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/starkeno
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  rilascio:
+    name: release su GitHub
+    needs: pypi
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # serve solo a creare la release, dopo che PyPI e' andata
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Crea la release con gli artefatti pubblicati
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Vedi [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md)."
