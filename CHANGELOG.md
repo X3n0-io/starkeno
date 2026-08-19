@@ -5,6 +5,8 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-19
+
 ### Added
 
 - **La seconda misura dello scarto**, e con due punti l'ipotesi della costante
@@ -13,32 +15,10 @@ usa il versionamento semantico.
   stato scritto dopo.
 - `tests/fixtures/preflight/sessione-lunga.json`, il Blueprint che descrive una sessione
   lunga di lavoro con un agente.
-
-### Fixed
-
-- **Un ciclo lungo non produce più «Errore interno».** Oltre circa 150 passaggi il
-  lookahead ricorsivo del simulatore sfonda lo stack; ora il limite si dichiara, con il
-  rimedio, ed esce 2 invece di 1. Il limite resta: è la ricorsione a doverlo perdere.
-
-## [0.4.0] - 2026-08-19
-
-### Added
 - **`starkeno preflight esempio`**: scrive su disco il Blueprint d'esempio spedito col
   pacchetto. I tre comandi in cima al README puntavano a `tests/fixtures/`, che chi
   installa con `pip` non ha: la porta d'ingresso della metà predittiva falliva per
   chiunque non avesse clonato il repository. Rifiuta di sovrascrivere un file esistente.
-
-### Removed
-
-- **La dipendenza `anthropic`**, mai importata da nessun file del repository. Era stata
-  aggiunta il 15/08/2026 per un client che il cambio di architettura dello stesso giorno
-  ha reso inutile — l'agente genera, StarkEno valida — e il briefing del 16/08 la dava
-  già per rimuovibile con un commit dedicato. Il modulo `preflight_anthropic.py` che
-  avrebbe dovuto usarla non è mai esistito. L'installazione perde cinque pacchetti:
-  `anthropic`, `jiter`, `docstring-parser`, `distro`, `sniffio`.
-
-### Added
-
 - **Il simulatore si prova in due comandi**, in cima a entrambi i README, con l'immagine
   del report che produce. Non serve plugin, hook o server MCP: la fixture è già nel
   repository e il lettore riproduce esattamente quella schermata.
@@ -59,7 +39,6 @@ usa il versionamento semantico.
 
 - Dipendenze allineate: `actions/checkout` 4 -> 7, `actions/setup-python` 5 -> 7,
   `websockets` 16.1.1 -> 17.0.1 con il vincolo in `pyproject.toml` alzato a `<18`.
-
 - Il README apre con la previsione invece che con il 60% di rilettura: quel numero è noto
   a chiunque segua il tema, mentre la previsione è l'unica cosa che il progetto tenta da
   solo. Il 60% resta, come spiegazione dello scarto.
@@ -67,6 +46,21 @@ usa il versionamento semantico.
   skill resta bilingue perché è la superficie con cui l'agente decide se invocarla.
 - Le immagini nel README usano URL assoluti: PyPI non risolve i percorsi relativi al
   repository e mostrerebbe un'immagine rotta.
+
+### Removed
+
+- **La dipendenza `anthropic`**, mai importata da nessun file del repository. Era stata
+  aggiunta il 15/08/2026 per un client che il cambio di architettura dello stesso giorno
+  ha reso inutile — l'agente genera, StarkEno valida — e il briefing del 16/08 la dava
+  già per rimuovibile con un commit dedicato. Il modulo `preflight_anthropic.py` che
+  avrebbe dovuto usarla non è mai esistito. L'installazione perde cinque pacchetti:
+  `anthropic`, `jiter`, `docstring-parser`, `distro`, `sniffio`.
+
+### Fixed
+
+- **Un ciclo lungo non produce più «Errore interno».** Oltre circa 150 passaggi il
+  lookahead ricorsivo del simulatore sfonda lo stack; ora il limite si dichiara, con il
+  rimedio, ed esce 2 invece di 1. Il limite resta: è la ricorsione a doverlo perdere.
 
 ### Security
 
