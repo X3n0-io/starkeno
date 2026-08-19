@@ -17,9 +17,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Mapping, Sequence
+from typing import TYPE_CHECKING, Literal, Mapping, Sequence
 
 from starkeno.rules import COMPONENTI_PARZIALI, effective_tokens
+
+# I quattro esiti possibili dell'attribuzione. Sono un `Literal` e non `str` perche' non
+# sono documentazione: `costruisci` e `rendi_testo` si RAMIFICANO su questi valori esatti,
+# e un refuso in uno dei cinque punti che li producono darebbe un consuntivo che si
+# comporta come «non ok» senza dirlo. Cosi' lo prende un type checker invece del runtime.
+Stato = Literal["ok", "aperta", "ambigua", "senza_osservazioni"]
 
 if TYPE_CHECKING:  # pragma: no cover - solo per i tipi
     from starkeno.preflight_schema import Blueprint
@@ -70,7 +76,7 @@ class Attribuzione:
     nel confronto sarebbero due nodi che non esistono.
     """
 
-    stato: str                   # ok | aperta | ambigua | senza_osservazioni
+    stato: Stato
     motivo: str
     per_nodo: tuple[tuple[str, tuple[RigaOsservata, ...]], ...]
     non_attribuite: tuple[RigaOsservata, ...]
@@ -194,7 +200,7 @@ def totali_per_modello(
     )
 
 
-def _vuota(stato: str, motivo: str, senza_sessione=()) -> Attribuzione:
+def _vuota(stato: Stato, motivo: str, senza_sessione=()) -> Attribuzione:
     return Attribuzione(
         stato=stato, motivo=motivo, per_nodo=(), non_attribuite=(),
         senza_sessione=tuple(senza_sessione), sessioni=(),
@@ -504,7 +510,7 @@ class Consuntivo:
     blueprint_hash: str
     started_at: datetime
     ended_at: datetime | None
-    stato: str
+    stato: Stato
     motivo: str
     osservato: TotaliOsservati
     scenari: tuple[StimaScenario, ...]
