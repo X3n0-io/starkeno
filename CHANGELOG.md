@@ -7,6 +7,15 @@ usa il versionamento semantico.
 
 ## [0.4.0] - 2026-08-19
 
+### Removed
+
+- **La dipendenza `anthropic`**, mai importata da nessun file del repository. Era stata
+  aggiunta il 15/08/2026 per un client che il cambio di architettura dello stesso giorno
+  ha reso inutile — l'agente genera, StarkEno valida — e il briefing del 16/08 la dava
+  già per rimuovibile con un commit dedicato. Il modulo `preflight_anthropic.py` che
+  avrebbe dovuto usarla non è mai esistito. L'installazione perde cinque pacchetti:
+  `anthropic`, `jiter`, `docstring-parser`, `distro`, `sniffio`.
+
 ### Added
 
 - **Il simulatore si prova in due comandi**, in cima a entrambi i README, con l'immagine

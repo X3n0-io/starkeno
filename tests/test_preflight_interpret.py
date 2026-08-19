@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -32,9 +33,31 @@ def moduli_importati(percorso: Path) -> set[str]:
     return nomi
 
 
-def test_anthropic_e_dichiarato_come_dipendenza():
-    testo = (RADICE / "pyproject.toml").read_text(encoding="utf-8")
-    assert "anthropic" in testo, "l'SDK non e' dichiarato: l'installazione non lo avra'"
+def test_l_sdk_non_e_piu_una_dipendenza():
+    """L'inverso del test che stava qui, e non la sua cancellazione.
+
+    Fino al 15/08/2026 StarkEno doveva chiamare l'API con una PROPRIA chiave, e questo
+    test pretendeva l'SDK fra le dipendenze. Il cambio di architettura di quel giorno lo
+    ha reso inutile: l'agente genera, StarkEno valida, e nessun modello viene chiamato.
+    Il briefing del 16/08 lo aveva gia' scritto — «andra' rimossa con un commit di revert
+    dedicato» — e il client `preflight_anthropic.py` non e' mai stato costruito.
+
+    Rovesciato invece che tolto perche' l'invariante che conta e' cambiato di segno: non
+    «l'SDK c'e'», ma «non serve». E' la promessa che il README fa a chi installa, e una
+    promessa senza guardia si perde alla prima aggiunta distratta.
+
+    Letto con tomllib e non cercando la stringa nel file: un rilievo di revisione del
+    16/08 osservava che la ricerca testuale passa anche su un commento che nomina l'SDK.
+    """
+    dipendenze = tomllib.loads(
+        (RADICE / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["dependencies"]
+
+    colpevoli = [d for d in dipendenze if "anthropic" in d.lower()]
+    assert not colpevoli, (
+        "StarkEno dichiara di non chiamare nessun modello, ma installa un client di API "
+        "LLM: %r" % colpevoli
+    )
 
 
 def test_solo_il_modulo_client_importa_lo_sdk():
