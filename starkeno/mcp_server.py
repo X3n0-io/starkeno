@@ -527,6 +527,14 @@ def blueprint_run_end(run_key: str, model_map: str | None = None) -> str:
     Estimated node invocations and observed API calls are printed side by side and
     never subtracted: they are different units.
 
+    EXPECT THE FIRST COMPARISON TO BE SHORT OR EMPTY. You call this DURING a turn,
+    but the rows of that turn are written by the `Stop` hook AFTER the turn ends: the
+    calls you just made — often the biggest — are not in the database yet, so the
+    comparison may say `senza_osservazioni` or report a total that is too low. That is
+    timing, not a failure. Run `starkeno consuntivo --run <run_key>` later, or call
+    this tool again, and the same comparison is recomputed over the rows that have
+    arrived in the meantime.
+
     Calling it again on an already closed run recomputes the comparison without
     changing anything — attribution is a view, not a stamp on the collected rows.
 

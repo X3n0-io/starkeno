@@ -394,6 +394,19 @@ def test_blueprint_run_end_restituisce_il_consuntivo(
     assert "senza_osservazioni" in risposta
 
 
+def test_blueprint_run_end_docstring_avverte_del_close_a_meta_turno():
+    """La docstring e' l'interfaccia del tool, e questo tool si chiama DURANTE un turno
+    mentre le righe di quel turno le scrive l'hook `Stop` DOPO. Il primo close reale
+    stampa quindi `senza_osservazioni` o un totale corto: senza l'avvertenza e il
+    rimedio, chi lo incontra conclude che il consuntivo sia rotto invece di
+    ricalcolarlo quando le righe sono arrivate."""
+    documentazione = mcp_server_module.blueprint_run_end.__doc__ or ""
+
+    assert "Stop" in documentazione, "non dice chi scrive le righe, ne' quando"
+    assert "senza_osservazioni" in documentazione,         "non nomina l'esito che il primo close stampera' davvero"
+    assert "starkeno consuntivo --run" in documentazione,         "non dice come ricalcolare il confronto piu' tardi"
+
+
 def test_una_chiave_sconosciuta_non_solleva(session_factory, monkeypatch):
     """Nessuno di questi tool solleva: l'errore torna come testo, come save_draft."""
     monkeypatch.setattr(mcp_server_module, "get_session_factory", lambda: session_factory)
