@@ -9,6 +9,74 @@ from starkeno.diagnostica import Controllo
 from starkeno.cli import main
 
 
+def _database_con_ultima_riga(path: Path, quando: str) -> Path:
+    """Un database allo schema di produzione la cui riga piu' recente e' `quando`."""
+    import sqlite3
+    from contextlib import closing
+
+    from alembic import command
+
+    from starkeno.migrazioni import configurazione_alembic
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    command.upgrade(configurazione_alembic(path), "head")
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(
+            "INSERT INTO agent_actions"
+            "(project, action, model_used, tokens_used, timestamp) "
+            "VALUES (?, ?, ?, ?, ?)",
+            ("progetto", "read:file.py", "modello-finto", 100, quando),
+        )
+    return path
+
+
+def test_il_doctor_dichiara_uno_storico_piu_recente_del_canonico(tmp_path, monkeypatch):
+    """LA regressione misurata il 19/08/2026, costata quattro giorni e 465 righe.
+
+    Un hook instradato male raccoglie per INTERO, ma in un percorso che `report` e
+    `consuntivo` non guardano. Il canonico resta integro, quindi il controllo rispondeva
+    `ok` e non c'era nient'altro che potesse accorgersene: l'hook e' fail-open e muto per
+    l'invariante 12, e la raccolta guarda solo il canonico.
+
+    Uno storico con righe PIU' RECENTI del canonico e' la firma di quel guasto, e i dati
+    per nominarla erano gia' tutti in `CandidatoDatabase.ultimo_evento`.
+    """
+    from starkeno import percorsi
+    from starkeno.cli import _controllo_inventario
+
+    storica = tmp_path / "AppData" / "Local" / "StarkEno"
+    monkeypatch.setattr(percorsi, "cartella_dati_windows_storica", lambda: storica)
+    canonico = _database_con_ultima_riga(tmp_path / "dati" / "starkeno.db",
+                                         "2026-08-17 08:32:55.000000")
+    _database_con_ultima_riga(storica / "starkeno.db", "2026-08-19 07:47:01.000000")
+
+    controllo = _controllo_inventario(canonico, tmp_path / "repo")
+
+    assert controllo.stato == "attenzione", (
+        "un canonico integro non basta: la raccolta sta scrivendo altrove"
+    )
+    assert str(storica) in controllo.dettaglio, "non dice DOVE stanno finendo le righe"
+
+
+def test_il_doctor_non_allarma_per_uno_storico_piu_vecchio(tmp_path, monkeypatch):
+    """Il rovescio, e non e' pignoleria: uno storico VECCHIO e' il caso normale di chi
+    ha aggiornato, ed e' la ragione per cui l'inventario esiste. Un controllo che
+    dicesse `attenzione` per ogni storico integro sarebbe rumore a ogni `doctor`, e
+    l'utente imparerebbe a ignorarlo proprio prima del giorno in cui conta."""
+    from starkeno import percorsi
+    from starkeno.cli import _controllo_inventario
+
+    storica = tmp_path / "AppData" / "Local" / "StarkEno"
+    monkeypatch.setattr(percorsi, "cartella_dati_windows_storica", lambda: storica)
+    canonico = _database_con_ultima_riga(tmp_path / "dati" / "starkeno.db",
+                                         "2026-08-19 07:47:01.000000")
+    _database_con_ultima_riga(storica / "starkeno.db", "2026-08-14 10:00:00.000000")
+
+    controllo = _controllo_inventario(canonico, tmp_path / "repo")
+
+    assert controllo.stato == "ok", "lo storico vecchio e' il caso normale, non un guasto"
+
+
 def test_module_cli_delegates_report(tmp_path, monkeypatch):
     visti = {}
 

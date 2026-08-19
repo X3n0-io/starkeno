@@ -24,6 +24,29 @@ def _codex_root() -> Path:
     return Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
 
 
+def _ha_righe_piu_recenti(candidato, riferimento) -> bool:
+    """Se `candidato` contiene righe successive all'ultima del `riferimento`.
+
+    E' la firma di una raccolta instradata male: un hook che scrive nel percorso
+    sbagliato raccoglie per INTERO, quindi il canonico resta integro e smette
+    semplicemente di crescere, mentre l'altro file continua. Misurato il 19/08/2026,
+    ed era durato quattro giorni senza che nulla lo dicesse: l'hook e' fail-open e
+    muto per l'invariante 12, e il controllo `raccolta` guarda solo il canonico.
+
+    Il confronto e' fra le stringhe come stanno nel database — la rappresentazione
+    scritta da `db.UTCDateTime` — ed e' lo stesso che SQLite applica gia' dentro
+    `ispeziona_database` per calcolare `MAX(timestamp)`.
+
+    Un candidato senza righe non e' mai piu' recente; un canonico senza righe e'
+    superato da chiunque ne abbia.
+    """
+    if candidato.ultimo_evento is None:
+        return False
+    if riferimento.ultimo_evento is None:
+        return True
+    return candidato.ultimo_evento > riferimento.ultimo_evento
+
+
 def _controllo_inventario(canonico: Path, plugin_root: Path) -> Controllo:
     candidati = inventaria_candidati(
         canonico=canonico, radice_progetto=plugin_root,
@@ -34,10 +57,19 @@ def _controllo_inventario(canonico: Path, plugin_root: Path) -> Controllo:
         voce["percorso"] = str(candidato.percorso)
         dati.append(voce)
 
-    canonico_integro = candidati[0].integro
+    canonico_candidato = candidati[0]
     recuperabili = [c for c in candidati[1:] if c.integro]
-    if canonico_integro:
-        stato, dettaglio = "ok", "database canonico inventariato"
+    if canonico_candidato.integro:
+        piu_recenti = [c for c in recuperabili
+                       if _ha_righe_piu_recenti(c, canonico_candidato)]
+        if piu_recenti:
+            stato = "attenzione"
+            dettaglio = (
+                "la raccolta sta scrivendo altrove: %s ha righe piu' recenti del "
+                "canonico" % ", ".join(str(c.percorso) for c in piu_recenti)
+            )
+        else:
+            stato, dettaglio = "ok", "database canonico inventariato"
     elif recuperabili:
         stato, dettaglio = "attenzione", "storico recuperabile trovato"
     else:

@@ -51,6 +51,11 @@ usa il versionamento semantico.
 
 ### Fixed
 
+- `starkeno doctor` dichiara quando uno storico ha righe più recenti del canonico. È la
+  firma di una raccolta instradata male — l'hook raccoglie per intero, ma in un file che
+  `report` e `consuntivo` non guardano — e il controllo rispondeva `ok` perché il
+  canonico restava integro. I dati per accorgersene c'erano già tutti; nessuno li
+  confrontava.
 - Gli hook Claude Code si invocano con `python -P -m`, non `python -m`. Senza `-P` il
   primo elemento di `sys.path` è la working directory della sessione, che ha la
   precedenza sul pacchetto installato: chi lavora dentro un qualunque checkout di
