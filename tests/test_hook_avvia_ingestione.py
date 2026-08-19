@@ -49,15 +49,15 @@ def test_launcher_restituisce_subito_e_ingestione_prosegue_in_background(tmp_pat
         text=True,
         cwd=estranea,
         env=ambiente,
-        timeout=5,
+        timeout=30,
     )
-    durata = time.monotonic() - inizio
+    durata_launcher = time.monotonic() - inizio
 
     assert esito.returncode == 0
     assert esito.stdout == esito.stderr == ""
-    assert durata < 1.0, "il launcher ha atteso la fine dell'ingestione"
 
     scadenza = time.monotonic() + 20
+    durata_ingestione = None
     while time.monotonic() < scadenza:
         if database.exists():
             try:
@@ -66,9 +66,19 @@ def test_launcher_restituisce_subito_e_ingestione_prosegue_in_background(tmp_pat
                         "SELECT COUNT(*) FROM agent_actions"
                     ).fetchone()[0]
                 if righe == 1:
+                    durata_ingestione = time.monotonic() - inizio
                     break
             except sqlite3.Error:
                 pass
         time.sleep(0.05)
     else:
         raise AssertionError("l'ingestione in background non ha scritto la chiamata")
+
+    # La soglia e' relativa e non assoluta: sotto carico launcher e ingestione
+    # rallentano insieme, mentre un launcher che attende finisce per durare quanto
+    # l'ingestione. Una soglia fissa a 1 s falliva a macchina carica pur essendo il
+    # launcher corretto. A macchina scarica: 0,17 s contro 1,75 s, dieci volte tanto.
+    assert durata_launcher < durata_ingestione / 2, (
+        "il launcher ha atteso la fine dell'ingestione: "
+        f"{durata_launcher:.2f}s su {durata_ingestione:.2f}s"
+    )
