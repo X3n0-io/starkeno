@@ -34,6 +34,50 @@ An agent that is recognised but not measurable produces **zero calls, never an e
 says why — because the hooks must stay silent, and zero rows with no explanation is
 indistinguishable from a defect.
 
+## Install with your coding agent
+
+Paste this to Claude Code or Codex:
+
+> Install StarkEno from https://github.com/X3n0-io/starkeno on this machine, then verify
+> it is collecting.
+
+**Instructions for the agent.** There are two steps and skipping the first is the common
+failure: the plugin is only a manifest, and without the package the hooks run, fail to
+import anything, and exit `0` in silence.
+
+1. Install the package. Requires Python 3.12–3.14 on `PATH`:
+   ```bash
+   pip install git+https://github.com/X3n0-io/starkeno.git
+   ```
+   Verify with `starkeno --help`. If the command is not found, the user's `pip` and
+   `python` are different installations — resolve that before continuing.
+
+2. Install the plugin for the agent in use. For Claude Code:
+   ```bash
+   claude plugin marketplace add X3n0-io/starkeno
+   claude plugin install starkeno@starkeno-local
+   ```
+   For Codex, add the same repository as a marketplace from its plugin panel and install
+   `starkeno`. Do not hand-edit `~/.codex/config.toml`.
+
+3. Have the user restart the agent and approve the hooks when asked. Hooks are read at
+   session start, so nothing collects until then.
+
+4. After one completed turn, verify:
+   ```bash
+   starkeno doctor
+   ```
+
+| What it says | What it means | What to do |
+|---|---|---|
+| `raccolta: nessun evento raccolto` | nothing has ever been collected | the package is missing, or the hooks were never approved |
+| `plugin_claude_aggiornato: ... diverso dal pacchetto` | the installed plugin copy is older than the package | refresh it through the agent; never delete the cached copy by hand, that uninstalls it |
+| `inventario_storici: la raccolta sta scrivendo altrove` | rows are landing in a database no command reads | nothing is lost; the two need merging |
+| `schema: schema disallineato` | the database predates the current revision | report it to the user rather than migrating silently |
+
+Do not report success until `starkeno doctor` shows a recent collection. A silent
+StarkEno looks exactly like a working one.
+
 ## Install
 
 StarkEno is **two separate things, and you need both**:
@@ -214,6 +258,13 @@ than one session, the comparison stops and says so instead of picking one.
 Three MCP tools drive it, alongside `log_agent_action`. None of them raises: errors come
 back as plain text, and nothing is recorded.
 
+> **These tools are not registered by the plugin, and are not shipped as a ready
+> feature.** The plugin installs hooks and a skill, not an MCP server: to reach these
+> tools you must register `python -P -m starkeno.mcp_server` as a stdio MCP server
+> yourself. That is deliberate — this half of StarkEno has never been checked against a
+> real execution, only against synthetic fixtures, and the project does not ship what it
+> has not measured. The bill and the diagnosis below need none of it.
+
 | Tool | What it does |
 |---|---|
 | `blueprint_run_start` | Opens a run against a stored `preflight analyze --format json` output and returns its `run_key`. The analysis is kept verbatim, so the run is compared against the estimate you were shown, not one recomputed later. |
@@ -342,7 +393,8 @@ for r in con.execute('SELECT project, COUNT(*), SUM(tokens_used) FROM agent_acti
 | `starkeno/transcript.py` | From `.jsonl` to API calls; a pure module |
 | `starkeno/hook_avvia_ingestione.py` | Non-blocking launcher, for Codex |
 | `starkeno/hook_ingestione.py` | Idempotent end-of-turn ingestion |
-| `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook |
+| `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook; states one measured fact after a break |
+| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when. Read by Claude Code and Codex alike |
 | `starkeno/conto.py` | Pure model of the bill |
 | `starkeno/consuntivo.py` | Pure model of estimate against execution |
 | `starkeno/report_conto.py` | Static HTML page generator |
@@ -358,8 +410,12 @@ python -m pytest -q
 
 Stated plainly, because a README that hides its gaps costs more than one that names them.
 
-- **No release to install from.** There is no PyPI package: you install from a clone.
-  The last tagged release is `0.2.0`; everything since is unreleased.
+- **No pinned release.** There is no PyPI package. `pip install git+…` works, but it
+  installs whatever `main` happens to be at that moment: there is no tag to pin to, and
+  no way to say which version you are running beyond the one in the manifest.
+- **The estimate-against-execution half is not shipped.** Its MCP tools exist and are
+  documented above, but the plugin does not register them, on purpose — see the note in
+  that section.
 - **The comparison has never been checked against real data.** `starkeno consuntivo` and
   the three `blueprint_run_*` tools are covered by tests, but every one of those tests
   runs on synthetic fixtures. Nothing has yet compared an estimate with a real execution
