@@ -64,6 +64,34 @@ Ripeti su <https://test.pypi.org/manage/account/publishing/> con environment `te
 > in attesa finché un umano non approva: è la regola del progetto — nessuna pubblicazione
 > senza consenso esplicito — resa esecutiva invece che scritta in un documento.
 
+### Il workflow è stato provato, non solo scritto
+
+Eseguito il 19/08/2026 con `workflow_dispatch` verso TestPyPI, **prima** che esistesse un
+publisher configurato. Esito:
+
+| Job | Esito |
+|---|---|
+| `cancelli` | ✅ suite, scanner, coerenza fra versione e tag |
+| `costruisci` | ✅ build, `twine check --strict`, artefatto caricato |
+| `TestPyPI` | ❌ `invalid-publisher` — **l'unico motivo atteso** |
+
+Il messaggio esatto è `valid token, but no corresponding publisher`. Le due parole che
+contano sono **valid token**: lo scambio OIDC ha funzionato, GitHub ha emesso il token,
+e manca soltanto la registrazione dal lato PyPI. Tutto il resto del workflow è verificato
+in esecuzione, non per lettura.
+
+I claim che GitHub dichiara — da confrontare col form, così non si configura a memoria:
+
+```
+repository        X3n0-io/starkeno
+repository_owner  X3n0-io
+workflow_ref      X3n0-io/starkeno/.github/workflows/release.yml@refs/heads/main
+environment       testpypi        (per la pubblicazione vera: pypi)
+```
+
+> In Actions resta una corsa `Release` rossa: è questa prova. Si cancella con
+> `gh run delete <id>` se dà fastidio a chi guarda, ma la sua evidenza è qui sopra.
+
 ### La prova, prima di quella vera
 
 Da Actions → Release → *Run workflow*, destinazione **testpypi**. Costa dieci minuti e
