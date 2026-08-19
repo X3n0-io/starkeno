@@ -442,7 +442,9 @@ live only at the root, because Claude Code cannot see `../skills/`; and Claude C
 cannot mount the root instead, because the `hooks/hooks.json` there is the Codex one,
 whose `PLUGIN_ROOT` it does not expand.
 
-Measured on 2026-08-19 by asking Codex a cost question and watching the skill not fire.
+Measured on 2026-08-19, twice: first by asking Codex a cost question and watching the
+skill *not* fire — which is how the two-roots problem was found at all — and then, after
+the second copy existed, by asking again and watching it fire.
 
 ### Installing the hooks by hand
 
@@ -481,11 +483,9 @@ Stated plainly, because a README that hides its gaps costs more than one that na
   end to end. Until that happens, treat the predictive half as unproven.
 - **The bill reports, it does not forecast.** There is no spending cap and no alerting on
   one: the page tells you what a run cost, never that a run is about to cost too much.
-- **The skill is verified on Claude Code; on Codex it is shipped but unproven.** It now
-  exists in both plugin roots (see *How it is built, and why*), but the only measurement
-  so far is a negative one: on 2026-08-19, before the fix, Codex was asked a cost
-  question and the skill did not fire. It has not been re-tested since. Collection itself
-  is verified on both.
+- ~~The skill is unproven on Codex.~~ **Verified on both** on 2026-08-19: asked a cost
+  question, Claude Code and Codex each invoked the skill. It took one negative
+  measurement first — see *Why the skill exists twice*.
 - **Only two agents are measured.** Codex and Claude Code. Antigravity is recognised but
   cannot be measured, because its transcript carries no token counts, and it reports zero
   calls rather than a guess.
