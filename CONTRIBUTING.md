@@ -1,5 +1,17 @@
 # Contribuire a StarkEno
 
+## Il contributo che serve di più non è codice
+
+È una **misura**. La previsione di StarkEno ha sbagliato di 9x su una sola esecuzione, e
+con un punto non si distingue una costante moltiplicativa da un errore che dipende dalla
+forma del lavoro. Servono esecuzioni vere di forme diverse.
+
+Non serve il tuo database e non lo vogliamo: servono otto numeri. Come produrli e cosa
+cancellare prima di incollarli sta in [lo scarto 9x](docs/lo-scarto-9x.md)
+([English](docs/the-9x-gap.en.md)); si manda con il template di issue **«Una misura»**.
+
+Se invece vuoi scrivere codice, il resto di questa pagina è per te.
+
 ## Setup
 
 Richiede Python 3.12–3.14.
