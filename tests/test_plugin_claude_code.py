@@ -39,6 +39,8 @@ Misurato il 15/08/2026 installando il plugin e strumentando un hook vero.
    `(session_id, message_id)`.
 """
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import starkeno
@@ -111,8 +113,52 @@ def test_gli_hook_claude_invocano_moduli_che_esistono():
         (start, "starkeno.hook_inizio_sessione"),
         (stop, "starkeno.hook_ingestione"),
     ):
-        assert hook["command"] == "python -m " + modulo
+        assert hook["command"] == "python -P -m " + modulo
         assert (RADICE / modulo.replace(".", "/")).with_suffix(".py").is_file()
+
+
+def _flag_interprete(comando: str) -> list[str]:
+    """I flag fra `python` e `-m`, cioe' come viene costruito `sys.path`."""
+    pezzi = comando.split()
+    assert pezzi[0] == "python" and "-m" in pezzi, comando
+    return pezzi[1:pezzi.index("-m")]
+
+
+def test_gli_hook_claude_non_si_fanno_scavalcare_da_un_checkout_nella_cwd(tmp_path):
+    """LA regressione misurata il 19/08/2026, ed e' costata 465 righe finite in un
+    database che `report` e `doctor` non guardano.
+
+    Con `-m` il primo elemento di `sys.path` e' la working directory della SESSIONE, che
+    ha la precedenza sul pacchetto installato. Chi lavora dentro un qualunque checkout di
+    StarkEno fa quindi eseguire all'hook il codice di QUEL checkout. Se e' anteriore allo
+    spostamento della cartella dati del 15/08/2026, l'hook raccoglie per intero e scrive
+    nel percorso storico: nessun errore, nessuna riga su stderr, perche' l'invariante 12
+    gli vieta entrambi, e nessun controllo del doctor in grado di accorgersene.
+
+    Misurato dalla cartella dell'archivio: `import starkeno` risolveva al checkout del
+    14/08 e `config.DB_PATH` al percorso storico, mentre lo stesso interprete con `-P`
+    risolveva al pacchetto installato e alla cartella canonica.
+
+    L'esca non e' un pacchetto qualunque: si chiama `starkeno` proprio perche' e' cosi'
+    che si presenta il caso reale, cioe' un altro checkout dello stesso progetto.
+    """
+    pacchetto = tmp_path / "starkeno"
+    pacchetto.mkdir()
+    (pacchetto / "__init__.py").write_text("", encoding="utf-8")
+
+    for evento, gruppi in _hooks()["hooks"].items():
+        for gruppo in gruppi:
+            for hook in gruppo["hooks"]:
+                esito = subprocess.run(
+                    [sys.executable, *_flag_interprete(hook["command"]), "-c",
+                     "import starkeno; print(starkeno.__file__)"],
+                    cwd=tmp_path, capture_output=True, text=True, timeout=60,
+                )
+                uscita = esito.stdout + esito.stderr
+                assert str(pacchetto) not in uscita, (
+                    "%s: l'hook importa il pacchetto che si trova nella working "
+                    "directory invece di quello installato" % evento
+                )
 
 
 def test_lo_stop_claude_e_sincrono_e_non_passa_dall_avviatore():

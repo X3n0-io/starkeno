@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -m starkeno.hook_inizio_sessione",
+            "command": "python -P -m starkeno.hook_inizio_sessione",
             "async": false,
             "timeout": 5
           }
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -m starkeno.hook_ingestione",
+            "command": "python -P -m starkeno.hook_ingestione",
             "async": false,
             "timeout": 30
           }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python -m starkeno.hook_ingestione",
+            "command": "python -P -m starkeno.hook_ingestione",
             "async": false,
             "timeout": 30
           }
