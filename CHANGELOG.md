@@ -53,6 +53,10 @@ usa il versionamento semantico.
 
 ### Fixed
 
+- La skill arriva anche a Codex. I due harness montano radici di plugin diverse dallo
+  stesso repository — Claude Code `plugin-claude-code/`, Codex la radice — quindi una
+  copia sola era invisibile a uno dei due. Ora esistono entrambe e un test fallisce se
+  divergono.
 - `starkeno doctor` dichiara quando la copia installata del plugin esegue codice diverso
   dal pacchetto. Correggere il bundle nel repository non aggiorna cio' che gira: l'harness
   copia il plugin nella propria cache, e quella copia e' ciò che esegue. Il confronto e'

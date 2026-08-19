@@ -124,3 +124,39 @@ def test_il_readme_distingue_gli_hook_dei_due_harness():
     assert "SessionEnd" in readme, (
         "senza SessionEnd l'ultimo turno di ogni sessione Claude Code si perde"
     )
+
+
+# ==================================== la skill deve stare anche nella radice del repo
+#
+# I due harness montano radici di plugin DIVERSE dallo stesso repository:
+# Claude Code monta `plugin-claude-code/` (`.claude-plugin/marketplace.json`), Codex
+# monta la radice (`.agents/plugins/marketplace.json`, `path: "./"`). Una skill sotto la
+# prima e' invisibile alla seconda, e nessun test lo diceva.
+
+
+SKILL_CODEX = RADICE / "skills" / "starkeno" / "SKILL.md"
+SKILL_CLAUDE = RADICE / "plugin-claude-code" / "skills" / "starkeno" / "SKILL.md"
+
+
+def test_la_skill_esiste_anche_nella_radice_che_monta_codex():
+    """LA regressione, misurata il 19/08/2026 chiedendo a Codex quanto avesse speso: la
+    skill non e' partita. Era in `plugin-claude-code/skills/`, dove Codex non guarda."""
+    assert SKILL_CODEX.is_file(), (
+        "Codex monta la radice del repository: senza `skills/` qui non vede la skill"
+    )
+
+
+def test_le_due_copie_della_skill_restano_identiche():
+    """La duplicazione e' FORZATA dalle due radici — la skill non puo' stare solo alla
+    radice, perche' Claude Code monta `plugin-claude-code/` e non vede `../skills/` —
+    ma questo progetto ha gia' pagato due volte per due copie della stessa regola che
+    divergono (`effective_tokens`, il parsing di `model_map`).
+
+    Qui la divergenza costerebbe in silenzio: due agenti con due idee diverse di quando
+    invocare StarkEno, e nessuno dei due che se ne accorge. `read_text` normalizza i fine
+    riga, quindi il confronto e' sul contenuto e non sul checkout.
+    """
+    assert SKILL_CODEX.read_text(encoding="utf-8") == \
+        SKILL_CLAUDE.read_text(encoding="utf-8"), (
+            "le due copie della skill sono divergute: allineale"
+        )

@@ -43,6 +43,7 @@ packages = ["starkeno", "migrations"]
 [tool.hatch.build.targets.wheel.force-include]
 ".codex-plugin" = "starkeno/plugin_bundle/.codex-plugin"
 "hooks" = "starkeno/plugin_bundle/hooks"
+"skills" = "starkeno/plugin_bundle/skills"
 ".claude-plugin" = "starkeno/plugin_bundle/.claude-plugin"
 "plugin-claude-code" = "starkeno/plugin_bundle/plugin-claude-code"
 
@@ -52,6 +53,7 @@ include = [
   "/.claude-plugin",
   "/plugin-claude-code",
   "/hooks",
+  "/skills",
   "/migrations",
   "/starkeno",
   "/LICENSE",

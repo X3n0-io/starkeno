@@ -429,6 +429,21 @@ model to show a single short line in the next useful message. It welcomes you wh
 database is missing or empty, and stays quiet once you have history. It creates no
 database and applies no migrations.
 
+### Why the skill exists twice
+
+`skills/starkeno/SKILL.md` and `plugin-claude-code/skills/starkeno/SKILL.md` are the same
+file, and a test fails if they stop being identical.
+
+Duplication is normally the wrong answer, and this project has twice paid for two copies
+of one rule drifting apart. Here it is forced: the two harnesses mount **different plugin
+roots** from this single repository — Claude Code mounts `plugin-claude-code/`, Codex
+mounts the repository root — and a skill under one is invisible to the other. It cannot
+live only at the root, because Claude Code cannot see `../skills/`; and Claude Code
+cannot mount the root instead, because the `hooks/hooks.json` there is the Codex one,
+whose `PLUGIN_ROOT` it does not expand.
+
+Measured on 2026-08-19 by asking Codex a cost question and watching the skill not fire.
+
 ### Installing the hooks by hand
 
 The Codex plugin ships `.codex-plugin/plugin.json` and `hooks/hooks.json`, whose commands
@@ -466,11 +481,11 @@ Stated plainly, because a README that hides its gaps costs more than one that na
   end to end. Until that happens, treat the predictive half as unproven.
 - **The bill reports, it does not forecast.** There is no spending cap and no alerting on
   one: the page tells you what a run cost, never that a run is about to cost too much.
-- **The skill reaches Claude Code only.** Measured on 2026-08-19, by asking Codex a cost
-  question and watching it not fire. The two harnesses install *different plugin roots*
-  from this one repository — Claude Code mounts `plugin-claude-code/`, Codex mounts the
-  repository root — and the skill lives under the first, so Codex never sees it.
-  Collection itself is verified on both; only the skill is missing.
+- **The skill is verified on Claude Code; on Codex it is shipped but unproven.** It now
+  exists in both plugin roots (see *How it is built, and why*), but the only measurement
+  so far is a negative one: on 2026-08-19, before the fix, Codex was asked a cost
+  question and the skill did not fire. It has not been re-tested since. Collection itself
+  is verified on both.
 - **Only two agents are measured.** Codex and Claude Code. Antigravity is recognised but
   cannot be measured, because its transcript carries no token counts, and it reports zero
   calls rather than a guess.
@@ -485,7 +500,8 @@ Stated plainly, because a README that hides its gaps costs more than one that na
 | `starkeno/hook_avvia_ingestione.py` | Non-blocking launcher, for Codex |
 | `starkeno/hook_ingestione.py` | Idempotent end-of-turn ingestion |
 | `starkeno/hook_inizio_sessione.py` | Synchronous session-start hook; states one measured fact after a break |
-| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when. Loaded by Claude Code only: Codex mounts the repository root as its plugin root and looks for `skills/` there |
+| `plugin-claude-code/skills/starkeno/` | The skill that tells the agent what StarkEno answers, and when — the copy Claude Code mounts |
+| `skills/starkeno/` | The same file, byte for byte, where Codex mounts it. A test fails if the two drift apart |
 | `starkeno/conto.py` | Pure model of the bill |
 | `starkeno/consuntivo.py` | Pure model of estimate against execution |
 | `starkeno/report_conto.py` | Static HTML page generator |
