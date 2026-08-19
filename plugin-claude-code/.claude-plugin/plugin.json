@@ -1,7 +1,7 @@
 {
   "name": "starkeno",
   "description": "Finds waste and errors in how you work with coding agents",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "keywords": [
     "tokens",
     "cost",

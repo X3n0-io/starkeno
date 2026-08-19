@@ -32,11 +32,16 @@ def test_manifest_codex_ha_shape_completa_e_punta_agli_hook():
 
 
 def test_manifest_version_matches_python_package():
+    """Il letterale e' un FERMO, non una ridondanza: la versione e' anche il percorso
+    di cache del plugin (`.../<plugin>/<versione>/`), quindi cambiarla e' come si
+    consegna una modifica agli hook a chi ha gia' installato. Lasciarla ferma nasconde
+    la correzione; cambiarla di riflesso la nasconde altrettanto. Il letterale obbliga
+    a passare di qui apposta."""
     manifest = json.loads(
         (RADICE / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
     )
 
-    assert manifest["version"] == starkeno.__version__ == "0.3.2"
+    assert manifest["version"] == starkeno.__version__ == "0.3.3"
 
 
 def test_repo_marketplace_exposes_the_root_plugin():
