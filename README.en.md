@@ -48,6 +48,17 @@ Telling those two apart needs more real runs. That is the current work, and it i
 honest state of the project: one measurement, a known mechanism, and an unanswered
 question.
 
+## Help answer the question
+
+One measurement cannot tell a multiplicative constant from an error that depends on the
+shape of the work: a single point does not determine a slope. If you run a real execution
+and send **eight numbers** — not your database, not your transcripts — the question gets
+closer to an answer.
+
+**[The 9x gap](docs/the-9x-gap.en.md)** explains the mechanism, says exactly
+which numbers are needed and what to delete before pasting them. Every measurement
+received goes into a public table, credited to whoever sent it.
+
 ## What you can actually run today
 
 The forecasting half is **not shipped as a ready feature** — see
@@ -128,7 +139,7 @@ The last two rows are the ones other tools do not show you. A number you cannot 
 worth less than a smaller number you can, and the forecast is only as good as the
 measurement it is scored against.
 
-![StarkEno's local bill: weighted total, cost of work, of loading and of re-reading, and the per-project breakdown](docs/immagini/conto.png)
+![StarkEno's local bill: weighted total, cost of work, of loading and of re-reading, and the per-project breakdown](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/conto.png)
 
 *Nobody's data, not mine.* The page is generated from the **already-sanitised** real
 transcript that ships in this repository, with `python scripts/genera_immagine_conto.py`:

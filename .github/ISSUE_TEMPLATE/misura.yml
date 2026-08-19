@@ -1,0 +1,74 @@
+name: Una misura
+description: Manda un confronto fra previsto e osservato, e chiudi la domanda aperta
+title: "[Misura]: "
+labels: [misura]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie. Questa è la cosa più utile che si possa mandare a questo progetto.
+
+        La previsione di StarkEno ha sbagliato di 9x su **una sola** esecuzione, e con un
+        punto solo non si distingue una costante moltiplicativa da un errore che dipende
+        dalla forma del lavoro. Servono misure di forme diverse — vedi
+        [lo scarto 9x](https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md).
+
+        **Non mandare il database, i transcript o l'output grezzo.** Servono i totali.
+        Prima di incollare, cancella `project`, `session_id`, `run_key` e
+        `blueprint_hash`: dicono a cosa stavi lavorando, e non servono a niente qui.
+  - type: input
+    id: harness
+    attributes:
+      label: Harness
+      description: Claude Code, Codex, o altro.
+    validations:
+      required: true
+  - type: textarea
+    id: forma
+    attributes:
+      label: Forma del lavoro
+      description: >
+        La parte che i numeri non dicono, ed è quella che distingue le due ipotesi.
+        Durata, quanti file toccati, ritentativi, lineare o pieno di rami.
+      placeholder: "circa 40 minuti, 12 file, tre ritentativi su un test, un ramo condizionale"
+    validations:
+      required: true
+  - type: textarea
+    id: numeri
+    attributes:
+      label: Previsto contro osservato
+      description: >
+        Da `starkeno consuntivo --run <run_key> --json`, solo i totali dei due lati.
+      render: text
+      placeholder: |
+        stima     input=..  output=..  cache_read=..  cache_write=..  totale=..
+        osservato input=..  output=..  cache_read=..  cache_write=..  totale=..
+    validations:
+      required: true
+  - type: input
+    id: qualita
+    attributes:
+      label: Righe non scomposte e righe rifiutate
+      description: >
+        I due numeri che dicono quanto fidarsi del resto. Se non sono zero va bene lo
+        stesso: dillo e basta, una misura dichiarata imperfetta vale più di una pulita
+        per omissione.
+      placeholder: "righe_non_scomposte=0  righe_rifiutate=0"
+    validations:
+      required: true
+  - type: input
+    id: versione
+    attributes:
+      label: Versione di StarkEno
+      placeholder: "starkeno --version, oppure il commit"
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Confini
+      options:
+        - label: Ho tolto `project`, `session_id`, `run_key` e `blueprint_hash`.
+          required: true
+        - label: Non ho incollato transcript, percorsi personali o dati di clienti.
+          required: true
+        - label: Va bene che questa misura compaia nella tabella pubblica, col mio nome utente.
+          required: true

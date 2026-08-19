@@ -46,6 +46,16 @@ La domanda aperta è quale forma abbia —
 Distinguere i due casi richiede più esecuzioni vere. È il lavoro in corso, ed è lo stato
 onesto del progetto: una misura, un meccanismo noto, e una domanda senza risposta.
 
+## Aiuta a rispondere alla domanda
+
+Con una misura sola non si distingue una costante da un errore che dipende dalla forma:
+un punto non determina una pendenza. Se fai un'esecuzione vera e mandi **otto numeri** —
+non il database, non i transcript — la domanda si avvicina alla risposta.
+
+**[Lo scarto 9x](docs/lo-scarto-9x.md)** spiega il meccanismo, dice esattamente quali
+numeri servono e cosa cancellare prima di incollarli. Le misure ricevute finiscono in una
+tabella pubblica, con il credito a chi le manda.
+
 ## Cosa puoi davvero usare oggi
 
 La metà predittiva **non è spedita come funzione pronta** — vedi
@@ -121,7 +131,7 @@ Le ultime due righe sono quelle che gli altri strumenti non ti mostrano. Un nume
 puoi controllare vale meno di un numero più piccolo che puoi controllare, e la previsione
 vale solo quanto la misura contro cui viene giudicata.
 
-![Il conto locale di StarkEno: totale pesato, costo di lavoro, di caricamento e di rilettura, e la scomposizione per progetto](docs/immagini/conto.png)
+![Il conto locale di StarkEno: totale pesato, costo di lavoro, di caricamento e di rilettura, e la scomposizione per progetto](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/conto.png)
 
 *Dati di nessuno, non i miei.* La pagina è generata dal transcript vero **già ripulito**
 che sta nel repository, con `python scripts/genera_immagine_conto.py`: il progetto è

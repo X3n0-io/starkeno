@@ -5,6 +5,30 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/lo-scarto-9x.md` e la sua versione inglese: perché la previsione ha sbagliato di
+  9x, perché è un errore strutturale e non aritmetico, e la domanda che ne resta aperta —
+  costante moltiplicativa o dipendente dalla forma del lavoro. Con un invito a mandare
+  misure: otto numeri, niente database e niente transcript.
+- Template di issue **«Una misura»**, che chiede esattamente quei numeri e pretende che
+  `project`, `session_id`, `run_key` e `blueprint_hash` siano stati tolti.
+- `scripts/genera_immagine_conto.py`: rigenera l'immagine del conto per il README da dati
+  di nessuno, così non invecchia in silenzio.
+- Metadati per farsi trovare: `keywords`, `classifiers` e `project.urls` nel pacchetto.
+- `docs/releasing.md` documenta la pubblicazione su PyPI, TestPyPI compreso.
+- `README.en.md`, con quattro guardie che impediscono alle due lingue di divergere.
+
+### Changed
+
+- Il README apre con la previsione invece che con il 60% di rilettura: quel numero è noto
+  a chiunque segua il tema, mentre la previsione è l'unica cosa che il progetto tenta da
+  solo. Il 60% resta, come spiegazione dello scarto.
+- Il progetto parla italiano: README, skill, manifest e metadati. Il `description` della
+  skill resta bilingue perché è la superficie con cui l'agente decide se invocarla.
+- Le immagini nel README usano URL assoluti: PyPI non risolve i percorsi relativi al
+  repository e mostrerebbe un'immagine rotta.
+
 ### Security
 
 - Lo scanner dei segreti riconosce le credenziali AWS: l'identificativo `AKIA…`/`ASIA…`,

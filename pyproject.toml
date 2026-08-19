@@ -10,6 +10,23 @@ readme = "README.md"
 requires-python = ">=3.12,<3.15"
 license = { file = "LICENSE" }
 authors = [{ name = "Simone Mansella" }]
+keywords = [
+  "claude-code", "codex", "coding-agent", "observability", "cost", "tokens",
+  "forecast", "preflight", "local-first", "privacy",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: Italian",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: System :: Monitoring",
+]
 dependencies = [
   "alembic>=1.13,<2",
   "anthropic>=0.122,<1",
@@ -22,6 +39,12 @@ dependencies = [
   "pydantic>=2.9,<3",
   "PyYAML>=6,<7",
 ]
+
+[project.urls]
+Homepage = "https://github.com/X3n0-io/starkeno"
+Repository = "https://github.com/X3n0-io/starkeno"
+Changelog = "https://github.com/X3n0-io/starkeno/blob/main/CHANGELOG.md"
+"Lo scarto 9x" = "https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md"
 
 [project.optional-dependencies]
 dev = [
