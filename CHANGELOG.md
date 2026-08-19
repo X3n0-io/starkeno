@@ -51,6 +51,14 @@ usa il versionamento semantico.
 
 ### Fixed
 
+- Gli hook Claude Code si invocano con `python -P -m`, non `python -m`. Senza `-P` il
+  primo elemento di `sys.path` è la working directory della sessione, che ha la
+  precedenza sul pacchetto installato: chi lavora dentro un qualunque checkout di
+  StarkEno faceva eseguire all'hook il codice di quel checkout. Misurato il 19/08/2026
+  su un archivio anteriore allo spostamento della cartella dati: la raccolta funzionava
+  per intero ma scriveva nel percorso storico, quindi `report`, `doctor` e `consuntivo`
+  non ne vedevano una riga. Nessun errore e nessuna riga su stderr, perché l'invariante
+  12 li vieta entrambi.
 - `starkeno consuntivo` dichiara invece di cadere quando non c'è niente da leggere. La
   sessione è aperta in sola lettura (`mode=ro`, che fallisce invece di creare): su
   un'installazione fresca il comando usciva con un traceback `OperationalError`, e su uno
