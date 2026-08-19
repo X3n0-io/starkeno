@@ -216,7 +216,7 @@ def renderizza_html(conto: Conto) -> str:
     <div class="metrica">Esiti ignoti<strong>%(ignoti)s</strong></div>
     <div class="metrica">Righe non classificabili<strong>%(non_classificabili)s</strong></div>
   </div>
-  <p class="nota"><strong>Tetto non configurato.</strong> Il conto resta disponibile; la previsione tace.</p>
+  <p class="nota"><strong>Questo e' un consuntivo.</strong> StarkEno misura cio' che e' gia' stato speso e <strong>non prevede</strong>: non esiste un tetto di spesa, non c'e' niente da configurare, e nessun avviso arrivera' prima che una sessione costi troppo.</p>
   %(sezioni)s
   <footer>StarkEno misura quello che spendi, non quello che ottieni.</footer>
 </main></body>

@@ -65,7 +65,13 @@ def test_genera_html_statico_con_conto_completo_e_valori_escapati(
     assert "Per sessione" in contenuto
     assert "Ritmo locale degli ultimi 7 giorni" in contenuto
     assert "Le etichette si sovrappongono" in contenuto
-    assert "Tetto non configurato" in contenuto
+    # Diceva «Tetto non configurato», che implicava una manopola da configurare. Un
+    # tetto di spesa non esiste: la riga era testo fisso, e prometteva una funzione
+    # assente invece di dichiararla. Ora dichiara.
+    assert "non prevede" in contenuto, "il conto non dice di non prevedere"
+    assert "Tetto non configurato" not in contenuto, (
+        "non deve implicare una configurazione che non esiste"
+    )
     assert "StarkEno misura quello che spendi, non quello che ottieni." in contenuto
 
 

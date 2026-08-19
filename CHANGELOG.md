@@ -5,6 +5,8 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-08-19
+
 ### Added
 
 - Consuntivo di un'esecuzione: tre tool MCP (`blueprint_run_start`, `blueprint_run_node`,
