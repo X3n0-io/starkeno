@@ -5,6 +5,14 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+### Security
+
+- Lo scanner dei segreti riconosce le credenziali AWS: l'identificativo `AKIA…`/`ASIA…`,
+  che si riconosce da solo, e la chiave segreta quando compare accanto al proprio nome.
+  Prima passavano entrambe, e lo scanner è il cancello che precede ogni pubblicazione.
+  La chiave segreta lontana dal proprio nome resta invisibile — è dichiarato in un test,
+  perché quaranta caratteri base64 da soli sono indistinguibili da uno sha1.
+
 ## [0.3.3] - 2026-08-19
 
 ### Added

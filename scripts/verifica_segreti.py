@@ -25,6 +25,20 @@ PATTERN = (
     ("bearer_token", re.compile(
         r"\bBearer\s+[A-Za-z0-9._~+/=-]{24,}", re.IGNORECASE
     )),
+    # L'identificativo AWS si riconosce da solo: prefisso fisso piu' sedici
+    # caratteri. ASIA e' la credenziale temporanea, che scade ma nel frattempo
+    # apre le stesse porte.
+    ("aws_access_key_id", re.compile(
+        r"\b(?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA|AIDA|AGPA|AIPA|ANPA|ANVA|APKA|AROA)"
+        r"[A-Z0-9]{16}\b"
+    )),
+    # La chiave segreta invece e' quaranta caratteri base64 e nient'altro: cercarla
+    # da sola farebbe scattare il cancello su ogni sha1 o blob base64 del
+    # repository. Si pretende il nome accanto — un cancello che urla sempre si
+    # impara a scavalcare, ed e' peggio di non averlo.
+    ("aws_secret_access_key", re.compile(
+        r"aws_?secret_?access_?key\W{0,10}[A-Za-z0-9/+=]{40}\b", re.IGNORECASE
+    )),
 )
 
 
