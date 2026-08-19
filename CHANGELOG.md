@@ -7,6 +7,10 @@ usa il versionamento semantico.
 
 ### Added
 
+- **Il simulatore si prova in due comandi**, in cima a entrambi i README, con l'immagine
+  del report che produce. Non serve plugin, hook o server MCP: la fixture è già nel
+  repository e il lettore riproduce esattamente quella schermata.
+- `scripts/genera_immagine_simulazione.py` rigenera quell'immagine dalla fixture.
 - `docs/lo-scarto-9x.md` e la sua versione inglese: perché la previsione ha sbagliato di
   9x, perché è un errore strutturale e non aritmetico, e la domanda che ne resta aperta —
   costante moltiplicativa o dipendente dalla forma del lavoro. Con un invito a mandare

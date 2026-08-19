@@ -48,6 +48,37 @@ Telling those two apart needs more real runs. That is the current work, and it i
 honest state of the project: one measurement, a known mechanism, and an unanswered
 question.
 
+## Try the simulation, right now
+
+Two commands, a fixture that already ships in this repository, **nothing to install
+beyond the package**: no plugin, no hooks, no MCP server.
+
+```bash
+python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json --format yaml --output bozza.yaml
+python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 --format html --output report.html
+```
+
+![Preflight report: four scenarios with tokens, LLM calls, tool calls and latency; overall confidence and the provenance of every estimate](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png)
+
+Look at **what it refuses to do** — that is the part that matters:
+
+- **It does not give you a number.** It gives four scenarios — `optimistic`, `typical`,
+  `prudent`, `maximum` — because a single estimate for non-deterministic work is a
+  fiction.
+- **It declares its own confidence.** In the example above it is `low`, and it says so.
+- **It says where each estimate came from**: `declared` (you said it), `default` (it
+  supplied it), `inferred` (it worked it out). An estimate whose provenance you do not
+  know cannot be checked.
+- **It names what it could not price** instead of putting a zero there: *"Prezzi mancanti
+  nel caso peggiore per: synthetic-model"*. Absent money is **absent**, never zero.
+
+`--confirmed` is literal and required: that explicit confirmation creates a new revision,
+and only then do lint and simulation run. Nothing moves by accident.
+
+> And the 331,500 in the measurement above? That is the **`maximum`** scenario. The worst
+> case the simulator could imagine was still nine times below reality. That is why the gap
+> is interesting rather than a calibration slip.
+
 ## Help answer the question
 
 One measurement cannot tell a multiplicative constant from an error that depends on the
@@ -410,12 +441,16 @@ and you can see whether the forecast is getting closer.
 
 > ### What "not shipped" means, precisely
 >
-> **The plugin does not register these tools.** It installs hooks and a skill, not an MCP
-> server. To reach the forecast you must register `python -P -m starkeno.mcp_server` as a
-> stdio MCP server yourself, and you must hand it a structured Blueprint — Preflight does
-> not yet read a workflow described in prose.
+> **The simulator already runs**, from the command line, without any of this — see
+> [Try the simulation](#try-the-simulation-right-now). What is not shipped is the
+> **comparison** between its estimate and a real execution.
 >
-> That is deliberate, not an oversight. This half has been checked against a real
+> For that the plugin is not enough: it installs hooks and a skill, not an MCP server. You
+> must register `python -P -m starkeno.mcp_server` as a stdio MCP server yourself, and you
+> must hand it a structured Blueprint — Preflight does not yet read a workflow described
+> in prose.
+>
+> That is deliberate, not an oversight. The comparison has been made against a real
 > execution **once**, and against synthetic fixtures otherwise. The project does not ship
 > what it has not measured. The bill and the diagnosis need none of it.
 >

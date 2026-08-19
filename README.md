@@ -46,6 +46,37 @@ La domanda aperta è quale forma abbia —
 Distinguere i due casi richiede più esecuzioni vere. È il lavoro in corso, ed è lo stato
 onesto del progetto: una misura, un meccanismo noto, e una domanda senza risposta.
 
+## Prova la simulazione, adesso
+
+Due comandi, una fixture che è già nel repository, **niente da installare oltre al
+pacchetto**: né plugin, né hook, né server MCP.
+
+```bash
+python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json --format yaml --output bozza.yaml
+python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 --format html --output report.html
+```
+
+![Report Preflight: quattro scenari con token, chiamate LLM, tool e latenza; confidenza complessiva e provenienza di ogni stima](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png)
+
+Guarda **cosa non fa**, che è la parte che conta:
+
+- **Non dà un numero.** Dà quattro scenari — `optimistic`, `typical`, `prudent`,
+  `maximum` — perché una stima singola su un lavoro non deterministico è una finzione.
+- **Dichiara la propria confidenza.** Nell'esempio qui sopra è `low`, e lo scrive.
+- **Dice da dove viene ogni stima**: `declared` (l'hai detto tu), `default` (l'ha messo
+  lui), `inferred` (l'ha dedotto). Una stima di cui non sai la provenienza non è
+  verificabile.
+- **Nomina quello che non ha saputo valorizzare** invece di metterci zero: *«Prezzi
+  mancanti nel caso peggiore per: synthetic-model»*. Il denaro assente è **assente**, mai
+  zero.
+
+`--confirmed` è letterale e obbligatorio: quella conferma esplicita crea una revisione
+nuova, e solo allora partono lint e simulazione. Niente si muove per sbaglio.
+
+> E il 331.500 della misura qui sopra? È lo scenario **`maximum`**. Il caso peggiore che
+> il simulatore sapeva immaginare era ancora nove volte sotto la realtà. È per questo che
+> lo scarto è interessante e non è una svista di taratura.
+
 ## Aiuta a rispondere alla domanda
 
 Con una misura sola non si distingue una costante da un errore che dipende dalla forma:
@@ -405,13 +436,16 @@ Rilancialo la settimana dopo e vedi se la previsione si sta avvicinando.
 
 > ### Cosa significa «non spedita», per la precisione
 >
-> **Il plugin non registra questi tool.** Installa hook e una skill, non un server MCP.
-> Per raggiungere la previsione devi registrare tu `python -P -m starkeno.mcp_server` come
-> server MCP stdio, e devi passargli un Blueprint strutturato — Preflight non legge ancora
-> un workflow descritto a parole.
+> **Il simulatore gira già**, da riga di comando, senza niente di tutto questo — è la
+> sezione [Prova la simulazione](#prova-la-simulazione-adesso). Quello che non è spedito
+> è il **confronto** fra la sua stima e un'esecuzione vera.
 >
-> È deliberato, non una dimenticanza. Questa metà è stata confrontata con un'esecuzione
-> vera **una volta**, e per il resto solo con fixture sintetiche. Il progetto non spedisce
+> Per quello il plugin non basta: installa hook e una skill, non un server MCP. Devi
+> registrare tu `python -P -m starkeno.mcp_server` come server MCP stdio, e devi passargli
+> un Blueprint strutturato — Preflight non legge ancora un workflow descritto a parole.
+>
+> È deliberato, non una dimenticanza. Il confronto è stato fatto contro un'esecuzione vera
+> **una volta**, e per il resto solo contro fixture sintetiche. Il progetto non spedisce
 > ciò che non ha misurato. Al conto e alla diagnosi non serve niente di tutto questo.
 >
 > Se vuoi aiutare a rispondere alla domanda aperta, è questa la parte da provare.

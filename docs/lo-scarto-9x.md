@@ -17,6 +17,13 @@ scarto                              9,15x
 
 Questa pagina dice **perché**, e chiede aiuto per rispondere alla domanda che ne segue.
 
+> **Il 331.500 non è una stima media: è lo scenario `maximum`.** Il simulatore non
+> produce un numero, produce quattro scenari — `optimistic`, `typical`, `prudent`,
+> `maximum` — e quello che ha sbagliato di nove volte era già il suo caso peggiore.
+>
+> Puoi lanciarlo tu in due comandi, senza installare plugin né hook: vedi
+> [Prova la simulazione](../README.md#prova-la-simulazione-adesso).
+
 ---
 
 ## Perché non è un errore di calcolo

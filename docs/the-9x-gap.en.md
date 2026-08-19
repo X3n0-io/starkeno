@@ -16,6 +16,13 @@ gap                                   9.15x
 
 This page says **why**, and asks for help answering the question that follows.
 
+> **331,500 is not an average estimate: it is the `maximum` scenario.** The simulator does
+> not produce a number, it produces four scenarios — `optimistic`, `typical`, `prudent`,
+> `maximum` — and the one that was nine times off was already its worst case.
+>
+> You can run it yourself in two commands, with no plugin and no hooks installed: see
+> [Try the simulation](../README.en.md#try-the-simulation-right-now).
+
 ---
 
 ## Why it is not an arithmetic bug
