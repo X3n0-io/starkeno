@@ -8,21 +8,22 @@ Tutti gli altri strumenti rispondono dopo. Leggono gli stessi transcript locali 
 agente già scrive e ti dicono, con precisione, quanto hai speso. È un problema risolto, e
 ci sono buoni strumenti che lo fanno.
 
-StarkEno è costruito attorno alla domanda che non fanno. È l'unica cosa qui che meriti la
-tua attenzione, ed è agli inizi.
+StarkEno è costruito attorno alla domanda che non fanno.
 
 > **Stato: Fase 2.** La raccolta funziona e il conto locale è reale e installabile. La
-> previsione è costruita e raggiungibile a mano, ed è stata confrontata con un'esecuzione
-> vera **una volta sola** — quella misura è la prossima cosa su questa pagina.
+> previsione è costruita, si prova in tre comandi, ed è stata confrontata con **due**
+> esecuzioni vere — quelle misure sono la prossima cosa su questa pagina.
 
-## L'unica misura vera
+## Le due misure
 
-> StarkEno aveva previsto un'esecuzione a **331.500 token** al massimo.
-> L'esecuzione ne è costati **3.035.535**. La previsione ha sbagliato di **9 volte**.
+> **Misura 1** — Codex, 7 nodi lineari. Previsti **331.500** token nel caso peggiore,
+> spesi **3.035.535**: **9,15×**.
+> **Misura 2** — Claude Code, ~150 turni con ritentativi. Previsti **11.098.500**, spesi
+> **34.303.668**: **3,1×**.
 
-Un'esecuzione, una macchina, un agente. Sta in cima a questo README invece che sepolta in
-fondo, perché uno strumento di previsione che nasconde il proprio errore non vale niente —
-e perché l'errore si è rivelato la parte interessante.
+Stanno in cima a questo README invece che sepolte in fondo, perché uno strumento di
+previsione che nasconde il proprio errore non vale niente — e perché l'errore si è
+rivelato la parte interessante.
 
 **Non era rumore. Era strutturale, e la struttura si conosce.**
 
@@ -43,8 +44,10 @@ La domanda aperta è quale forma abbia —
 - se **dipende dalla forma del lavoro** — un'esecuzione lunga, una con molte riletture,
   una piena di ritentativi — allora serve un modello per forma.
 
-Distinguere i due casi richiede più esecuzioni vere. È il lavoro in corso, ed è lo stato
-onesto del progetto: una misura, un meccanismo noto, e una domanda senza risposta.
+**Due punti dicono già qualcosa:** 9,15 e 3,1 non sono lo stesso numero, quindi
+l'ipotesi della costante è la meno probabile delle due, e la correzione non sarà un
+coefficiente. Quale sia la forma vera richiede più esecuzioni, di lavori diversi. È il
+lavoro in corso.
 
 ## Prova la simulazione, adesso
 
@@ -86,9 +89,10 @@ nuova, e solo allora partono lint e simulazione. Niente si muove per sbaglio.
 
 ## Aiuta a rispondere alla domanda
 
-Con una misura sola non si distingue una costante da un errore che dipende dalla forma:
-un punto non determina una pendenza. Se fai un'esecuzione vera e mandi **otto numeri** —
-non il database, non i transcript — la domanda si avvicina alla risposta.
+Due misure escludono la costante, ma non dicono da cosa dipenda lo scarto: differiscono
+in harness, forma, lunghezza e ritentativi tutti insieme. Se fai un'esecuzione vera e
+mandi **otto numeri** — non il database, non i transcript — la domanda si avvicina alla
+risposta.
 
 **[Lo scarto 9x](docs/lo-scarto-9x.md)** spiega il meccanismo, dice esattamente quali
 numeri servono e cosa cancellare prima di incollarli. Le misure ricevute finiscono in una
@@ -450,9 +454,9 @@ Rilancialo la settimana dopo e vedi se la previsione si sta avvicinando.
 > registrare tu `python -P -m starkeno.mcp_server` come server MCP stdio, e devi passargli
 > un Blueprint strutturato — Preflight non legge ancora un workflow descritto a parole.
 >
-> È deliberato, non una dimenticanza. Il confronto è stato fatto contro un'esecuzione vera
-> **una volta**, e per il resto solo contro fixture sintetiche. Il progetto non spedisce
-> ciò che non ha misurato. Al conto e alla diagnosi non serve niente di tutto questo.
+> È deliberato, non una dimenticanza. Il confronto è stato fatto contro **due** esecuzioni
+> vere, e per il resto contro fixture sintetiche. Al conto e alla diagnosi non serve niente
+> di tutto questo.
 >
 > Se vuoi aiutare a rispondere alla domanda aperta, è questa la parte da provare.
 
@@ -607,10 +611,9 @@ controlla la configurazione con `/hooks` nella CLI di Codex.
 Detto chiaramente, perché un README che nasconde i propri buchi costa più di uno che li
 nomina.
 
-- **La previsione è stata giudicata contro la realtà una volta sola.** Un'esecuzione, una
-  macchina, un agente. Tutto il resto è fixture sintetiche. Finché non ce ne sono altre,
-  tratta la metà predittiva come una domanda di ricerca aperta con un banco di prova
-  funzionante, non come una funzione.
+- **La previsione è stata giudicata contro la realtà due volte**, entrambe dall'autore.
+  Tutto il resto è fixture sintetiche. Finché non ce ne sono altre, tratta la metà
+  predittiva come una domanda di ricerca aperta con un banco di prova funzionante.
 - **La metà predittiva non è spedita.** I suoi tool MCP esistono e sono documentati qui
   sopra, ma il plugin non li registra, di proposito — vedi la nota in quella sezione.
 - **Preflight non legge la prosa.** Analizza Blueprint già strutturati. Descrivere un
@@ -618,8 +621,8 @@ nomina.
 - ~~Nessun rilascio appuntabile.~~ **Pubblicato su PyPI** il 20/08/2026:
   [`starkeno` 0.4.0](https://pypi.org/project/starkeno/), con wheel e sdist, da un
   workflow che non custodisce nessuna credenziale.
-- **Il conto rendiconta, non prevede.** Non esiste un tetto di spesa né un avviso su di
-  esso: la pagina ti dice quanto è costata un'esecuzione, mai che sta per costare troppo.
+- **Il conto non avvisa.** Non esiste un tetto di spesa né una soglia che scatti: la
+  pagina ti dice quanto è costata un'esecuzione, mai che sta per costare troppo.
 - ~~La skill non è provata su Codex.~~ **Verificata su entrambi** il 19/08/2026: fatta una
   domanda sui costi, Claude Code e Codex hanno invocato la skill ciascuno. C'è voluta prima
   una misura negativa — vedi *Perché la skill esiste due volte*.

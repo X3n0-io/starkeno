@@ -22,6 +22,16 @@ usa il versionamento semantico.
 
 ### Changed
 
+- **I due README dicevano ancora «una misura sola»**, in cinque punti ciascuno, mentre le
+  misure sono due dal 19/08. Corretti insieme: titolo della sezione, riquadro di stato,
+  nota sui tool MCP, richiesta di misure e elenco di quello che manca.
+- **Il sito non si presenta più al negativo.** Diceva «guarda cosa si rifiuta di fare» e
+  «non ti dà un numero»: chi leggeva i titoli senza il corpo capiva che StarkEno non
+  prevede, cioè l'opposto di quello che fa. Stessi fatti, detti per quello che sono —
+  quattro scenari invece di uno, confidenza dichiarata, provenienza di ogni stima.
+- **I limiti stanno in un posto solo.** Erano ripetuti su sito, README e descrizioni; il
+  README resta l'elenco completo, il sito ne tiene le due righe che servono a chi decide
+  se installare.
 - **Il cancello del sito distingue le sottorisorse dai collegamenti.** Prima cercava
   `https?://` in tutto il testo: vietava di linkare PyPI e non guardava dentro `url()` di
   un CSS né dentro `srcset`, che sono i posti da cui un font o un pixel di tracciamento

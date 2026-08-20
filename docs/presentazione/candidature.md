@@ -26,7 +26,7 @@ volevano fare per ultimi. L'ordine si inverte da sé.
 
 Poi, il pomeriggio dello stesso giorno, ho letto anche le regole delle **comunità**, e la
 stessa cosa è successa una seconda volta: «Reddit prima, Hacker News dopo» non è
-eseguibile, perché r/ClaudeAI chiede 50 punti di karma e l'account non ne ha. **L'ordine
+eseguibile, perché r/ClaudeAI chiede 50 punti di karma e il profilo ne ha 27. **L'ordine
 buono è nella sezione 1**, ed è l'unico da seguire: quello scritto qui sopra è rimasto
 solo per far vedere quante volte un piano dedotto invece che letto è stato smentito.
 
@@ -42,28 +42,33 @@ tutte le porte sono chiuse, e per lo stesso motivo: un account senza storia.**
 
 | Comunità | Il cancello, alla lettera | Stato |
 |---|---|---|
-| **r/ClaudeAI** | regola 7: «Posts on the feed now require **OP karma > 50**» | **chiusa** — l'account ha 1 post karma e 0 comment karma |
+| **r/ClaudeAI** | regola 7: «Posts on the feed now require **OP karma > 50**» | **chiusa per ora** — il profilo da usare ha 27 karma su 25 contributi: ne mancano 24 |
 | **Hacker News** | nessun karma richiesto per inviare | **serve l'accesso**: nel browser non risulta nessuna sessione |
 | **r/LocalLLaMA** | regola 3: vietata la copia «completely/primarily LLM generated»; regola 4: self-promo ≤ 10% del proprio contenuto | **aperta con cautele** (vedi sotto) |
 | **r/Python** | regola 1: «**No showcase posts**», per via dell'aumento di vetrine su contenuti AI | **chiusa ai post**: solo il thread mensile di showcase o il daily |
 | **Lobsters** | a invito, e per 70 giorni un utente nuovo non può inviare link da un dominio nuovo | chiusa |
 | **le liste awesome** | 14 giorni o 100 stelle · 10 stelle · 1000 stelle | vedi sezioni 6–8 |
 
-**Il vincolo vero non è il progetto, è l'account.** Un account Reddit di un anno con un
-solo punto di karma e nessun commento fallisce il cancello di r/ClaudeAI, sfiora la
-regola del 10% su r/LocalLLaMA, e su qualunque sub con un filtro automatico sembra
-esattamente quello che i filtri cercano. **Il karma non si automatizza**: la regola 10 di
-r/ClaudeAI punisce la manipolazione dei voti con ban permanente immediato, e il sub ha
-installati Bot Bouncer, Evasion Guard e Manipulation Detector. Si costruisce commentando
-davvero, per qualche giorno, dove si ha qualcosa da dire.
+**Attenzione a quale profilo:** quello aperto nel browser è `Few_Guard7497`, che ha
+**1 punto di karma e nessun commento** — con quello il post sparisce ovunque. Il profilo
+da usare è l'altro, **27 karma su 25 contributi**: basta per r/LocalLLaMA, che non
+dichiara soglie, e resta **24 punti sotto** il cancello di r/ClaudeAI. Verifica di essere
+loggato con quello giusto prima di premere invio, perché è un errore che non si scopre
+finché il post non è già stato rimosso.
+
+**Il karma non si automatizza**: la regola 10 di r/ClaudeAI punisce la manipolazione dei
+voti con ban permanente immediato, e il sub ha installati Bot Bouncer, Evasion Guard e
+Manipulation Detector. Ventiquattro punti si fanno commentando davvero, per qualche
+giorno, dove si ha qualcosa da dire — e sono anche il modo di non arrivare su r/ClaudeAI
+come uno che ha aperto l'account per postare il proprio progetto.
 
 **L'ordine che ne segue:**
 
 1. **Hacker News per primo**, appena c'è un account. È l'unico canale che non chiede
    niente a chi arriva nuovo, ed è quello che può produrre le stelle da cui dipendono le
    liste. Rovescia di nuovo il piano — e di nuovo per una regola letta, non per un'idea.
-2. **Reddit dopo**, quando il karma esiste. Prima r/LocalLLaMA (nessuna soglia
-   dichiarata), poi r/ClaudeAI sopra i 50.
+2. **r/LocalLLaMA già adesso**, con i 27 karma del profilo giusto e la dichiarazione
+   d'uso dell'LLM che la regola 3 impone. **r/ClaudeAI** quando i punti sono oltre 50.
 3. **r/Python** solo dentro il thread mensile di showcase, col formato a tre sezioni
    della regola 11 (vedi sezione 2).
 4. **Le liste** quando i loro cancelli si aprono.

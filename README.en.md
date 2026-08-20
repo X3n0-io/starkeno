@@ -9,21 +9,22 @@ Every other tool in this space answers afterwards. They read the same local tran
 your agent already writes and tell you, accurately, what you have already spent. That is
 a solved problem and there are good tools for it.
 
-StarkEno is built around the question they do not ask. It is the only thing here worth
-your attention, and it is early.
+StarkEno is built around the question they do not ask.
 
 > **Status: Phase 2.** Collection works and the local bill is real and installable.
-> The forecast is built and reachable by hand, and has been scored against a real
-> execution exactly once — that measurement is the next thing on this page.
+> The forecast is built, runs in three commands, and has been scored against **two** real
+> executions — those measurements are the next thing on this page.
 
-## The one real measurement
+## The two measurements
 
-> StarkEno estimated a run at **331,500 tokens** at most.
-> The run cost **3,035,535**. The forecast was wrong by **9x**.
+> **Run 1** — Codex, 7 linear nodes. Predicted **331,500** tokens in the worst case, cost
+> **3,035,535**: **9.15×**.
+> **Run 2** — Claude Code, ~150 turns with retries. Predicted **11,098,500**, cost
+> **34,303,668**: **3.1×**.
 
-One run, one machine, one agent. It is at the top of this README instead of buried,
-because a forecasting tool that hides its error is worth nothing — and because the error
-turned out to be the interesting part.
+They are at the top of this README instead of buried, because a forecasting tool that
+hides its error is worth nothing — and because the error turned out to be the interesting
+part.
 
 **It was not noise. It was structural, and the structure is known.**
 
@@ -44,9 +45,10 @@ question is which shape it has —
 - if it **depends on the shape of the work** — a long run, a run with heavy re-reading, a
   run full of retries — then it needs a model per shape.
 
-Telling those two apart needs more real runs. That is the current work, and it is the
-honest state of the project: one measurement, a known mechanism, and an unanswered
-question.
+**Two points already say something:** 9.15 and 3.1 are not the same number, so the
+constant hypothesis is the less likely of the two, and the fix will not be one
+coefficient. Which shape it really has needs more runs, of different work. That is the
+current work.
 
 ## Try the simulation, right now
 
@@ -88,10 +90,10 @@ and only then do lint and simulation run. Nothing moves by accident.
 
 ## Help answer the question
 
-One measurement cannot tell a multiplicative constant from an error that depends on the
-shape of the work: a single point does not determine a slope. If you run a real execution
-and send **eight numbers** — not your database, not your transcripts — the question gets
-closer to an answer.
+Two measurements rule out a multiplicative constant, but do not say what the gap depends
+on: they differ in harness, shape, length and retries all at once. If you run a real
+execution and send **eight numbers** — not your database, not your transcripts — the
+question gets closer to an answer.
 
 **[The 9x gap](docs/the-9x-gap.en.md)** explains the mechanism, says exactly
 which numbers are needed and what to delete before pasting them. Every measurement
@@ -456,9 +458,9 @@ and you can see whether the forecast is getting closer.
 > must hand it a structured Blueprint — Preflight does not yet read a workflow described
 > in prose.
 >
-> That is deliberate, not an oversight. The comparison has been made against a real
-> execution **once**, and against synthetic fixtures otherwise. The project does not ship
-> what it has not measured. The bill and the diagnosis need none of it.
+> That is deliberate, not an oversight. The comparison has been made against **two** real
+> executions, and against synthetic fixtures otherwise. The bill and the diagnosis need
+> none of it.
 >
 > If you want to help answer the open question, this is the part to try.
 
@@ -611,9 +613,9 @@ configuration with `/hooks` in the Codex CLI.
 
 Stated plainly, because a README that hides its gaps costs more than one that names them.
 
-- **The forecast has been scored against reality once.** One run, one machine, one agent.
+- **The forecast has been scored against reality twice**, both times by the author.
   Everything else is synthetic fixtures. Until there are more, treat the predictive half
-  as an open research question with a working harness, not as a feature.
+  as an open research question with a working harness.
 - **The forecasting half is not shipped.** Its MCP tools exist and are documented above,
   but the plugin does not register them, on purpose — see the note in that section.
 - **Preflight does not read prose.** It analyses already-structured Blueprints. Describing
@@ -622,7 +624,7 @@ Stated plainly, because a README that hides its gaps costs more than one that na
 - ~~No pinned release.~~ **Published on PyPI** on 2026-08-20:
   [`starkeno` 0.4.0](https://pypi.org/project/starkeno/), wheel and sdist, from a
   workflow that holds no credentials at all.
-- **The bill reports, it does not forecast.** There is no spending cap and no alerting on
+- **The bill does not alert.** There is no spending cap and no threshold that fires on
   one: the page tells you what a run cost, never that a run is about to cost too much.
 - ~~The skill is unproven on Codex.~~ **Verified on both** on 2026-08-19: asked a cost
   question, Claude Code and Codex each invoked the skill. It took one negative

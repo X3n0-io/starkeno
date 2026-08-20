@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StarkEno — what will it cost, before you run it</title>
-<meta name="description" content="Simulate what a Claude Code or Codex workflow will cost before you launch it, and keep a local account of what it actually cost. Two measurements, 9.15x and 3.1x off, published. Everything stays on your machine.">
+<meta name="description" content="Simulate what a Claude Code or Codex workflow will cost before you launch it, and keep a local account of what it actually cost. Four scenarios, declared confidence, provenance on every estimate. Everything stays on your machine.">
 <link rel="canonical" href="https://x3n0-io.github.io/starkeno/en/">
 <link rel="alternate" hreflang="it" href="https://x3n0-io.github.io/starkeno/">
 <link rel="alternate" hreflang="en" href="https://x3n0-io.github.io/starkeno/en/">
@@ -21,11 +21,11 @@
 <meta property="og:url" content="https://x3n0-io.github.io/starkeno/en/">
 <meta property="og:site_name" content="StarkEno">
 <meta property="og:title" content="StarkEno — what will it cost, before you run it">
-<meta property="og:description" content="A cost simulator for coding agents that publishes how wrong it was: 9.15x under on the first measurement, 3.1x on the second. Fully local.">
+<meta property="og:description" content="Says what a coding-agent workflow will cost before you run it, then scores that forecast against the real run. Fully local: no network, no account.">
 <meta property="og:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="StarkEno — what will it cost, before you run it">
-<meta name="twitter:description" content="A cost simulator for coding agents that publishes how wrong it was: 9.15x under on the first measurement, 3.1x on the second. Fully local.">
+<meta name="twitter:description" content="Says what a coding-agent workflow will cost before you run it, then scores that forecast against the real run. Fully local: no network, no account.">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
 </head>
 <body>
@@ -43,8 +43,8 @@
   </div>
   <h1>What will this agent run cost, <em>before you start it?</em></h1>
   <p class="sottotitolo">
-    Every other tool answers afterwards. StarkEno tries to answer first — and publishes
-    how wrong it was.
+    Every other tool answers afterwards. StarkEno answers first — and then scores that
+    answer against the real run.
   </p>
   <div class="installa">
     <code>pip install starkeno</code>
@@ -154,19 +154,19 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 </section>
 
 <section id="refuses">
-  <h2>Look at what it refuses to do</h2>
-  <p>That is the part that separates it from any other estimate.</p>
+  <h2>What shape the forecast has</h2>
+  <p>This is where it separates itself from any other estimate.</p>
   <div class="schede">
     <div class="scheda">
-      <h3>It does not give you a number</h3>
-      <p>It gives four scenarios — <code>optimistic</code>, <code>typical</code>,
-         <code>prudent</code>, <code>maximum</code> — because a single estimate for
-         non-deterministic work is a fiction.</p>
+      <h3>Four scenarios, not one number</h3>
+      <p><code>optimistic</code>, <code>typical</code>, <code>prudent</code>,
+         <code>maximum</code>: a single estimate for non-deterministic work would be a
+         fiction, and four of them also tell you how wide the spread is.</p>
     </div>
     <div class="scheda">
       <h3>It declares its own confidence</h3>
-      <p>On the shipped example it is <code>low</code>, and it says so instead of letting
-         you infer it.</p>
+      <p>Every analysis carries its own confidence level on the front, instead of leaving
+         you to infer it.</p>
     </div>
     <div class="scheda">
       <h3>It says where every estimate came from</h3>
@@ -175,9 +175,9 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
          be checked.</p>
     </div>
     <div class="scheda">
-      <h3>It names what it could not price</h3>
-      <p>Instead of quietly using zero: <em>“missing prices in the worst case for…”</em>.
-         Absent money is absent, never zero.</p>
+      <h3>It names the prices it does not know</h3>
+      <p><em>“missing prices in the worst case for…”</em>, instead of quietly using zero:
+         absent money is absent, never zero.</p>
     </div>
   </div>
 </section>
@@ -207,9 +207,8 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 
   <div class="nota onesta">
     <p>
-      <strong>On this half, someone else does it better.</strong> <code>ccusage</code>
-      reads the same JSONL files, runs under <code>npx</code> with nothing to install, and
-      has thousands of people behind it. If all you need is the retrospective, use that.
+      <strong>If all you need is the retrospective, good tools already exist</strong> —
+      <code>ccusage</code> reads the same JSONL files and runs under <code>npx</code>.
       StarkEno exists for the half nobody else attempts: <strong>saying the cost
       beforehand</strong>, and then scoring it against the real one.
     </p>
@@ -233,17 +232,14 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 </section>
 
 <section id="status">
-  <h2>Where it stands, without hedging</h2>
+  <h2>Where it stands</h2>
   <ul>
     <li><strong>The account works</strong> and installs on Claude Code and Codex.</li>
     <li><strong>The simulator runs</strong> from the command line, and you just tried it.</li>
-    <li><strong>The comparison between the two is not shipped</strong>: the MCP tools
-        exist but the plugin does not register them, and the server has to be mounted by
-        hand. The project does not ship what it has not measured.</li>
-    <li><strong>Preflight does not read prose yet</strong>: it analyses Blueprints that
-        are already structured.</li>
-    <li><strong>Two measurements, both by the author.</strong> A third is needed, and it
-        needs to come from someone else.</li>
+    <li><strong>The comparison between the two is mounted by hand</strong>, with the MCP
+        server: the README says how.</li>
+    <li><strong>Anyone can make the third measurement</strong>, and it needs to be someone
+        who is not the author.</li>
   </ul>
   <div class="cta">
     <a class="bottone primario" href="https://github.com/X3n0-io/starkeno">The project on GitHub</a>

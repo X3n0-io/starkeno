@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StarkEno — quanto costerà, prima di lanciarlo</title>
-<meta name="description" content="Simula quanto costerà un lavoro con Claude Code o Codex prima di lanciarlo, e tiene il conto locale di quanto è costato davvero. Due misure, 9,15× e 3,1× di errore, pubblicate. Tutto sulla tua macchina.">
+<meta name="description" content="Simula quanto costerà un lavoro con Claude Code o Codex prima di lanciarlo, e tiene il conto locale di quanto è costato davvero. Quattro scenari, confidenza dichiarata, provenienza di ogni stima. Tutto sulla tua macchina.">
 <link rel="canonical" href="https://x3n0-io.github.io/starkeno/">
 <link rel="alternate" hreflang="it" href="https://x3n0-io.github.io/starkeno/">
 <link rel="alternate" hreflang="en" href="https://x3n0-io.github.io/starkeno/en/">
@@ -21,11 +21,11 @@
 <meta property="og:url" content="https://x3n0-io.github.io/starkeno/">
 <meta property="og:site_name" content="StarkEno">
 <meta property="og:title" content="StarkEno — quanto costerà, prima di lanciarlo">
-<meta property="og:description" content="Un simulatore di costo per agenti di coding che pubblica di quanto ha sbagliato: 9,15× sulla prima misura, 3,1× sulla seconda. Tutto locale.">
+<meta property="og:description" content="Dice quanto costerà un lavoro con un agente di coding prima di lanciarlo, e confronta la stima con l'esecuzione vera. Tutto locale: niente rete, niente account.">
 <meta property="og:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="StarkEno — quanto costerà, prima di lanciarlo">
-<meta name="twitter:description" content="Un simulatore di costo per agenti di coding che pubblica di quanto ha sbagliato: 9,15× sulla prima misura, 3,1× sulla seconda. Tutto locale.">
+<meta name="twitter:description" content="Dice quanto costerà un lavoro con un agente di coding prima di lanciarlo, e confronta la stima con l'esecuzione vera. Tutto locale: niente rete, niente account.">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
 </head>
 <body>
@@ -43,8 +43,8 @@
   </div>
   <h1>Quanto costerà questo lavoro dell'agente, <em>prima di lanciarlo?</em></h1>
   <p class="sottotitolo">
-    Tutti gli altri strumenti rispondono dopo. StarkEno prova a rispondere prima — e
-    pubblica di quanto ha sbagliato.
+    Tutti gli altri strumenti rispondono dopo. StarkEno risponde prima — e mette il
+    risultato a confronto con l'esecuzione vera.
   </p>
   <div class="installa">
     <code>pip install starkeno</code>
@@ -155,18 +155,19 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 </section>
 
 <section id="rifiuta">
-  <h2>Guarda cosa si rifiuta di fare</h2>
-  <p>È la parte che lo distingue da una stima qualunque.</p>
+  <h2>Che forma ha la previsione</h2>
+  <p>È qui che si distingue da una stima qualunque.</p>
   <div class="schede">
     <div class="scheda">
-      <h3>Non ti dà un numero</h3>
-      <p>Dà quattro scenari — <code>optimistic</code>, <code>typical</code>,
-         <code>prudent</code>, <code>maximum</code> — perché una stima singola su un
-         lavoro non deterministico è una finzione.</p>
+      <h3>Quattro scenari, non un numero solo</h3>
+      <p><code>optimistic</code>, <code>typical</code>, <code>prudent</code>,
+         <code>maximum</code>: su un lavoro non deterministico un numero solo sarebbe una
+         finzione, e quattro ti dicono anche quanto è largo il ventaglio.</p>
     </div>
     <div class="scheda">
       <h3>Dichiara la propria confidenza</h3>
-      <p>Nell'esempio è <code>low</code>, e lo scrive invece di lasciartelo dedurre.</p>
+      <p>Ogni analisi porta il proprio grado di fiducia scritto sopra, invece di
+         lasciartelo dedurre.</p>
     </div>
     <div class="scheda">
       <h3>Dice da dove viene ogni stima</h3>
@@ -175,8 +176,8 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
          verificabile.</p>
     </div>
     <div class="scheda">
-      <h3>Nomina quello che non sa valorizzare</h3>
-      <p>Invece di metterci zero: <em>«prezzi mancanti nel caso peggiore per…»</em>. Il
+      <h3>Nomina i prezzi che non conosce</h3>
+      <p><em>«prezzi mancanti nel caso peggiore per…»</em>, invece di metterci zero: il
          denaro assente è assente, mai zero.</p>
     </div>
   </div>
@@ -208,11 +209,10 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 
   <div class="nota onesta">
     <p>
-      <strong>Su questa metà, qualcun altro fa meglio.</strong> <code>ccusage</code> legge
-      gli stessi file JSONL, gira con <code>npx</code> senza installare niente, e ha alle
-      spalle migliaia di persone. Se ti serve solo il consuntivo, usa quello. StarkEno
-      esiste per la metà che nessun altro tenta: <strong>dire il costo prima</strong>, e
-      poi confrontarlo con quello vero.
+      <strong>Se ti serve solo il consuntivo, ci sono buoni strumenti già pronti</strong>
+      — <code>ccusage</code> legge gli stessi file JSONL e gira con <code>npx</code>.
+      StarkEno esiste per la metà che nessun altro tenta: <strong>dire il costo
+      prima</strong>, e poi metterlo a confronto con quello vero.
     </p>
   </div>
 </section>
@@ -235,17 +235,14 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 </section>
 
 <section id="stato">
-  <h2>A che punto è, senza giri di parole</h2>
+  <h2>A che punto è</h2>
   <ul>
     <li><strong>Il conto funziona</strong> ed è installabile su Claude Code e Codex.</li>
     <li><strong>Il simulatore gira</strong> da riga di comando, e lo hai appena provato.</li>
-    <li><strong>Il confronto fra i due non è spedito</strong>: i tool MCP esistono ma il
-        plugin non li registra, e il server va montato a mano. Il progetto non spedisce
-        ciò che non ha misurato.</li>
-    <li><strong>Preflight non legge ancora la prosa</strong>: analizza Blueprint già
-        strutturati.</li>
-    <li><strong>Due misure, fatte dall'autore.</strong> Serve la terza, e serve da
-        qualcun altro.</li>
+    <li><strong>Il confronto fra i due si monta a mano</strong>, col server MCP: come
+        farlo è nel README.</li>
+    <li><strong>La terza misura la può fare chiunque</strong>, e serve che la faccia
+        qualcuno che non sia l'autore.</li>
   </ul>
   <div class="cta">
     <a class="bottone primario" href="https://github.com/X3n0-io/starkeno">Il progetto su GitHub</a>
