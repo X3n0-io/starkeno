@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StarkEno — quanto costerà, prima di lanciarlo</title>
+<meta name="description" content="Simula quanto costerà un lavoro con Claude Code o Codex prima di lanciarlo, e tiene il conto locale di quanto è costato davvero. Tutto sulla tua macchina.">
+<style>
+  /* Nessuna richiesta a terzi: font di sistema, zero CDN, zero analytics.
+     Un sito che traccia chi lo legge smentirebbe la promessa del progetto. */
+  :root{
+    --fondo:#101216; --carta:#161a20; --bordo:#1a1e25;
+    --testo:#f3f4f6; --tenue:#b7beca; --debole:#8e98a8; --accento:#a9b7d0;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--fondo); color:var(--testo); line-height:1.6;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .guscio{max-width:860px;margin:0 auto;padding:0 24px}
+  header{padding:88px 0 8px}
+  .marchio{color:var(--debole);font-size:14px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:28px}
+  h1{font-size:clamp(32px,5.2vw,54px);line-height:1.12;letter-spacing:-.02em;font-weight:700}
+  h1 em{font-style:normal;color:var(--accento)}
+  .sottotitolo{margin-top:22px;font-size:clamp(17px,2.2vw,20px);color:var(--tenue);max-width:62ch}
+  h2{font-size:clamp(23px,3.2vw,30px);letter-spacing:-.01em;margin-bottom:14px;font-weight:700}
+  section{padding:56px 0;border-top:1px solid var(--bordo)}
+  p{color:var(--tenue);max-width:68ch;margin-bottom:14px}
+  p strong{color:var(--testo);font-weight:600}
+  .misure{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:26px 0}
+  .box{background:var(--carta);border:1px solid var(--bordo);border-radius:12px;padding:18px 20px}
+  .box .et{color:var(--debole);font-size:14px;margin-bottom:6px}
+  .box .nu{font-size:27px;font-weight:700;font-variant-numeric:tabular-nums}
+  .box .no{color:var(--debole);font-size:13px;margin-top:6px}
+  pre{background:var(--carta);border:1px solid var(--bordo);border-radius:12px;
+      padding:18px 20px;overflow-x:auto;margin:18px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:var(--tenue)}
+  pre code{color:var(--testo);line-height:1.75}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+  .bottone{display:inline-block;padding:12px 22px;border-radius:10px;text-decoration:none;
+           font-weight:600;font-size:15px;border:1px solid var(--bordo)}
+  .primario{background:var(--testo);color:var(--fondo);border-color:var(--testo)}
+  .secondario{background:var(--carta);color:var(--testo)}
+  ul{color:var(--tenue);margin:0 0 14px 20px;max-width:68ch}
+  li{margin-bottom:9px}
+  li strong{color:var(--testo)}
+  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:15px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--bordo)}
+  th{color:var(--debole);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+  td{color:var(--tenue)} td strong{color:var(--testo)}
+  figure{margin:24px 0}
+  img{width:100%;border-radius:12px;border:1px solid var(--bordo);display:block}
+  figcaption{color:var(--debole);font-size:13.5px;margin-top:10px}
+  .nota{background:var(--carta);border:1px solid var(--bordo);border-left:3px solid var(--accento);
+        border-radius:10px;padding:18px 20px;margin:22px 0}
+  .nota p:last-child{margin-bottom:0}
+  footer{padding:44px 0 72px;border-top:1px solid var(--bordo);color:var(--debole);font-size:14px}
+  footer a{color:var(--tenue)}
+  a{color:var(--accento)}
+</style>
+</head>
+<body>
+<div class="guscio">
+
+<header>
+  <div class="marchio">StarkEno</div>
+  <h1>Quanto costerà questo lavoro dell'agente,<br><em>prima di lanciarlo?</em></h1>
+  <p class="sottotitolo">
+    Tutti gli altri strumenti rispondono dopo. StarkEno prova a rispondere prima — e
+    pubblica di quanto ha sbagliato.
+  </p>
+  <div class="cta">
+    <a class="bottone primario" href="#prova">Provalo in tre comandi</a>
+    <a class="bottone secondario" href="https://github.com/X3n0-io/starkeno">Vedi su GitHub</a>
+  </div>
+</header>
+
+<section id="misure">
+  <h2>Due misure, e un'ipotesi che se ne va</h2>
+  <p>
+    Un simulatore che nasconde il proprio errore non vale niente. Questi sono i due
+    confronti fra il preventivo e l'esecuzione vera, per intero:
+  </p>
+  <div class="misure">
+    <div class="box"><div class="et">misura 1 · Codex</div><div class="nu">9,15×</div><div class="no">7 nodi, lineare</div></div>
+    <div class="box"><div class="et">misura 2 · Claude Code</div><div class="nu">3,10×</div><div class="no">150 turni, con ciclo</div></div>
+    <div class="box"><div class="et">conclusione</div><div class="nu">non costante</div><div class="no">l'ipotesi semplice cade</div></div>
+  </div>
+  <p>
+    <strong>9,15 e 3,10 non sono lo stesso numero.</strong> Lo scarto non è una costante
+    moltiplicativa: la correzione non sarà un coefficiente, e il lavoro davanti è capire
+    da cosa dipende.
+  </p>
+  <p>
+    La causa però si conosce, ed è strutturale. Il simulatore conta il contesto riletto
+    solo sui ritentativi; un agente vero non ha memoria fra un turno e l'altro e
+    rispedisce tutto a ogni turno. Nella misura 2 quella rilettura è il
+    <strong>97% della spesa</strong>.
+  </p>
+  <div class="nota">
+    <p>
+      <strong>Un errore casuale è un vicolo cieco. Uno strutturale è un coefficiente.</strong>
+      È per questo che il numero sbagliato sta in prima pagina invece che in fondo a un
+      backlog — ed è la ragione per cui servono altre misure.
+      <a href="https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md">Come mandarne una →</a>
+    </p>
+  </div>
+</section>
+
+<section id="prova">
+  <h2>Provalo adesso, in tre comandi</h2>
+  <p>
+    Niente plugin, niente hook, nessun server, nessuna rete. Il Blueprint d'esempio
+    viaggia dentro il pacchetto.
+  </p>
+<pre><code>pip install git+https://github.com/X3n0-io/starkeno.git
+
+python -m starkeno preflight esempio  --output esempio.json
+python -m starkeno preflight draft    --input esempio.json --format yaml --output bozza.yaml
+python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 50 \
+                                      --format html --output report.html</code></pre>
+  <figure>
+    <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png"
+         alt="Report Preflight: quattro scenari con token, chiamate LLM e latenza; confidenza complessiva e provenienza di ogni stima">
+    <figcaption>È la schermata che otterrai: stesso Blueprint, stessi numeri.</figcaption>
+  </figure>
+</section>
+
+<section id="rifiuta">
+  <h2>Guarda cosa si rifiuta di fare</h2>
+  <p>È la parte che lo distingue da una stima qualunque.</p>
+  <ul>
+    <li><strong>Non ti dà un numero.</strong> Dà quattro scenari — <code>optimistic</code>, <code>typical</code>, <code>prudent</code>, <code>maximum</code> — perché una stima singola su un lavoro non deterministico è una finzione.</li>
+    <li><strong>Dichiara la propria confidenza.</strong> Nell'esempio è <code>low</code>, e lo scrive.</li>
+    <li><strong>Dice da dove viene ogni stima</strong>: <code>declared</code>, <code>default</code>, <code>inferred</code>. Una stima di cui non conosci la provenienza non è verificabile.</li>
+    <li><strong>Nomina quello che non ha saputo valorizzare</strong> invece di metterci zero. Il denaro assente è assente, mai zero.</li>
+  </ul>
+</section>
+
+<section id="conto">
+  <h2>E il conto di quello che hai già speso</h2>
+  <p>
+    La metà finita e installabile: un hook di fine turno rilegge i transcript che il tuo
+    agente già scrive e ricostruisce quanto costa il tuo modo di lavorare. Claude Code e
+    Codex nello stesso conto.
+  </p>
+  <table>
+    <tr><th>Colonna</th><th>Perché è lì</th></tr>
+    <tr><td><strong>Costo di lavoro</strong></td><td>l'unica parte che è il lavoro</td></tr>
+    <tr><td><strong>Costo di caricamento</strong></td><td>il prezzo di preparare il lavoro</td></tr>
+    <tr><td><strong>Costo di rilettura</strong></td><td>ripagato a ogni turno, per lo stesso materiale</td></tr>
+    <tr><td>Esiti ignoti</td><td>quanta parte del quadro è congettura</td></tr>
+    <tr><td>Righe non classificabili</td><td>quanto diffidare</td></tr>
+  </table>
+  <p>Le ultime due righe sono quelle che gli altri strumenti non ti mostrano.</p>
+  <figure>
+    <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/conto.png"
+         alt="Il conto locale di StarkEno: totale pesato, costo di lavoro, di caricamento e di rilettura">
+    <figcaption>Dati d'esempio, generati da un transcript vero già ripulito.</figcaption>
+  </figure>
+</section>
+
+<section id="locale">
+  <h2>Niente lascia la tua macchina</h2>
+  <p>
+    Nessuna chiamata di rete, nessun account, nessuna telemetria. Il conto è un file HTML
+    sul tuo disco e il database è SQLite locale. Gli hook escono <code>0</code> qualunque
+    cosa accada: se StarkEno si rompe, il tuo lavoro no — ed è anche il motivo per cui
+    esiste <code>starkeno doctor</code>, perché uno StarkEno muto è identico a uno che
+    funziona.
+  </p>
+  <p>
+    <strong>Anche questa pagina.</strong> Nessun font esterno, nessuna libreria da CDN,
+    nessun analytics: le uniche richieste che fa sono le due immagini, ospitate su GitHub.
+  </p>
+</section>
+
+<section id="stato">
+  <h2>A che punto è, senza giri di parole</h2>
+  <ul>
+    <li><strong>Il conto funziona</strong> ed è installabile su Claude Code e Codex.</li>
+    <li><strong>Il simulatore gira</strong> da riga di comando, e lo hai appena provato.</li>
+    <li><strong>Il confronto fra i due non è spedito</strong>: i tool MCP esistono ma il plugin non li registra, e il server va montato a mano. Il progetto non spedisce ciò che non ha misurato.</li>
+    <li><strong>Preflight non legge ancora la prosa</strong>: analizza Blueprint già strutturati.</li>
+    <li><strong>Due misure, fatte dall'autore.</strong> Serve la terza, e serve da qualcun altro.</li>
+  </ul>
+  <div class="cta">
+    <a class="bottone primario" href="https://github.com/X3n0-io/starkeno">Il progetto su GitHub</a>
+    <a class="bottone secondario" href="https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md">Lo scarto, per intero</a>
+  </div>
+</section>
+
+<footer>
+  <p>
+    © 2026 Simone Mansella · MIT ·
+    <a href="https://github.com/X3n0-io/starkeno">github.com/X3n0-io/starkeno</a> ·
+    <a href="https://github.com/X3n0-io/starkeno/blob/main/README.en.md">English</a>
+  </p>
+</footer>
+
+</div>
+</body>
+</html>
