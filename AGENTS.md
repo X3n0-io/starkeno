@@ -101,6 +101,17 @@ ambienti isolati.
 - Non introdurre richieste di rete nel percorso predefinito, nel report o nella dashboard.
 - Non inserire transcript reali, database, log, credenziali, username, percorsi home o
   note personali nei file tracciati. Le fixture devono essere sintetiche o sanificate.
+  **Questa regola e' gia' stata violata il 20/08/2026**, e non da un errore di
+  distrazione: il piano di pubblicazione, il karma dell'autore su Reddit, la data di
+  creazione del suo account e le risposte pre-scritte alle obiezioni erano in
+  `docs/presentazione/`, pubblico. Il repository sembra una cartella di lavoro, e non lo
+  e'.
+- **Il materiale di lavoro non tecnico non sta nel repository.** Piani di pubblicazione,
+  bozze di post, risposte preparate, note di sessione e qualunque cosa riguardi gli
+  account o le persone vanno nel vault dell'utente, mai in un file tracciato.
+  `docs/presentazione/` e `docs/superpowers/briefings/` sono in `.gitignore` per questo:
+  se qualcuno li ricrea, restano fuori. In `docs/superpowers/` restano `plans/` e
+  `specs/`, che parlano solo di codice.
 - Non creare remote, repository pubblici, push o branch protection senza autorizzazione
   esplicita dell'utente.
 - La documentazione di design e i piani in `docs/superpowers/` spiegano le decisioni;

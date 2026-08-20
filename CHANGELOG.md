@@ -24,6 +24,15 @@ usa il versionamento semantico.
 - `scripts/verifica_sito.py`, con diciotto test suoi, sostituisce il controllo in linea
   dentro il workflow di Pages.
 
+### Removed
+
+- **Il materiale di lavoro esce dal repository pubblico.** `docs/presentazione/` e
+  `docs/superpowers/briefings/` contenevano il piano di pubblicazione, il karma
+  dell'autore su Reddit, la data del suo account e le risposte gia' scritte alle
+  obiezioni. Sono note di lavoro, e stavano in un repository pubblico con un post che ci
+  puntava. Ora vivono fuori dal repository e i due percorsi sono in `.gitignore`.
+  `docs/superpowers/plans/` e `specs/` restano: parlano solo di codice.
+
 ### Changed
 
 - **Il sito ha un aspetto suo**: viola e nero spazio di notte, bianco luce di giorno,

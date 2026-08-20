@@ -27,3 +27,9 @@ supervisor.log
 
 # Configurazione locale degli strumenti di sviluppo, non del progetto.
 .claude/
+
+# Materiale di lavoro: sta nel vault, non nel repository pubblico.
+# Il 20/08/2026 il piano dei post, il karma dell'autore e le risposte pre-scritte alle
+# obiezioni sono stati pubblici per un giorno. Se qualcuno li ricrea qui, restano fuori.
+docs/presentazione/
+docs/superpowers/briefings/
