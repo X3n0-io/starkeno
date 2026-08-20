@@ -24,53 +24,66 @@ Con 0 stelle e sei giorni di vita, «prima le liste» **non è eseguibile**: tre
 cinque rimandano, e le stelle che chiedono possono arrivare solo dai canali che si
 volevano fare per ultimi. L'ordine si inverte da sé.
 
-**L'ordine nuovo:**
+Poi, il pomeriggio dello stesso giorno, ho letto anche le regole delle **comunità**, e la
+stessa cosa è successa una seconda volta: «Reddit prima, Hacker News dopo» non è
+eseguibile, perché r/ClaudeAI chiede 50 punti di karma e l'account non ne ha. **L'ordine
+buono è nella sezione 1**, ed è l'unico da seguire: quello scritto qui sopra è rimasto
+solo per far vedere quante volte un piano dedotto invece che letto è stato smentito.
 
-1. ~~**PyPI**~~ — **fatto il 20/08/2026**: [`pip install starkeno`](https://pypi.org/project/starkeno/).
-2. **I canali che non chiedono stelle** — Reddit prima, Hacker News dopo. Reddit si può
-   sbagliare e rifare; HN no.
-3. **Le due liste senza cancello**, in parallelo: costano una PR ciascuna.
-4. **awesome-claude-code dal 28/08**, e awesome-claude-skills quando le stelle sono dieci.
-
-Il dettaglio comunità per comunità è nella sezione 1.
-
-> Il sito è online: <https://x3n0-io.github.io/starkeno/>. Per un pubblico tecnico il
-> link giusto resta il repository o il pezzo sullo scarto; il sito serve a chi arriva da
-> un social e non aprirebbe mai un README.
+**In una riga: Hacker News per primo, Reddit quando il karma esiste, le liste per ultime.**
 
 ---
 
-## 1. La mappa delle comunità, e in che ordine
+## 1. La mappa delle comunità — verificata il 20/08/2026, dall'account vero
 
-Postare tutto lo stesso giorno è il modo più rapido per sembrare spam a tre piattaforme
-insieme. **Una comunità al giorno**, e si risponde ai commenti di quella prima di aprire
-la successiva.
+Le regole di questa tabella non sono dedotte: sono state lette una per una nelle pagine
+`about/rules` delle comunità, con la sessione dell'autore. **Il risultato è che quasi
+tutte le porte sono chiuse, e per lo stesso motivo: un account senza storia.**
 
-| Quando | Dove | Cosa mandare | La regola che conta |
-|---|---|---|---|
-| Giorno 1 | **r/ClaudeAI** | corpo inglese, link nel corpo | pubblico che riconosce il problema; è la prova generale |
-| Giorno 2 | **r/LocalLLaMA** | corpo inglese, taglio «tutto locale» | leggi le regole nella sidebar: molti thread di self-promo finiscono in un megathread |
-| Giorno 3 | **Hacker News** | *Show HN* → il **repository** | una volta sola, e vedi sotto perché non l'articolo |
-| Giorno 4 | **r/Python** | corpo inglese, formato Showcase | il sub impone tre sezioni obbligatorie: verifica il formato prima |
-| Giorno 5 | **r/ItalyInformatica** o simili | **corpo italiano** | l'unico posto dove l'italiano è un vantaggio invece che un ostacolo |
-| Quando vuoi | **LinkedIn / X**, account tuoi | corpo italiano accorciato, link al sito | nessuna regola oltre alla tua reputazione |
-| Dal 28/08 | **le liste** | vedi le sezioni 6, 7 e 8 | chiedono stelle, non qualità |
+| Comunità | Il cancello, alla lettera | Stato |
+|---|---|---|
+| **r/ClaudeAI** | regola 7: «Posts on the feed now require **OP karma > 50**» | **chiusa** — l'account ha 1 post karma e 0 comment karma |
+| **Hacker News** | nessun karma richiesto per inviare | **serve l'accesso**: nel browser non risulta nessuna sessione |
+| **r/LocalLLaMA** | regola 3: vietata la copia «completely/primarily LLM generated»; regola 4: self-promo ≤ 10% del proprio contenuto | **aperta con cautele** (vedi sotto) |
+| **r/Python** | regola 1: «**No showcase posts**», per via dell'aumento di vetrine su contenuti AI | **chiusa ai post**: solo il thread mensile di showcase o il daily |
+| **Lobsters** | a invito, e per 70 giorni un utente nuovo non può inviare link da un dominio nuovo | chiusa |
+| **le liste awesome** | 14 giorni o 100 stelle · 10 stelle · 1000 stelle | vedi sezioni 6–8 |
 
-**Il sito ora è in due lingue**: <https://x3n0-io.github.io/starkeno/> e
+**Il vincolo vero non è il progetto, è l'account.** Un account Reddit di un anno con un
+solo punto di karma e nessun commento fallisce il cancello di r/ClaudeAI, sfiora la
+regola del 10% su r/LocalLLaMA, e su qualunque sub con un filtro automatico sembra
+esattamente quello che i filtri cercano. **Il karma non si automatizza**: la regola 10 di
+r/ClaudeAI punisce la manipolazione dei voti con ban permanente immediato, e il sub ha
+installati Bot Bouncer, Evasion Guard e Manipulation Detector. Si costruisce commentando
+davvero, per qualche giorno, dove si ha qualcosa da dire.
+
+**L'ordine che ne segue:**
+
+1. **Hacker News per primo**, appena c'è un account. È l'unico canale che non chiede
+   niente a chi arriva nuovo, ed è quello che può produrre le stelle da cui dipendono le
+   liste. Rovescia di nuovo il piano — e di nuovo per una regola letta, non per un'idea.
+2. **Reddit dopo**, quando il karma esiste. Prima r/LocalLLaMA (nessuna soglia
+   dichiarata), poi r/ClaudeAI sopra i 50.
+3. **r/Python** solo dentro il thread mensile di showcase, col formato a tre sezioni
+   della regola 11 (vedi sezione 2).
+4. **Le liste** quando i loro cancelli si aprono.
+
+**Il sito è in due lingue**: <https://x3n0-io.github.io/starkeno/> e
 <https://x3n0-io.github.io/starkeno/en/>. Manda l'inglese alle comunità internazionali —
 una pagina in italiano su r/Python perde metà dei lettori alla prima riga. Per un pubblico
 tecnico il link migliore resta il repository; il sito serve a chi arriva da un social e
 non aprirebbe mai un README.
 
-**Lobsters non è una strada, oggi.** È a invito, e un utente nuovo non può inviare link da
-un dominio nuovo per **70 giorni**. Non provarci finché non ci sei dentro davvero.
+**Una comunità al giorno**, e si risponde ai commenti di quella prima di aprire la
+successiva: tutte insieme sembrano spam a tre piattaforme contemporaneamente.
 
 ---
 
 ## 2. Reddit — il corpo del post
 
-Reddit va per primo perché è l'unico canale ripetibile: se il taglio non funziona si
-capisce lì e si corregge, prima di bruciare l'unico colpo su Hacker News.
+Reddit **non** va per primo, per il cancello del karma della sezione 1. Ma è l'unico
+canale ripetibile — se il taglio non funziona si capisce lì e si corregge — quindi il
+corpo sta qui, ed è la base da cui derivano tutti gli altri.
 
 **Il titolo apre sulla previsione, mai sul 60%.** Il 60% è la *spiegazione* dello scarto:
 messo in testa, il post diventa l'ennesima misura di consumo, e la risposta giusta a
@@ -158,9 +171,100 @@ Tutto in locale: nessuna chiamata di rete, nessun account, nessuna telemetria. M
 
 ### Corpo, inglese
 
-Usa il commento di Hacker News della sezione 3: è lo stesso testo, già in inglese.
-Sostituisci solo i link `docs/lo-scarto-9x.md` con `docs/the-9x-gap.en.md` e il sito con
-`https://x3n0-io.github.io/starkeno/en/`.
+```
+I spent the last few weeks building something I assumed already existed, and it does not:
+a tool that tells you what a coding-agent workflow will cost **before** you run it.
+
+Retrospective tools exist and they are good. `ccusage` reads the same JSONL files Claude
+Code already writes, runs under `npx`, installs nothing — if you want to know what
+yesterday cost, use that, it is better than mine at that half. What I could not find was
+the opposite question: *I have this job to do, what is it going to cost me?*
+
+**Try it in three commands.** No plugin, no hooks, no MCP server, no network — the example
+Blueprint ships inside the package, so it works the moment it is installed:
+
+    pip install starkeno
+
+    python -m starkeno preflight esempio --output esempio.json
+    python -m starkeno preflight draft   --input esempio.json --format yaml --output bozza.yaml
+    python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
+        --format html --output report.html
+
+**It deliberately does not give you a number.** It gives four scenarios — `optimistic`,
+`typical`, `prudent`, `maximum` — declares its own confidence (`low` on that example, and
+it says so instead of letting you infer it) and tags every estimate with where it came
+from: `declared` if you said it, `default` if it assumed it, `inferred` if it worked it
+out. Prices it cannot value are **named**, never silently zeroed.
+
+**Then I scored it against real runs, and it was under both times.**
+
+| # | shape of the work | predicted | observed | gap |
+|---|---|---|---|---|
+| 1 | Codex, 7 nodes, linear, no retries | 331,500 | 3,035,535 | **9.15x** |
+| 2 | Claude Code, ~150 turns, loop with retries | 11,098,500 | 34,303,668 | **3.1x** |
+
+The 331,500 was not an average estimate — it was its own `maximum` scenario. **Its worst
+case was nine times under.**
+
+Two points do not make a curve, but they are enough to kill the convenient hypothesis:
+9.15 and 3.1 are not the same number, so the error is **not a multiplicative constant**
+and the fix will not be one coefficient.
+
+**The direction, at least, is structural rather than arithmetic.** I counted context read
+back from cache only on retries, the way a single model call behaves. A real agent has no
+memory between turns: it resends its whole accumulated context **every turn**. In run 2
+that re-reading is 97% of the spend; across a normal week of work it is 60%.
+
+**What I need is not installs, it is measurements.** Eight numbers from a real run — no
+database, no transcripts, nothing of yours. Every measurement that arrives goes into the
+table credited to whoever sent it. It is the only thing that can say whether the gap
+depends on length, retries, harness, or something else: two points that differ in
+everything isolate nothing.
+
+All local: no network call, no account, no telemetry. Free and MIT.
+
+* Code: https://github.com/X3n0-io/starkeno
+* The gap, in full: https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md
+* Site: https://x3n0-io.github.io/starkeno/en/
+```
+
+### Le due varianti obbligatorie
+
+**r/LocalLLaMA** vieta la copia «completely/primarily LLM generated», con **una sola
+eccezione**: chi non è madrelingua può farsi tradurre o rifinire il testo, purché lo
+dichiari in chiaro. Il corpo qui sopra ricade in quel caso, quindi va aggiunta una riga —
+in fondo, non nascosta:
+
+```
+(English is not my first language; I used an LLM to translate and tidy this post. The
+project, the measurements and the numbers are mine.)
+```
+
+Vale anche la regola 4: la self-promo non dovrebbe superare il 10% di quello che scrivi.
+Con un account che non ha mai commentato, il primo post è il 100%. È un rischio reale, e
+il modo di ridurlo è avere già commentato altrove da qualche giorno.
+
+**r/Python** non accetta post di showcase (regola 1): si va nel thread mensile di showcase
+o nel daily. La regola 11 impone tre sezioni con questi titoli esatti, da mettere in cima
+al corpo:
+
+```
+**What My Project Does**
+It simulates what a coding-agent workflow will cost before you run it — four scenarios,
+declared confidence, provenance on every estimate — and separately reconstructs what a
+session actually cost from the transcripts the agent already writes.
+
+**Target Audience**
+Anyone paying per token for Claude Code or Codex who wants a number before committing to
+a job. The retrospective half is usable day to day; the forecast half is honest research
+in progress, and the README says which is which.
+
+**Comparison**
+`ccusage` and similar tools answer what you already spent, and do it better than I do.
+I have not found another tool that tries to answer the cost *before* the run — which is
+also why this one publishes how wrong it was: 9.15x under on one measurement, 3.1x on
+another.
+```
 
 ### Prima di premere invio
 
