@@ -22,6 +22,19 @@ usa il versionamento semantico.
 
 ### Changed
 
+- **Il sito ha un aspetto suo**: viola e nero spazio di notte, bianco luce di giorno,
+  campo stellare e aurore disegnate con gradienti, vetro smerigliato sulle schede, titolo
+  in sfumatura, bottoni a pillola. Nessuna immagine di sfondo, nessun font scaricato,
+  nessuno script: il peso della pagina resta quello del testo, e il cancello che vieta le
+  terze parti non e' stato toccato.
+- **Il bianco sul bottone viola stava a 3,3:1**, sotto lo standard AA. Il pieno del
+  bottone ora non segue il tema e sta fra 5,7:1 e 6,9:1.
+- **Le due barre erano finite nella stessa famiglia di colore.** Sfumavano entrambe nel
+  viola del marchio, e a colpo d'occhio la stima e il costo vero si somigliavano: la
+  decorazione si stava mangiando il significato. Ora il viola resta alla stima e il caldo
+  al costo osservato.
+- **Via i trattini lunghi dal testo del sito**, in tutte e due le lingue: erano una
+  stampella ritmica. Restano solo i tre che separano il nome dal sottotitolo.
 - **I due README dicevano ancora «una misura sola»**, in cinque punti ciascuno, mentre le
   misure sono due dal 19/08. Corretti insieme: titolo della sezione, riquadro di stato,
   nota sui tool MCP, richiesta di misure e elenco di quello che manca.

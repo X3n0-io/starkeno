@@ -10,8 +10,8 @@
 <link rel="alternate" hreflang="en" href="https://x3n0-io.github.io/starkeno/en/">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../stile.css">
-<meta name="theme-color" content="#0d0f13" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#fbfaf8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08060f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcfcff" media="(prefers-color-scheme: light)">
 
 <!-- Preview card for when the link is pasted into a community. The image lives on
      GitHub: no new host, and a visitor asks nothing of anyone else. -->
@@ -43,7 +43,7 @@
   </div>
   <h1>What will this agent run cost, <em>before you start it?</em></h1>
   <p class="sottotitolo">
-    Every other tool answers afterwards. StarkEno answers first — and then scores that
+    Every other tool answers afterwards. StarkEno answers first, then scores its own
     answer against the real run.
   </p>
   <div class="installa">
@@ -93,7 +93,7 @@
         <div class="riga"><span class="et">observed</span><span class="nu">34,303,668</span></div>
         <div class="traccia"><div class="riempi reale" style="width:100%"></div></div>
       </div>
-      <figcaption class="esito"><b>3.1×</b> <span>under — and 44× under the <code>typical</code> scenario</span></figcaption>
+      <figcaption class="esito"><b>3.1×</b> <span>under, and 44× under the <code>typical</code> scenario</span></figcaption>
     </figure>
   </div>
 
@@ -102,8 +102,8 @@
     <p>
       The gap is <strong>not a multiplicative constant</strong>: the fix will not be one
       coefficient, and the work ahead is finding out what it depends on. Two points are
-      enough to rule out the convenient hypothesis, not enough to draw a curve — and the
-      two runs differ in harness, shape, length and retries all at once, so they isolate
+      enough to rule out the convenient hypothesis, not enough to draw a curve. The two
+      runs differ in harness, shape, length and retries all at once, so they isolate
       nothing.
     </p>
   </div>
@@ -121,7 +121,7 @@
     <p>
       <strong>A random error is a dead end. A structural one is a coefficient.</strong>
       That is why the wrong number is on the front page instead of at the bottom of a
-      backlog — and why more measurements are needed, from someone who is not the author.
+      backlog, and why more measurements are needed, from someone who is not the author.
       Eight numbers are enough: no database, no transcripts.
       <a href="https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md">How to send one →</a>
     </p>
@@ -207,7 +207,7 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 
   <div class="nota onesta">
     <p>
-      <strong>If all you need is the retrospective, good tools already exist</strong> —
+      <strong>If all you need is the retrospective, good tools already exist.</strong>
       <code>ccusage</code> reads the same JSONL files and runs under <code>npx</code>.
       StarkEno exists for the half nobody else attempts: <strong>saying the cost
       beforehand</strong>, and then scoring it against the real one.
@@ -220,7 +220,7 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
   <p>
     No network call, no account, no telemetry. The bill is an HTML file on your disk and
     the database is local SQLite. The hooks exit <code>0</code> whatever happens: if
-    StarkEno breaks, your work does not — which is also why
+    StarkEno breaks, your work does not. Which is also why
     <code>starkeno doctor</code> exists, because a silent StarkEno looks exactly like a
     working one.
   </p>

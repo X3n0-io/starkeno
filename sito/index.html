@@ -10,8 +10,8 @@
 <link rel="alternate" hreflang="en" href="https://x3n0-io.github.io/starkeno/en/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="stile.css">
-<meta name="theme-color" content="#0d0f13" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#fbfaf8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08060f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcfcff" media="(prefers-color-scheme: light)">
 
 <!-- Anteprima quando il link viene incollato in una comunità. L'immagine sta su GitHub:
      nessun host nuovo, e chi apre la pagina non chiede niente a nessun altro. -->
@@ -43,8 +43,8 @@
   </div>
   <h1>Quanto costerà questo lavoro dell'agente, <em>prima di lanciarlo?</em></h1>
   <p class="sottotitolo">
-    Tutti gli altri strumenti rispondono dopo. StarkEno risponde prima — e mette il
-    risultato a confronto con l'esecuzione vera.
+    Tutti gli altri strumenti rispondono dopo. StarkEno risponde prima, e poi mette la
+    propria risposta a confronto con l'esecuzione vera.
   </p>
   <div class="installa">
     <code>pip install starkeno</code>
@@ -93,7 +93,7 @@
         <div class="riga"><span class="et">osservato</span><span class="nu">34.303.668</span></div>
         <div class="traccia"><div class="riempi reale" style="width:100%"></div></div>
       </div>
-      <figcaption class="esito"><b>3,1×</b> <span>sotto — e 44× sotto lo scenario <code>typical</code></span></figcaption>
+      <figcaption class="esito"><b>3,1×</b> <span>sotto, e 44× sotto lo scenario <code>typical</code></span></figcaption>
     </figure>
   </div>
 
@@ -102,7 +102,7 @@
     <p>
       Lo scarto <strong>non è una costante moltiplicativa</strong>: la correzione non sarà
       un coefficiente da applicare, e il lavoro davanti è capire da cosa dipende. Due punti
-      bastano a escludere l'ipotesi comoda, non a disegnare una curva — e le due misure
+      bastano a escludere l'ipotesi comoda, non a disegnare una curva. Le due misure
       differiscono in harness, forma, lunghezza e ritentativi tutti insieme, quindi non
       isolano niente.
     </p>
@@ -121,7 +121,7 @@
     <p>
       <strong>Un errore casuale è un vicolo cieco. Uno strutturale è un coefficiente.</strong>
       È per questo che il numero sbagliato sta in prima pagina invece che in fondo a un
-      backlog — ed è la ragione per cui servono altre misure, fatte da qualcuno che non sia
+      backlog, ed è la ragione per cui servono altre misure, fatte da qualcuno che non sia
       l'autore. Bastano otto numeri: nessun database, nessun transcript.
       <a href="https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md">Come mandarne una →</a>
     </p>
@@ -210,7 +210,7 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
   <div class="nota onesta">
     <p>
       <strong>Se ti serve solo il consuntivo, ci sono buoni strumenti già pronti</strong>
-      — <code>ccusage</code> legge gli stessi file JSONL e gira con <code>npx</code>.
+      Ad esempio <code>ccusage</code>, che legge gli stessi file JSONL e gira con <code>npx</code>.
       StarkEno esiste per la metà che nessun altro tenta: <strong>dire il costo
       prima</strong>, e poi metterlo a confronto con quello vero.
     </p>
@@ -222,7 +222,7 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
   <p>
     Nessuna chiamata di rete, nessun account, nessuna telemetria. Il conto è un file HTML
     sul tuo disco e il database è SQLite locale. Gli hook escono <code>0</code> qualunque
-    cosa accada: se StarkEno si rompe, il tuo lavoro no — ed è anche il motivo per cui
+    cosa accada: se StarkEno si rompe, il tuo lavoro no. Ed è anche il motivo per cui
     esiste <code>starkeno doctor</code>, perché uno StarkEno muto è identico a uno che
     funziona.
   </p>
