@@ -467,6 +467,101 @@ Formato della riga: `- **[Nome](link)** - Descrizione breve e chiara`.
 
 ---
 
+## 9. «Esiste già ccusage» — le risposte, pronte
+
+È il commento che arriva per primo e decide come va il thread. Non è ostilità: è la
+domanda giusta, e chi la fa ti sta regalando l'occasione di dire in cosa consiste il
+progetto. **La regola sopra tutte: dagli ragione sulla metà che gli compete, subito e
+senza giri.** Chi difende l'indifendibile perde il thread; chi concede una cosa vera si
+guadagna il diritto di essere ascoltato sul resto.
+
+Non copiare tutte queste risposte: sono quattro obiezioni diverse, e ognuna vuole la sua.
+
+### 9.1 «Questo è ccusage con altri passi»
+
+```
+You are right about half of it, and I say so in the post: for the retrospective,
+ccusage is the better tool. Same JSONL files, npx, nothing to install.
+
+The half I have not seen anyone else do is the other direction: what will this job
+cost, before I start it. That is not a reporting feature, it is a different problem --
+there is no data to read yet, so you have to describe the work and simulate it. Which
+is why it ships as `preflight`, not as a column in a report.
+
+If you only ever want to know what yesterday cost, you genuinely do not need this.
+```
+
+### 9.2 «E allora perché non aggiungerlo a ccusage?»
+
+```
+Because they read different things. ccusage reads the transcript of work that already
+happened. A forecast has no transcript to read: its input is a description of work that
+does not exist yet -- how many steps, how much context each one carries, how often you
+expect a retry -- and its output is a distribution, not a total.
+
+They meet at exactly one point, which is the interesting one: you take the forecast, run
+the work, and compare. That comparison is the whole reason this exists, and it is what
+produced the 9.15x and the 3.1x.
+```
+
+### 9.3 «Il tuo forecast ha sbagliato di 9x, quindi è inutile» — la più dura, e la più utile
+
+```
+Today, as a number you would budget against, yes. I would not plan a sprint on it, and
+the README says so.
+
+What it is useful for today is the thing that comes before a good forecast: a harness
+that produces a falsifiable number, runs it against reality, and publishes the distance.
+Most estimation tools never close that loop, which is why you never find out they are
+wrong -- you just quietly believe them.
+
+The gap also runs in one direction and has a known cause: I count context read back from
+cache only on retries, and a real agent resends its whole context every turn. That is not
+a mystery to debug, it is a model to fix. The reason I am not shipping a corrected
+coefficient today is that two measurements already say the error is not a constant --
+9.15x and 3.1x -- so a single multiplier would be a lie that looks like a fix.
+```
+
+### 9.4 «Basta moltiplicare per 10»
+
+```
+That was my first hypothesis, and the second measurement killed it. Run 1 was 9.15x
+under, run 2 was 3.1x under. If I shipped a x9 correction, run 2 would now be roughly
+3x over -- I would have replaced an underestimate with an overestimate and called it
+calibration.
+
+What the two points do rule out is the convenient answer. What they do not tell me is
+what the gap depends on, because they differ in harness, shape, length and retries all
+at once. That is why the page asks for eight numbers from a real run rather than for
+stars.
+```
+
+### La versione corta, in italiano
+
+Per i post in italiano, e per quando la risposta va data in due righe:
+
+```
+Hai ragione per metà, e lo scrivo anche nel post: sul consuntivo ccusage è meglio del
+mio, stessi file JSONL e nessuna installazione. StarkEno serve alla domanda opposta —
+quanto costerà, prima di lanciarlo — che non è una colonna in un report ma un problema
+diverso: non c'è ancora niente da leggere, quindi il lavoro va descritto e simulato.
+E poi confrontato con l'esecuzione vera, che è la parte da cui vengono il 9,15× e il 3,1×.
+```
+
+### Quello che non devi rispondere
+
+- **Non dire che ccusage è limitato.** Non lo è per quello che fa, e chiunque l'abbia
+  usato lo sa: ti smentisci in una riga.
+- **Non dire «è complementare».** È vero e non significa niente; suona come una risposta
+  preparata per non rispondere.
+- **Non difendere il 9x.** Concedilo per intero, e sposta la conversazione su cosa lo
+  rende interessante — la direzione nota, la causa strutturale, il fatto che sia
+  pubblicato.
+- **Non promettere una data** per la correzione. Non ce l'hai: dipende da misure che
+  ancora non esistono.
+
+---
+
 ## Da verificare il giorno del post
 
 Un post non si può correggere ovunque, e queste tre cose invecchiano:
