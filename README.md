@@ -2,6 +2,13 @@
 
 *Read this in [English](README.en.md).* · **[Il sito](https://x3n0-io.github.io/starkeno/)**
 
+> **Progetto archiviato il 20 agosto 2026.** Non è più in sviluppo e le issue non vengono
+> seguite. Quello che c'è funziona e resta installabile: `pip install starkeno`, gli hook
+> raccolgono, `starkeno report` produce il conto. La metà predittiva resta una domanda di
+> ricerca aperta con un banco di prova funzionante, e fin dove è arrivata è scritto qui
+> sotto, misure sbagliate incluse. Licenza MIT: chi vuole riprenderla può forkare senza
+> chiedere niente a nessuno.
+
 **Quanto costerà questo lavoro dell'agente — prima di lanciarlo?**
 
 Tutti gli altri strumenti rispondono dopo. Leggono gli stessi transcript locali che il tuo
@@ -12,7 +19,7 @@ StarkEno è costruito attorno alla domanda che non fanno.
 
 > **Stato: Fase 2.** La raccolta funziona e il conto locale è reale e installabile. La
 > previsione è costruita, si prova in tre comandi, ed è stata confrontata con **due**
-> esecuzioni vere — quelle misure sono la prossima cosa su questa pagina.
+> esecuzioni vere — quelle misure sono la prima cosa su questa pagina, sotto.
 
 ## Le due misure
 
@@ -46,8 +53,32 @@ La domanda aperta è quale forma abbia —
 
 **Due punti dicono già qualcosa:** 9,15 e 3,1 non sono lo stesso numero, quindi
 l'ipotesi della costante è la meno probabile delle due, e la correzione non sarà un
-coefficiente. Quale sia la forma vera richiede più esecuzioni, di lavori diversi. È il
-lavoro in corso.
+coefficiente. Quale sia la forma vera richiede più esecuzioni, di lavori diversi.
+
+### L'ultima misura, 20 agosto 2026
+
+Prima di archiviare è stata calcolata la distribuzione empirica sui consuntivi già
+raccolti: 2.581 chiamate, 31 sessioni, 8 progetti, tutte Claude Code. Tre risultati, e il
+primo smentisce quello che l'autore si aspettava.
+
+- **La spesa cresce in modo lineare col numero di turni, non quadratico.** Regredendo
+  `log(costo pesato della sessione)` su `log(chiamate)` si ottiene un esponente di
+  **0,93** (IC95% 0,85–1,01, R² 0,96) su 27 sessioni. L'ipotesi del contesto che si
+  accumula senza limiti è fuori dall'intervallo di confidenza. Dentro una singola sessione
+  il costo per chiamata sale di 1,3–3,6× dal primo all'ultimo quarto e poi si ferma: il
+  tetto di contesto e la compattazione lo tengono.
+- **Il numero di turni spiega quasi tutto** (R² 0,96), e condizionando su quello il costo
+  per turno resta fra 28.000 e 60.000 token pesati. L'incertezza di una previsione sta
+  quasi tutta nel *quanti turni serviranno*, non in quanto costa un turno.
+- **Il 60% di rilettura si conferma, e vale sulla spesa pesata:** `cache_read` è il
+  **63,4%** del costo pesato, contro il 23,7% della scrittura in cache e il 12,9%
+  dell'output. Sui token grezzi la rilettura è il 96,7%, che è un altro numero e non va
+  confuso col primo.
+
+Nessuno dei tre chiude la domanda aperta, perché tutti misurano il **costo vero** e
+nessuno misura l'**errore della previsione**, che richiede una stima dichiarata prima del
+lancio: quelle coppie restano due. Ma dicono da dove ripartirebbe chi volesse riprendere
+il lavoro — dal numero di turni, con esponente 1.
 
 ## Prova la simulazione, adesso
 
@@ -678,4 +709,6 @@ MIT — vedi [LICENSE](LICENSE).
 ## Una nota sulle soglie
 
 Le soglie storiche in `config.py` non sono valori da spedire: vengono dai dati di una
-persona sola. La Fase 3 userà soglie derivate dallo storico di chi installa StarkEno.
+persona sola. Il piano era che la Fase 3 le derivasse dallo storico di chi installa
+StarkEno; il progetto è stato archiviato prima. Chi riprende il lavoro le ritari sui
+propri dati invece di fidarsi di questi.

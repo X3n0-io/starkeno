@@ -3,6 +3,13 @@
 *Read this in [Italian](README.md) — Italian is the project's language, and
 this page is the translation.* · **[The site](https://x3n0-io.github.io/starkeno/en/)**
 
+> **Archived on 20 August 2026.** No longer under development, and issues are not
+> followed. What is here works and stays installable: `pip install starkeno`, the hooks
+> collect, `starkeno report` produces the bill. The predictive half remains an open
+> research question with a working harness, and how far it got is written below, wrong
+> measurements included. MIT licence: anyone who wants to pick it up can fork it without
+> asking.
+
 **What will this agent run cost — before you run it?**
 
 Every other tool in this space answers afterwards. They read the same local transcripts
@@ -13,7 +20,7 @@ StarkEno is built around the question they do not ask.
 
 > **Status: Phase 2.** Collection works and the local bill is real and installable.
 > The forecast is built, runs in three commands, and has been scored against **two** real
-> executions — those measurements are the next thing on this page.
+> executions — those measurements are the first thing on this page, below.
 
 ## The two measurements
 
@@ -47,8 +54,32 @@ question is which shape it has —
 
 **Two points already say something:** 9.15 and 3.1 are not the same number, so the
 constant hypothesis is the less likely of the two, and the fix will not be one
-coefficient. Which shape it really has needs more runs, of different work. That is the
-current work.
+coefficient. Which shape it really has needs more runs, of different work.
+
+### The last measurement, 20 August 2026
+
+Before archiving, the empirical distribution was computed over the actuals already
+collected: 2,581 calls, 31 sessions, 8 projects, all Claude Code. Three results, and the
+first contradicts what the author expected.
+
+- **Cost grows linearly with the number of turns, not quadratically.** Regressing
+  `log(weighted session cost)` on `log(calls)` gives an exponent of **0.93** (95% CI
+  0.85–1.01, R² 0.96) over 27 sessions. The hypothesis of context piling up without a
+  ceiling falls outside the confidence interval. Within a single session the per-call cost
+  rises 1.3–3.6× from the first quarter to the last and then stops: the context cap and
+  compaction hold it.
+- **The number of turns explains nearly everything** (R² 0.96), and conditioning on it the
+  per-turn cost stays between 28,000 and 60,000 weighted tokens. The uncertainty in a
+  forecast sits almost entirely in *how many turns it will take*, not in what a turn costs.
+- **The 60% of re-reading is confirmed, and it holds on weighted spend:** `cache_read` is
+  **63.4%** of the weighted cost, against 23.7% for cache writes and 12.9% for output. On
+  raw tokens re-reading is 96.7%, which is a different number and should not be confused
+  with the first.
+
+None of the three closes the open question, because all three measure the **real cost**
+and none measures the **forecast error**, which needs an estimate declared before the run:
+those pairs are still two. But they say where anyone picking this up would start — from
+the number of turns, with exponent 1.
 
 ## Try the simulation, right now
 
@@ -680,5 +711,6 @@ MIT — see [LICENSE](LICENSE).
 ## A note on thresholds
 
 The historical thresholds in `config.py` are not values to ship: they come from one
-person's data. Phase 3 will use thresholds derived from the history of whoever installs
-StarkEno.
+person's data. The plan was for Phase 3 to derive them from the history of whoever
+installs StarkEno; the project was archived first. Anyone picking this up should retune
+them on their own data rather than trust these.

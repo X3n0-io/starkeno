@@ -7,6 +7,15 @@ usa il versionamento semantico.
 
 ### Added
 
+- **Il progetto è archiviato**, e i due README lo dicono in cima: cosa funziona e resta
+  installabile, cosa resta aperto, licenza MIT per chi voglia riprenderlo. Le issue non
+  vengono più seguite; la 0.4.0 su PyPI resta pubblicata perché funziona.
+- **L'ultima misura, dal database vero**: 2.581 chiamate, 31 sessioni, 8 progetti. La
+  spesa cresce in modo LINEARE col numero di turni — esponente 0,93, IC95% 0,85–1,01,
+  R² 0,96 su 27 sessioni — e non quadratico come si era supposto: dentro una sessione il
+  costo per chiamata sale di 1,3–3,6x e poi si ferma contro il tetto di contesto. La
+  rilettura è il 63,4% del costo pesato, che conferma il 60% pubblico sulla spesa e non
+  sui token grezzi (dove è il 96,7%).
 - **I due README dichiarano che gli scenari non sono calibrati.** `optimistic`, `typical`,
   `prudent` e `maximum` non portano una probabilità e non sono quantili misurati: adesso è
   scritto sia dove gli scenari vengono presentati sia nell'elenco di quello che manca, in
