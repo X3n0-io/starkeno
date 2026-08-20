@@ -122,109 +122,47 @@ si può evitare.
 
 ---
 
-## 2. Reddit — il corpo del post
+## 2. I corpi dei post
 
-Reddit **non** va per primo, per il cancello del karma della sezione 1. Ma è l'unico
-canale ripetibile — se il taglio non funziona si capisce lì e si corregge — quindi il
-corpo sta qui, ed è la base da cui derivano tutti gli altri.
+Due versioni, non cinque: **una inglese** per r/LocalLLaMA, r/ClaudeAI e r/Python, e **una
+italiana più corta** per r/IA_Italia e i sub italiani. Le varianti che i regolamenti
+impongono stanno in fondo alla sezione.
 
-**Il titolo apre sulla previsione, mai sul 60%.** Il 60% è la *spiegazione* dello scarto:
-messo in testa, il post diventa l'ennesima misura di consumo, e la risposta giusta a
-quella è `ccusage`.
+Il titolo apre sulla previsione, mai sul 60% di rilettura. Il 60% spiega lo scarto, non è
+la notizia: messo in testa, il post diventa l'ennesima misura di consumo, e a quella si
+risponde giustamente «esiste ccusage».
 
-Titolo, inglese:
+Su Reddit il link va nel corpo, non nel titolo: in molti sub un post che è solo un link
+viene rimosso.
 
-```
-I built a cost simulator for coding agents, then scored it against real runs.
-It was 9x under on one, 3.1x on another.
-```
+### Titoli
 
-Titolo, italiano:
+Inglese:
 
 ```
-Ho scritto un simulatore che dice quanto costerà un lavoro con un agente prima di
-lanciarlo. Poi l'ho confrontato con esecuzioni vere: 9 volte sotto sulla prima,
-3,1 sulla seconda.
+I wrote a tool that estimates what an agent run will cost before you start it. First time
+I checked, it was 9x under.
 ```
 
-Su Reddit **il link va nel corpo, non nel titolo**: in molti subreddit un post che è solo
-un link viene rimosso.
-
-### Corpo, italiano
+Italiano:
 
 ```
-Ho passato le ultime settimane a costruire una cosa che credevo esistesse già, e non
-esiste: uno strumento che dice quanto costerà un lavoro con un agente di coding **prima**
-di lanciarlo.
-
-Di consuntivi ce ne sono, e sono buoni. `ccusage` legge gli stessi file JSONL che Claude
-Code scrive già, gira con `npx` e non installa niente: se ti serve sapere quanto hai speso
-ieri, usa quello — su quella metà è migliore del mio. Quello che non trovavo è la domanda
-opposta: *ho questo lavoro da fare, quanto mi verrà a costare?*
-
-**Provalo in tre comandi.** Niente plugin, niente hook, nessun server MCP, nessuna rete:
-il Blueprint d'esempio viaggia dentro il pacchetto.
-
-    pip install starkeno
-
-    python -m starkeno preflight esempio --output esempio.json
-    python -m starkeno preflight draft   --input esempio.json --format yaml --output bozza.yaml
-    python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
-        --format html --output report.html
-
-**Non ti dà un numero, ed è voluto.** Ti dà quattro scenari — `optimistic`, `typical`,
-`prudent`, `maximum` — dichiara la propria confidenza (nell'esempio è `low`, e lo scrive
-invece di lasciartelo dedurre) e tagga ogni stima con la provenienza: `declared` se
-gliel'hai detta tu, `default` se l'ha messa lui, `inferred` se l'ha dedotta. Quello che non
-sa valorizzare lo **nomina**, invece di metterci zero: il denaro assente è assente, non è
-zero.
-
-**Poi l'ho messo alla prova contro esecuzioni vere, ed è andata male due volte su due.**
-
-| | forma del lavoro | previsto | osservato | scarto |
-|-|-|-|-|-|
-| 1 | Codex, 7 nodi, lineare, senza ritentativi | 331.500 | 3.035.535 | **9,15×** |
-| 2 | Claude Code, ~150 turni, ciclo con ritentativi | 11.098.500 | 34.303.668 | **3,1×** |
-
-Il 331.500 della prima non era una stima media: era il suo scenario `maximum`. **Il suo
-stesso caso peggiore era nove volte sotto.**
-
-Due punti non fanno una curva, ma bastano a uccidere l'ipotesi comoda: 9,15 e 3,1 non sono
-lo stesso numero, quindi lo scarto **non è una costante moltiplicativa** e la correzione
-non sarà un coefficiente da applicare.
-
-**La causa della direzione però si conosce, ed è strutturale invece che aritmetica.**
-Contavo il contesto riletto dalla cache solo sui ritentativi, come si comporta una singola
-chiamata a un modello. Un agente vero non ha memoria fra un turno e l'altro: rispedisce
-tutto il contesto accumulato **a ogni turno**. Nella misura 2 quella rilettura è il 97%
-della spesa; su una settimana di lavoro normale è il 60%.
-
-**Quello che mi serve non sono installazioni, sono misure.** Otto numeri da un'esecuzione
-vera: niente database, niente transcript, niente che ti riguardi. Ogni misura che arriva
-finisce nella tabella col nome di chi l'ha mandata. È l'unica cosa che può dire se lo
-scarto dipende dalla lunghezza, dai ritentativi, dall'harness o da qualcos'altro ancora —
-con due punti che differiscono in tutto, non si isola niente.
-
-Tutto in locale: nessuna chiamata di rete, nessun account, nessuna telemetria. MIT.
-
-- Codice: https://github.com/X3n0-io/starkeno
-- Lo scarto, per intero: https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md
-- Sito: https://x3n0-io.github.io/starkeno/
+Ho fatto uno strumento che dice quanto costerà un lavoro con un agente AI prima di
+lanciarlo. Alla prima prova ha sbagliato di 9 volte.
 ```
 
 ### Corpo, inglese
 
 ```
-I spent the last few weeks building something I assumed already existed, and it does not:
-a tool that tells you what a coding-agent workflow will cost **before** you run it.
+I use Claude Code and Codex most days, and what bothers me is that I only find out what a
+job cost after I have already run it. For the retrospective there are good tools already:
+ccusage reads the same JSONL files, runs under npx, installs nothing. For the question
+before you press enter I could not find anything, so I wrote it.
 
-Retrospective tools exist and they are good. `ccusage` reads the same JSONL files Claude
-Code already writes, runs under `npx`, installs nothing — if you want to know what
-yesterday cost, use that, it is better than mine at that half. What I could not find was
-the opposite question: *I have this job to do, what is it going to cost me?*
+It is called StarkEno. Runs locally, free, MIT.
 
-**Try it in three commands.** No plugin, no hooks, no MCP server, no network — the example
-Blueprint ships inside the package, so it works the moment it is installed:
+Three commands, no plugin, no hooks, no MCP server. The example Blueprint ships inside the
+package, so this works straight after the install:
 
     pip install starkeno
 
@@ -233,159 +171,123 @@ Blueprint ships inside the package, so it works the moment it is installed:
     python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
         --format html --output report.html
 
-**It deliberately does not give you a number.** It gives four scenarios — `optimistic`,
-`typical`, `prudent`, `maximum` — declares its own confidence (`low` on that example, and
-it says so instead of letting you infer it) and tags every estimate with where it came
-from: `declared` if you said it, `default` if it assumed it, `inferred` if it worked it
-out. Prices it cannot value are **named**, never silently zeroed.
+You get four scenarios instead of one number: optimistic, typical, prudent, maximum. Each
+analysis states its own confidence. Every estimate carries a tag saying where it came
+from: declared if you gave it, default if the tool assumed it, inferred if it worked it
+out. When it cannot price something it names the thing it could not price, rather than
+quietly using zero.
 
-**Then I scored it against real runs, and it was under both times.**
+Then I checked whether any of that holds up. I wrote a forecast, ran the work, compared
+the two.
 
-| # | shape of the work | predicted | observed | gap |
+| # | the work | predicted | observed | gap |
 |---|---|---|---|---|
-| 1 | Codex, 7 nodes, linear, no retries | 331,500 | 3,035,535 | **9.15x** |
-| 2 | Claude Code, ~150 turns, loop with retries | 11,098,500 | 34,303,668 | **3.1x** |
+| 1 | Codex, 7 nodes, linear, no retries | 331,500 | 3,035,535 | 9.15x |
+| 2 | Claude Code, ~150 turns, loop with retries | 11,098,500 | 34,303,668 | 3.1x |
 
-The 331,500 was not an average estimate — it was its own `maximum` scenario. **Its worst
-case was nine times under.**
+That 331,500 was not the average estimate. It was the worst case the tool could imagine.
 
-Two points do not make a curve, but they are enough to kill the convenient hypothesis:
-9.15 and 3.1 are not the same number, so the error is **not a multiplicative constant**
-and the fix will not be one coefficient.
+The two gaps are different numbers, so I cannot ship a x9 correction and call it fixed. If
+I did, run 2 would come out three times over instead of three times under.
 
-**The direction, at least, is structural rather than arithmetic.** I counted context read
-back from cache only on retries, the way a single model call behaves. A real agent has no
-memory between turns: it resends its whole accumulated context **every turn**. In run 2
-that re-reading is 97% of the spend; across a normal week of work it is 60%.
+I do know why it always lands short. I counted context read back from cache only on
+retries, which is how a single model call behaves. A real agent has no memory between
+turns, so it resends its whole accumulated context every turn. On my machine that
+re-reading was 60% of a week's spend, and 97% of run 2. I was counting it as close to
+nothing.
 
-**What I need is not installs, it is measurements.** Eight numbers from a real run — no
-database, no transcripts, nothing of yours. Every measurement that arrives goes into the
-table credited to whoever sent it. It is the only thing that can say whether the gap
-depends on length, retries, harness, or something else: two points that differ in
-everything isolate nothing.
+Both wrong numbers are at the top of the README rather than the bottom.
 
-All local: no network call, no account, no telemetry. Free and MIT.
+What would help me most is measurements from someone who is not me: eight numbers from a
+real run, no database, no transcripts. Anything that arrives goes in the table with credit
+to whoever sent it.
 
-* Code: https://github.com/X3n0-io/starkeno
-* The gap, in full: https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md
-* Site: https://x3n0-io.github.io/starkeno/en/
+Code: https://github.com/X3n0-io/starkeno
+The gap in full: https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md
+Site: https://x3n0-io.github.io/starkeno/en/
 ```
 
-### Le due varianti obbligatorie
+### Corpo, italiano
 
-**r/LocalLLaMA** vieta la copia «completely/primarily LLM generated», con **una sola
-eccezione**: chi non è madrelingua può farsi tradurre o rifinire il testo, purché lo
-dichiari in chiaro. Il corpo qui sopra ricade in quel caso, quindi va aggiunta una riga —
-in fondo, non nascosta:
+Più corto, e senza gli scenari e la provenienza delle stime: su un sub generalista quella
+roba non aggiunge credibilità, toglie lettori.
 
 ```
-(English is not my first language; I used an LLM to translate and tidy this post. The
-project, the measurements and the numbers are mine.)
-```
+Uso Claude Code e Codex quasi tutti i giorni, e la cosa che mi dà fastidio è che scopro
+quanto è costato un lavoro solo dopo averlo fatto. Per il conto a posteriori ci sono già
+strumenti buoni. Per la domanda prima di premere invio non ho trovato niente, quindi me lo
+sono scritto.
 
-Vale anche la regola 4: la self-promo non dovrebbe superare il 10% di quello che scrivi.
-Con un account che non ha mai commentato, il primo post è il 100%. È un rischio reale, e
-il modo di ridurlo è avere già commentato altrove da qualche giorno.
+Si chiama StarkEno. Gira in locale, è gratis, il codice è aperto.
 
-**r/Python** non accetta post di showcase (regola 1): si va nel thread mensile di showcase
-o nel daily. La regola 11 impone tre sezioni con questi titoli esatti, da mettere in cima
-al corpo:
+Poi ho voluto vedere se le sue stime reggevano. Gli ho fatto fare un preventivo su un
+lavoro vero, l'ho lanciato, e ho confrontato.
 
-```
-**What My Project Does**
-It simulates what a coding-agent workflow will cost before you run it — four scenarios,
-declared confidence, provenance on every estimate — and separately reconstructs what a
-session actually cost from the transcripts the agent already writes.
+    previsto nel caso peggiore:    331.500 token
+    speso davvero:               3.035.535 token
 
-**Target Audience**
-Anyone paying per token for Claude Code or Codex who wants a number before committing to
-a job. The retrospective half is usable day to day; the forecast half is honest research
-in progress, and the README says which is which.
+Nove volte tanto. E quel 331.500 non era la stima media, era già lo scenario più pessimista
+che sapeva produrre.
 
-**Comparison**
-`ccusage` and similar tools answer what you already spent, and do it better than I do.
-I have not found another tool that tries to answer the cost *before* the run — which is
-also why this one publishes how wrong it was: 9.15x under on one measurement, 3.1x on
-another.
-```
+Ho rifatto la prova su un altro lavoro e lì lo scarto era 3,1. Sono due numeri diversi,
+quindi non posso moltiplicare per dieci e dire che l'ho sistemato.
 
-### Prima di premere invio
+Perché sbagli sempre per difetto però l'ho capito. Un agente non si ricorda niente da un
+turno all'altro, quindi a ogni messaggio rispedisce tutto il contesto che ha accumulato. Su
+una settimana di lavoro vero quella rilettura è stata il 60% di quello che ho speso, e io
+la contavo quasi zero.
 
-- **Rispondi a chi nomina `ccusage`**, e dagli ragione sulla metà che gli compete. Il
-  corpo lo fa già prima che qualcuno debba chiederlo: è la mossa che disinnesca
-  l'obiezione invece di subirla.
-- **Non promettere il confronto come funzione pronta.** Il simulatore gira in tre comandi;
-  il confronto con l'esecuzione vera richiede il server MCP montato a mano. Confonderli è
-  il modo più rapido per essere smentiti dal primo che prova.
-- **Niente superlativi.** Un difetto ammesso vale più di dieci aggettivi.
+Tutti e due i numeri sbagliati stanno in cima al README, non in fondo.
 
----
-
-## 2-bis. r/IA_Italia — la versione breve, in italiano
-
-Pubblico diverso da tutti gli altri: **7.848 iscritti, comunità italiana generalista**,
-dagli appassionati ai professionisti, e la sidebar dice esplicitamente che ci sono anche
-persone che si avvicinano all'IA per la prima volta. Quindi niente `optimistic/typical/
-prudent/maximum`, niente provenienza delle stime, niente MCP: quella roba qui non aggiunge
-credibilità, toglie lettori.
-
-**Quello che regge da solo è la storia**: ho provato a prevedere, ho sbagliato di nove
-volte, ho pubblicato l'errore. Funziona anche per chi non ha mai aperto un terminale.
-
-Il sub **richiede un flair sul post** (`link_flair_enabled`), e non pubblica regole
-nell'API: come su r/LocalLLaMA, può avere soglie di AutoModerator che non sono scritte da
-nessuna parte. Se sparisce, il motivo arriva in messaggio privato — vedi la sezione 1-bis.
-
-Titolo:
-
-```
-Ho provato a prevedere quanto costa far lavorare un agente AI. Ho sbagliato di 9 volte,
-e ho pubblicato l'errore.
-```
-
-Corpo:
-
-```
-Se usi Claude Code, Codex o simili sai già com'è: lanci un lavoro e scopri quanto è
-costato dopo. Strumenti che ti fanno il conto a posteriori ce ne sono, e sono buoni.
-
-Io volevo l'opposto — **quanto costerà, prima di premere invio.** Non l'ho trovato, così
-l'ho scritto. Si chiama StarkEno, gira tutto in locale, è gratis e open source.
-
-Poi ho fatto la cosa che quasi nessuno fa con le proprie stime: **le ho messe alla prova.**
-
-    previsto (nel caso peggiore):    331.500 token
-    speso davvero:                 3.035.535 token
-
-**Nove volte sotto.** E quel 331.500 non era la stima media: era già il suo scenario più
-pessimista.
-
-Alla seconda prova lo scarto era 3,1 volte. Due numeri diversi vogliono dire una cosa
-precisa: non è una costante, e non basta moltiplicare per dieci e dire di aver risolto.
-
-Il motivo però si conosce, ed è la parte che interessa a chiunque paghi a token:
-**un agente non ha memoria fra un turno e l'altro, quindi rispedisce tutto il contesto
-ogni volta.** Su una settimana di lavoro vero quella rilettura è stata il 60% della spesa.
-Io la contavo quasi zero.
-
-Il numero sbagliato l'ho lasciato in prima pagina, perché uno strumento di previsione che
-nasconde i propri errori non vale niente.
-
-Si prova in tre comandi, senza account e senza mandare niente a nessuno:
+Se vuoi provarlo sono tre comandi, senza account e senza mandare niente a nessuno:
 
     pip install starkeno
 
 Sito: https://x3n0-io.github.io/starkeno/
 Codice: https://github.com/X3n0-io/starkeno
 
-Se qualcuno se la sente di misurarlo sul proprio lavoro mi fa un favore enorme: servono
-otto numeri, non il database e non le conversazioni.
+Se qualcuno ha voglia di misurarlo sul proprio lavoro mi fa un favore grosso. Servono otto
+numeri, non il database e non le conversazioni.
 ```
 
-**Perché è costruito così:** apre con una situazione che il lettore riconosce, dà **un**
-numero invece di cinque, mette la sconfitta al centro invece che in fondo, e chiude con
-una richiesta piccola e concreta. Il taglio tecnico completo resta nella sezione 2, per i
-sub dove serve.
+### Le due varianti che i regolamenti impongono
+
+**r/LocalLLaMA** vieta la copia «completely/primarily LLM generated», con una sola
+eccezione: chi non è madrelingua può farsi tradurre o rifinire il testo, purché lo dichiari
+in chiaro. Riga da aggiungere in fondo, non nascosta:
+
+```
+(Disclosure: English is not my first language, so I used an LLM to tidy up this post. The
+project and the numbers are mine, and I am the author.)
+```
+
+**r/Python** non accetta post di showcase (regola 1): si va nel thread mensile di showcase
+o nel daily. La regola 11 impone tre sezioni con questi titoli esatti, da mettere in cima:
+
+```
+**What My Project Does**
+It estimates what a coding-agent workflow will cost before you run it, as four scenarios
+with a stated confidence, and separately reconstructs what a session actually cost from
+the transcripts the agent already writes.
+
+**Target Audience**
+Anyone paying per token for Claude Code or Codex who wants a number before committing to a
+job. The retrospective half is usable day to day. The forecasting half is research with a
+working harness, and the README says which is which.
+
+**Comparison**
+ccusage and similar tools answer what you already spent, and they do it better than I do.
+I have not found another tool that tries to answer the cost before the run, which is also
+why this one publishes its own errors: 9.15x under on one measurement, 3.1x on another.
+```
+
+### Prima di premere invio
+
+- **Rispondi a chi nomina `ccusage`** e dagli ragione sulla metà che gli compete. Il corpo
+  lo fa già prima che qualcuno debba chiederlo. Le risposte lunghe stanno nella sezione 9.
+- **Non promettere il confronto come funzione pronta.** Il simulatore gira in tre comandi.
+  Il confronto con l'esecuzione vera richiede il server MCP montato a mano.
+- **Niente superlativi.** Un difetto ammesso vale più di dieci aggettivi.
 
 ---
 
@@ -398,11 +300,11 @@ sub dove serve.
 
 Un articolo con davanti «Show HN» viene ricategorizzato o cancellato, e sarebbe l'unico
 colpo sprecato per una riga di regolamento. Show HN vuole *«things people can run on their
-computers»*, e StarkEno lo è: `pip install`, tre comandi, nessuna registrazione. **Quindi
-si manda il repository, e la storia dello scarto sta nel titolo e nel primo commento.**
+computers»*, e StarkEno lo è: `pip install`, tre comandi, nessuna registrazione. Quindi si
+manda il repository, e lo scarto sta nel titolo e nel primo commento.
 
-Titolo — sotto gli 80 caratteri, specifico, non vende niente, e dichiara subito che le
-misure sono due, così nessuno può accusarti di aver scelto il numero più drammatico:
+Titolo, sotto gli 80 caratteri, con le due misure dichiarate subito così nessuno può
+accusarti di aver scelto il numero più drammatico:
 
 ```
 Show HN: I forecast what an agent run will cost. I was 9x under, then 3.1x
@@ -410,68 +312,64 @@ Show HN: I forecast what an agent run will cost. I was 9x under, then 3.1x
 
 Link: `https://github.com/X3n0-io/starkeno`
 
-> Se preferisci il taglio da saggio, l'alternativa è una **submission normale** dell'articolo
-> `docs/the-9x-gap.en.md`, **senza il prefisso «Show HN»**. È legittima, e gli articoli su HN
-> funzionano. Ma scegline una sola: ripostare lo stesso progetto è il modo più rapido per
-> farsi bandire.
+> Se preferisci il taglio da saggio, l'alternativa è una **submission normale**
+> dell'articolo `docs/the-9x-gap.en.md`, **senza il prefisso «Show HN»**. È legittima, e
+> gli articoli su HN funzionano. Ma scegline una sola: ripostare lo stesso progetto è il
+> modo più rapido per farsi bandire.
 
-Primo commento, da scrivere subito dopo aver postato:
+Primo commento, da scrivere subito dopo aver postato. Un Show HN senza il commento
+dell'autore parte monco:
 
 ```
   pip install starkeno
 
-I built a local tool that reads the transcripts Claude Code and Codex already write and
-reconstructs what a session cost. That half works, and I will say it before anyone else
-does: ccusage does that half better, with more stars and nothing to install.
+StarkEno has two halves. One of them reads the transcripts Claude Code and Codex already
+write and reconstructs what a session cost. I will say this before anyone else does:
+ccusage does that half better, with more stars and nothing to install.
 
-The other half is the one I have not seen anyone else attempt -- simulating a workflow
-*before* you run it. Three commands, no plugin, no hooks, no MCP server, and the example
-Blueprint ships inside the package:
+The other half is the one I have not seen anyone else try, which is saying what a job will
+cost before you start it. Three commands, no plugin, no hooks, no MCP server, and the
+example Blueprint ships inside the package:
 
   python -m starkeno preflight esempio --output esempio.json
   python -m starkeno preflight draft   --input esempio.json --format yaml --output bozza.yaml
   python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
       --format html --output report.html
 
-It deliberately does not give you a number. It gives four scenarios
-(optimistic/typical/prudent/maximum), declares its own confidence -- `low`, on that
-example, and it says so -- and tags every estimate with where it came from: declared,
-default, or inferred. Prices it cannot value are named, never silently zeroed.
+You get four scenarios rather than one number: optimistic, typical, prudent, maximum. Each
+analysis states its own confidence, which on the shipped example is `low`. Every estimate
+is tagged declared, default or inferred depending on where the input came from, and
+anything it cannot price is named instead of quietly zeroed.
 
-Then I scored it against real executions. Twice, and it was under both times:
+Then I scored it against real runs, twice, and it came in under both times:
 
-  1. Codex, 7 nodes, linear, no retries: its own `maximum` scenario said 331,500 tokens.
-     The run cost 3,035,535. That is 9.15x under its own worst case.
-  2. Claude Code, ~150 turns, a loop with retries: 11,098,500 predicted, 34,303,668
-     observed. 3.1x.
+  1. Codex, 7 nodes, linear, no retries. Its `maximum` scenario said 331,500 tokens. The
+     run cost 3,035,535, so 9.15x under the worst case it could imagine.
+  2. Claude Code, ~150 turns with retries. 11,098,500 predicted, 34,303,668 observed, 3.1x.
 
-Two points do not make a curve, but they are enough to kill the convenient hypothesis.
-9.15x and 3.1x are not the same number, so the error is not a multiplicative constant
-and the fix will not be one coefficient. What it *does* depend on I genuinely do not
-know: the two runs differ in harness, shape, length and retries all at once, so they
+Those are different numbers, so I cannot ship a x9 correction and call it calibrated. Run
+2 would then come out three times over. What the gap actually depends on I do not know
+yet: the two runs differ in harness, shape, length and retries all at once, so they
 isolate nothing.
 
-The direction, at least, is structural rather than arithmetic. I counted context read
-back from cache only on retries, the way a single model call behaves. A real agent has
-no memory between turns, so it resends its whole accumulated context every turn. On my
-machine that re-reading was 60% of a week's spend -- and 97% of run 2, because a long
-session ends up paying for almost nothing else.
+Why it lands short is clearer. I counted context read back from cache only on retries,
+which is how a single model call behaves. A real agent has no memory between turns, so it
+resends its whole accumulated context every turn. On my machine that re-reading was 60% of
+a week's spend, and 97% of run 2, where a long session ends up paying for little else.
 
-Which is why I am asking for measurements instead of installs: eight numbers from a real
-run, no database, no transcripts, and every one that arrives goes into the table credited
-to whoever sent it. I would rather be corrected in public than be the only person holding
-the data.
+So what I am asking for is measurements rather than installs. Eight numbers from a real
+run, no database, no transcripts, and whatever arrives goes into the table with credit.
 
   https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md
 
-Everything is local: no network call, no account, no telemetry. MIT.
+Everything runs locally: no network call, no account, no telemetry. MIT.
 ```
 
 Regole di Hacker News che costano caro se ignorate:
 
 - **Una volta sola.** Ripostare lo stesso progetto è il modo più rapido per farsi bandire.
-- **Niente superlativi.** «Rivoluzionario», «potente», «game-changer» affondano un post
-  su HN più in fretta di un difetto ammesso.
+- **Niente superlativi.** «Rivoluzionario», «potente», «game-changer» affondano un post su
+  HN più in fretta di un difetto ammesso.
 - **Non chiedere voti a nessuno.** È scritto nelle regole di Show HN, e si vede.
 - **Posta quando sei disponibile** per le due ore successive. Un thread abbandonato muore.
 
