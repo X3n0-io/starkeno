@@ -32,57 +32,173 @@ volevano fare per ultimi. L'ordine si inverte da sé.
 3. **Le due liste senza cancello**, in parallelo: costano una PR ciascuna.
 4. **awesome-claude-code dal 28/08**, e awesome-claude-skills quando le stelle sono dieci.
 
+Il dettaglio comunità per comunità è nella sezione 1.
+
 > Il sito è online: <https://x3n0-io.github.io/starkeno/>. Per un pubblico tecnico il
 > link giusto resta il repository o il pezzo sullo scarto; il sito serve a chi arriva da
 > un social e non aprirebbe mai un README.
 
 ---
 
-## 1. Reddit — r/ClaudeAI
+## 1. La mappa delle comunità, e in che ordine
 
-Va per primo perché è l'unico canale ripetibile: se il taglio non funziona, si capisce
-qui e si corregge prima di bruciare l'unico colpo su HN.
+Postare tutto lo stesso giorno è il modo più rapido per sembrare spam a tre piattaforme
+insieme. **Una comunità al giorno**, e si risponde ai commenti di quella prima di aprire
+la successiva.
+
+| Quando | Dove | Cosa mandare | La regola che conta |
+|---|---|---|---|
+| Giorno 1 | **r/ClaudeAI** | corpo inglese, link nel corpo | pubblico che riconosce il problema; è la prova generale |
+| Giorno 2 | **r/LocalLLaMA** | corpo inglese, taglio «tutto locale» | leggi le regole nella sidebar: molti thread di self-promo finiscono in un megathread |
+| Giorno 3 | **Hacker News** | *Show HN* → il **repository** | una volta sola, e vedi sotto perché non l'articolo |
+| Giorno 4 | **r/Python** | corpo inglese, formato Showcase | il sub impone tre sezioni obbligatorie: verifica il formato prima |
+| Giorno 5 | **r/ItalyInformatica** o simili | **corpo italiano** | l'unico posto dove l'italiano è un vantaggio invece che un ostacolo |
+| Quando vuoi | **LinkedIn / X**, account tuoi | corpo italiano accorciato, link al sito | nessuna regola oltre alla tua reputazione |
+| Dal 28/08 | **le liste** | vedi le sezioni 6, 7 e 8 | chiedono stelle, non qualità |
+
+**Il sito ora è in due lingue**: <https://x3n0-io.github.io/starkeno/> e
+<https://x3n0-io.github.io/starkeno/en/>. Manda l'inglese alle comunità internazionali —
+una pagina in italiano su r/Python perde metà dei lettori alla prima riga. Per un pubblico
+tecnico il link migliore resta il repository; il sito serve a chi arriva da un social e
+non aprirebbe mai un README.
+
+**Lobsters non è una strada, oggi.** È a invito, e un utente nuovo non può inviare link da
+un dominio nuovo per **70 giorni**. Non provarci finché non ci sei dentro davvero.
+
+---
+
+## 2. Reddit — il corpo del post
+
+Reddit va per primo perché è l'unico canale ripetibile: se il taglio non funziona si
+capisce lì e si corregge, prima di bruciare l'unico colpo su Hacker News.
 
 **Il titolo apre sulla previsione, mai sul 60%.** Il 60% è la *spiegazione* dello scarto:
 messo in testa, il post diventa l'ennesima misura di consumo, e la risposta giusta a
 quella è `ccusage`.
 
+Titolo, inglese:
+
 ```
-I built a cost simulator for coding agents, then scored it against real runs. It was
-9x under on one, 3.1x on another.
+I built a cost simulator for coding agents, then scored it against real runs.
+It was 9x under on one, 3.1x on another.
 ```
 
-In italiano, se il post va anche altrove:
+Titolo, italiano:
 
 ```
 Ho scritto un simulatore che dice quanto costerà un lavoro con un agente prima di
-lanciarlo. Poi l'ho confrontato con esecuzioni vere: ha sbagliato di 9 volte sulla
-prima, di 3,1 sulla seconda.
+lanciarlo. Poi l'ho confrontato con esecuzioni vere: 9 volte sotto sulla prima,
+3,1 sulla seconda.
 ```
 
-Il corpo: lo stesso del commento HN qui sotto. Su Reddit **il link va nel corpo, non nel
-titolo**, e in molti subreddit un post che è solo un link viene rimosso.
+Su Reddit **il link va nel corpo, non nel titolo**: in molti subreddit un post che è solo
+un link viene rimosso.
+
+### Corpo, italiano
+
+```
+Ho passato le ultime settimane a costruire una cosa che credevo esistesse già, e non
+esiste: uno strumento che dice quanto costerà un lavoro con un agente di coding **prima**
+di lanciarlo.
+
+Di consuntivi ce ne sono, e sono buoni. `ccusage` legge gli stessi file JSONL che Claude
+Code scrive già, gira con `npx` e non installa niente: se ti serve sapere quanto hai speso
+ieri, usa quello — su quella metà è migliore del mio. Quello che non trovavo è la domanda
+opposta: *ho questo lavoro da fare, quanto mi verrà a costare?*
+
+**Provalo in tre comandi.** Niente plugin, niente hook, nessun server MCP, nessuna rete:
+il Blueprint d'esempio viaggia dentro il pacchetto.
+
+    pip install starkeno
+
+    python -m starkeno preflight esempio --output esempio.json
+    python -m starkeno preflight draft   --input esempio.json --format yaml --output bozza.yaml
+    python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
+        --format html --output report.html
+
+**Non ti dà un numero, ed è voluto.** Ti dà quattro scenari — `optimistic`, `typical`,
+`prudent`, `maximum` — dichiara la propria confidenza (nell'esempio è `low`, e lo scrive
+invece di lasciartelo dedurre) e tagga ogni stima con la provenienza: `declared` se
+gliel'hai detta tu, `default` se l'ha messa lui, `inferred` se l'ha dedotta. Quello che non
+sa valorizzare lo **nomina**, invece di metterci zero: il denaro assente è assente, non è
+zero.
+
+**Poi l'ho messo alla prova contro esecuzioni vere, ed è andata male due volte su due.**
+
+| | forma del lavoro | previsto | osservato | scarto |
+|-|-|-|-|-|
+| 1 | Codex, 7 nodi, lineare, senza ritentativi | 331.500 | 3.035.535 | **9,15×** |
+| 2 | Claude Code, ~150 turni, ciclo con ritentativi | 11.098.500 | 34.303.668 | **3,1×** |
+
+Il 331.500 della prima non era una stima media: era il suo scenario `maximum`. **Il suo
+stesso caso peggiore era nove volte sotto.**
+
+Due punti non fanno una curva, ma bastano a uccidere l'ipotesi comoda: 9,15 e 3,1 non sono
+lo stesso numero, quindi lo scarto **non è una costante moltiplicativa** e la correzione
+non sarà un coefficiente da applicare.
+
+**La causa della direzione però si conosce, ed è strutturale invece che aritmetica.**
+Contavo il contesto riletto dalla cache solo sui ritentativi, come si comporta una singola
+chiamata a un modello. Un agente vero non ha memoria fra un turno e l'altro: rispedisce
+tutto il contesto accumulato **a ogni turno**. Nella misura 2 quella rilettura è il 97%
+della spesa; su una settimana di lavoro normale è il 60%.
+
+**Quello che mi serve non sono installazioni, sono misure.** Otto numeri da un'esecuzione
+vera: niente database, niente transcript, niente che ti riguardi. Ogni misura che arriva
+finisce nella tabella col nome di chi l'ha mandata. È l'unica cosa che può dire se lo
+scarto dipende dalla lunghezza, dai ritentativi, dall'harness o da qualcos'altro ancora —
+con due punti che differiscono in tutto, non si isola niente.
+
+Tutto in locale: nessuna chiamata di rete, nessun account, nessuna telemetria. MIT.
+
+- Codice: https://github.com/X3n0-io/starkeno
+- Lo scarto, per intero: https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md
+- Sito: https://x3n0-io.github.io/starkeno/
+```
+
+### Corpo, inglese
+
+Usa il commento di Hacker News della sezione 3: è lo stesso testo, già in inglese.
+Sostituisci solo i link `docs/lo-scarto-9x.md` con `docs/the-9x-gap.en.md` e il sito con
+`https://x3n0-io.github.io/starkeno/en/`.
+
+### Prima di premere invio
+
+- **Rispondi a chi nomina `ccusage`**, e dagli ragione sulla metà che gli compete. Il
+  corpo lo fa già prima che qualcuno debba chiederlo: è la mossa che disinnesca
+  l'obiezione invece di subirla.
+- **Non promettere il confronto come funzione pronta.** Il simulatore gira in tre comandi;
+  il confronto con l'esecuzione vera richiede il server MCP montato a mano. Confonderli è
+  il modo più rapido per essere smentiti dal primo che prova.
+- **Niente superlativi.** Un difetto ammesso vale più di dieci aggettivi.
 
 ---
 
-## 2. Hacker News
+## 3. Hacker News — Show HN, ma del repository
 
-**Manda il pezzo sullo scarto, non il repository.** Un altro strumento di costi non
-interessa nessuno; un forecaster che pubblica il proprio errore sì.
+**Correzione al piano precedente.** Diceva di mandare il pezzo sullo scarto con un titolo
+«Show HN», e le regole di Show HN lo escludono alla lettera:
 
-Titolo — specifico, verificabile, non vende niente, e **dichiara subito che le misure
-sono due**, così nessuno può accusarti di aver scelto il numero più drammatico:
+> Off topic: blog posts, sign-up pages, newsletters, lists, and other reading material.
+
+Un articolo con davanti «Show HN» viene ricategorizzato o cancellato, e sarebbe l'unico
+colpo sprecato per una riga di regolamento. Show HN vuole *«things people can run on their
+computers»*, e StarkEno lo è: `pip install`, tre comandi, nessuna registrazione. **Quindi
+si manda il repository, e la storia dello scarto sta nel titolo e nel primo commento.**
+
+Titolo — sotto gli 80 caratteri, specifico, non vende niente, e dichiara subito che le
+misure sono due, così nessuno può accusarti di aver scelto il numero più drammatico:
 
 ```
-Show HN: My cost simulator for coding agents was 9x under on one run, 3.1x on another
+Show HN: I forecast what an agent run will cost. I was 9x under, then 3.1x
 ```
 
-Link: `https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md`
+Link: `https://github.com/X3n0-io/starkeno`
 
-> **«Show HN» richiede qualcosa che si possa provare**, ed è il motivo per cui il primo
-> commento apre con l'installazione: il simulatore gira in tre comandi, senza plugin né
-> hook. Un «Show HN» che si apre su un articolo e basta viene ripreso nei commenti, e
-> giustamente.
+> Se preferisci il taglio da saggio, l'alternativa è una **submission normale** dell'articolo
+> `docs/the-9x-gap.en.md`, **senza il prefisso «Show HN»**. È legittima, e gli articoli su HN
+> funzionano. Ma scegline una sola: ripostare lo stesso progetto è il modo più rapido per
+> farsi bandire.
 
 Primo commento, da scrivere subito dopo aver postato:
 
@@ -91,14 +207,14 @@ Primo commento, da scrivere subito dopo aver postato:
 
 I built a local tool that reads the transcripts Claude Code and Codex already write and
 reconstructs what a session cost. That half works, and I will say it before anyone else
-does: ccusage does that half better, with more stars and no install.
+does: ccusage does that half better, with more stars and nothing to install.
 
 The other half is the one I have not seen anyone else attempt -- simulating a workflow
-*before* you run it. Three commands after `pip install starkeno`, no plugin, no hooks,
-no MCP server, and the example Blueprint ships inside the package:
+*before* you run it. Three commands, no plugin, no hooks, no MCP server, and the example
+Blueprint ships inside the package:
 
   python -m starkeno preflight esempio --output esempio.json
-  python -m starkeno preflight draft --input esempio.json --format yaml --output bozza.yaml
+  python -m starkeno preflight draft   --input esempio.json --format yaml --output bozza.yaml
   python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 \
       --format html --output report.html
 
@@ -126,10 +242,12 @@ no memory between turns, so it resends its whole accumulated context every turn.
 machine that re-reading was 60% of a week's spend -- and 97% of run 2, because a long
 session ends up paying for almost nothing else.
 
-Which is why the page asks for measurements instead of installs: eight numbers from a
-real run, no database, no transcripts, and every one that arrives goes into the table
-credited to whoever sent it. I would rather be corrected in public than be the only
-person holding the data.
+Which is why I am asking for measurements instead of installs: eight numbers from a real
+run, no database, no transcripts, and every one that arrives goes into the table credited
+to whoever sent it. I would rather be corrected in public than be the only person holding
+the data.
+
+  https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md
 
 Everything is local: no network call, no account, no telemetry. MIT.
 ```
@@ -139,14 +257,28 @@ Regole di Hacker News che costano caro se ignorate:
 - **Una volta sola.** Ripostare lo stesso progetto è il modo più rapido per farsi bandire.
 - **Niente superlativi.** «Rivoluzionario», «potente», «game-changer» affondano un post
   su HN più in fretta di un difetto ammesso.
-- **Rispondi a tutti**, soprattutto a chi ti dice che esiste già `ccusage`. La risposta
-  vera è nel commento sopra: sì, e per il consuntivo è migliore — questo simula il lavoro
-  *prima*.
+- **Non chiedere voti a nessuno.** È scritto nelle regole di Show HN, e si vede.
 - **Posta quando sei disponibile** per le due ore successive. Un thread abbandonato muore.
 
 ---
 
-## 3. Le due liste senza cancello — si possono fare oggi
+## 4. dev.to e simili — la ristampa dell'articolo
+
+Il pezzo sullo scarto è già un articolo compiuto: su dev.to (o Hashnode, o Medium) si
+ripubblica per intero, con il **canonical** che punta al file su GitHub, così la copia non
+compete con l'originale. Non è un canale che porta installazioni, ma è quello che resta
+indicizzato quando i thread sono scesi.
+
+## 5. I Discord e i forum
+
+Anthropic e OpenAI hanno comunità dove si mostra quello che si costruisce. Valgono le
+stesse due regole di sempre: **si posta nel canale giusto** (di solito uno chiamato
+`showcase` o `built-with`), e **si risponde**. Un link lasciato cadere e mai più seguito
+fa più danno che non postare.
+
+---
+
+## 6. Le due liste senza cancello — si possono fare oggi
 
 Entrambe si segnalano con una **pull request normale**, ed entrambe elencano i progetti in
 tabella con nome, stelle e descrizione.
@@ -169,7 +301,7 @@ segnalazione fuori formato viene chiusa senza discussione.
 
 ---
 
-## 4. awesome-claude-code — dal 28/08/2026, e per issue
+## 7. awesome-claude-code — dal 28/08/2026, e per issue
 
 È la lista principale, e ha due regole che se non conosci ti fanno perdere il colpo:
 
@@ -209,7 +341,7 @@ leggile, non spuntarle per riflesso.
 
 ---
 
-## 5. awesome-claude-skills — a dieci stelle, e a mano
+## 8. awesome-claude-skills — a dieci stelle, e a mano
 
 [travisvn/awesome-claude-skills](https://github.com/travisvn/awesome-claude-skills)
 accetta PR, ma:

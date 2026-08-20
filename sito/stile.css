@@ -1,0 +1,275 @@
+/* StarkEno — foglio di stile unico per le due lingue.
+ *
+ * Nessuna richiesta a terzi: font di sistema, zero CDN, zero analytics, zero webfont.
+ * Un sito che traccia chi lo legge smentirebbe la promessa che il progetto fa a chi lo
+ * installa, e il cancello in `.github/workflows/pages.yml` fa fallire il deploy se
+ * questa regola viene violata — anche da un `url()` dentro questo file.
+ *
+ * Due colori portano tutto il significato e non vanno usati per decorare:
+ *   --stima  (freddo)  = quello che StarkEno aveva previsto
+ *   --reale  (caldo)   = quello che è costato davvero
+ */
+
+:root {
+  --fondo:      #fbfaf8;
+  --fondo-alt:  #f4f2ee;
+  --carta:      #ffffff;
+  --bordo:      #e4e0d8;
+  --bordo-net:  #d3cec3;
+  --testo:      #15181e;
+  --tenue:      #4c5462;
+  --debole:     #616a79;   /* 5,3:1 sul fondo chiaro: sotto questo le didascalie non passano AA */
+  --stima:      #2f57b8;
+  --stima-tenue:#dbe3f7;
+  --reale:      #a95c07;
+  --reale-tenue:#f7e6cf;
+  --accento:    #2f57b8;
+  --ombra:      0 1px 2px rgba(20,24,32,.05), 0 8px 24px -12px rgba(20,24,32,.18);
+  --raggio:     14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo:      #0d0f13;
+    --fondo-alt:  #12151b;
+    --carta:      #14171d;
+    --bordo:      #232833;
+    --bordo-net:  #333a48;
+    --testo:      #f2f4f8;
+    --tenue:      #b3bccb;
+    --debole:     #838e9f;
+    --stima:      #86a9f9;
+    --stima-tenue:#1b2436;
+    --reale:      #f0a95f;
+    --reale-tenue:#2a2115;
+    --accento:    #9dbaff;
+    --ombra:      0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--fondo);
+  color: var(--testo);
+  line-height: 1.62;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.guscio { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+a { color: var(--accento); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+
+/* ---------- barra di lingua ---------- */
+
+.lingua {
+  display: flex; justify-content: flex-end; gap: 6px;
+  padding: 18px 0 0; font-size: 13.5px;
+}
+.lingua a, .lingua span {
+  padding: 4px 10px; border-radius: 999px; text-decoration: none;
+  color: var(--debole); border: 1px solid transparent;
+}
+.lingua .attiva { color: var(--testo); border-color: var(--bordo-net); background: var(--carta); }
+
+/* ---------- testata ---------- */
+
+header { padding: 40px 0 12px; position: relative; }
+
+/* Il bagliore in cima. `fixed` invece di `absolute` di proposito: un elemento fisso non
+   allarga il documento, quindi non puo' far comparire una barra di scorrimento
+   orizzontale su schermi stretti — che e' esattamente quello che faceva prima. */
+body::before {
+  content: ""; position: fixed; top: 0; left: 0; right: 0; height: 520px;
+  background: radial-gradient(52% 100% at 50% 0%, var(--stima-tenue) 0%, transparent 70%);
+  opacity: .8; z-index: -1; pointer-events: none;
+}
+
+.marchio {
+  display: inline-flex; align-items: center; gap: 9px;
+  color: var(--debole); font-size: 13px; letter-spacing: .18em;
+  text-transform: uppercase; font-weight: 600; margin-bottom: 26px;
+}
+.marchio .segno { display: inline-flex; flex-direction: column; gap: 3px; }
+.marchio .segno i { display: block; height: 4px; border-radius: 2px; }
+.marchio .segno i:first-child { width: 10px; background: var(--stima); }
+.marchio .segno i:last-child  { width: 22px; background: var(--reale); }
+
+h1 {
+  font-size: clamp(34px, 6vw, 60px); line-height: 1.08;
+  letter-spacing: -.032em; font-weight: 700; max-width: 19ch;
+}
+h1 em { font-style: normal; color: var(--stima); }
+
+.sottotitolo {
+  margin-top: 22px; font-size: clamp(18px, 2.3vw, 21px);
+  color: var(--tenue); max-width: 58ch;
+}
+
+/* ---------- sezioni e testo ---------- */
+
+h2 {
+  font-size: clamp(24px, 3.4vw, 33px); letter-spacing: -.02em;
+  margin-bottom: 16px; font-weight: 700; max-width: 22ch;
+}
+
+section { padding: 60px 0; border-top: 1px solid var(--bordo); }
+
+p { color: var(--tenue); max-width: 66ch; margin-bottom: 15px; }
+p strong { color: var(--testo); font-weight: 650; }
+
+ul { color: var(--tenue); margin: 0 0 15px 20px; max-width: 66ch; }
+li { margin-bottom: 10px; }
+li strong { color: var(--testo); }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: .88em;
+}
+p code, li code, td code {
+  background: var(--fondo-alt); border: 1px solid var(--bordo);
+  border-radius: 5px; padding: 1px 5px;
+}
+
+pre {
+  background: var(--carta); border: 1px solid var(--bordo);
+  border-radius: var(--raggio); padding: 20px 22px; overflow-x: auto;
+  margin: 20px 0; box-shadow: var(--ombra);
+}
+pre code { color: var(--testo); line-height: 1.8; font-size: 13.5px; }
+pre .cm { color: var(--debole); }
+
+/* ---------- richiami e bottoni ---------- */
+
+.cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 30px; }
+
+.bottone {
+  display: inline-block; padding: 13px 24px; border-radius: 11px;
+  text-decoration: none; font-weight: 620; font-size: 15.5px;
+  border: 1px solid var(--bordo-net); transition: transform .12s ease;
+}
+.bottone:hover { transform: translateY(-1px); text-decoration: none; }
+.primario { background: var(--testo); color: var(--fondo); border-color: var(--testo); }
+.secondario { background: var(--carta); color: var(--testo); box-shadow: var(--ombra); }
+
+.installa {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 28px; padding: 14px 18px; width: fit-content;
+  background: var(--carta); border: 1px solid var(--bordo);
+  border-radius: 11px; box-shadow: var(--ombra);
+}
+.installa code { font-size: 15px; color: var(--testo); font-weight: 600; }
+.installa .fonte { color: var(--debole); font-size: 13px; }
+
+/* ---------- il confronto: previsto contro osservato ---------- */
+
+.confronti {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 18px; margin: 30px 0 26px;
+}
+
+.confronto {
+  background: var(--carta); border: 1px solid var(--bordo);
+  border-radius: var(--raggio); padding: 20px 22px 18px; box-shadow: var(--ombra);
+}
+.confronto .capo {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; margin-bottom: 18px;
+}
+.confronto .quale { font-size: 13px; letter-spacing: .1em; text-transform: uppercase;
+                    color: var(--debole); font-weight: 650; }
+.confronto .forma { font-size: 13px; color: var(--debole); text-align: right; }
+
+.barra { display: grid; grid-template-columns: 1fr; gap: 5px; margin-bottom: 14px; }
+.barra .riga { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.barra .et { font-size: 13.5px; color: var(--tenue); }
+.barra .nu {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums;
+  color: var(--testo);
+}
+.traccia { height: 10px; border-radius: 6px; background: var(--fondo-alt);
+           border: 1px solid var(--bordo); overflow: hidden; }
+.riempi { height: 100%; border-radius: 5px; transform-origin: left center;
+          animation: cresci .9s cubic-bezier(.2,.8,.3,1) both; }
+.riempi.stima { background: var(--stima); }
+.riempi.reale { background: var(--reale); animation-delay: .12s; }
+
+@keyframes cresci { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .riempi { animation: none; }
+  .bottone { transition: none; }
+  html { scroll-behavior: auto; }
+}
+
+.confronto .esito {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--bordo);
+  display: flex; align-items: baseline; gap: 9px;
+}
+.confronto .esito b {
+  font-size: 27px; font-weight: 700; color: var(--reale);
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+.confronto .esito span { font-size: 13.5px; color: var(--debole); }
+
+.verdetto {
+  background: linear-gradient(180deg, var(--carta), var(--fondo-alt));
+  border: 1px solid var(--bordo-net); border-radius: var(--raggio);
+  padding: 22px 24px; margin: 26px 0; box-shadow: var(--ombra);
+}
+.verdetto p:last-child { margin-bottom: 0; }
+.verdetto .titolo {
+  font-size: 19px; font-weight: 700; color: var(--testo);
+  margin-bottom: 8px; letter-spacing: -.01em;
+}
+
+/* ---------- schede, tabelle, immagini ---------- */
+
+.schede { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 16px; margin: 26px 0; }
+.scheda { background: var(--carta); border: 1px solid var(--bordo);
+          border-radius: var(--raggio); padding: 20px; box-shadow: var(--ombra); }
+.scheda h3 { font-size: 16px; font-weight: 680; margin-bottom: 7px; letter-spacing: -.01em; }
+.scheda p { font-size: 15px; margin-bottom: 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 15.5px; }
+th, td { text-align: left; padding: 12px 12px; border-bottom: 1px solid var(--bordo); }
+th { color: var(--debole); font-weight: 650; font-size: 12.5px;
+     text-transform: uppercase; letter-spacing: .07em; }
+td { color: var(--tenue); }
+td strong { color: var(--testo); }
+
+figure { margin: 26px 0; }
+img { width: 100%; border-radius: var(--raggio); border: 1px solid var(--bordo);
+      display: block; box-shadow: var(--ombra); }
+figcaption { color: var(--debole); font-size: 13.5px; margin-top: 11px; }
+
+.nota {
+  background: var(--carta); border: 1px solid var(--bordo);
+  border-left: 3px solid var(--stima); border-radius: 11px;
+  padding: 19px 22px; margin: 24px 0;
+}
+.nota p:last-child { margin-bottom: 0; }
+
+.onesta { border-left-color: var(--reale); }
+
+footer {
+  padding: 46px 0 76px; border-top: 1px solid var(--bordo);
+  color: var(--debole); font-size: 14.5px;
+}
+footer a { color: var(--tenue); }
+footer p { color: var(--debole); }
+
+@media (max-width: 560px) {
+  body { font-size: 16.5px; }
+  header { padding-top: 26px; }
+  section { padding: 46px 0; }
+  .installa { width: 100%; }
+}

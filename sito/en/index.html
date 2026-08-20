@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StarkEno — what will it cost, before you run it</title>
+<meta name="description" content="Simulate what a Claude Code or Codex workflow will cost before you launch it, and keep a local account of what it actually cost. Two measurements, 9.15x and 3.1x off, published. Everything stays on your machine.">
+<link rel="canonical" href="https://x3n0-io.github.io/starkeno/en/">
+<link rel="alternate" hreflang="it" href="https://x3n0-io.github.io/starkeno/">
+<link rel="alternate" hreflang="en" href="https://x3n0-io.github.io/starkeno/en/">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../stile.css">
+<meta name="theme-color" content="#0d0f13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfaf8" media="(prefers-color-scheme: light)">
+
+<!-- Preview card for when the link is pasted into a community. The image lives on
+     GitHub: no new host, and a visitor asks nothing of anyone else. -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="it_IT">
+<meta property="og:url" content="https://x3n0-io.github.io/starkeno/en/">
+<meta property="og:site_name" content="StarkEno">
+<meta property="og:title" content="StarkEno — what will it cost, before you run it">
+<meta property="og:description" content="A cost simulator for coding agents that publishes how wrong it was: 9.15x under on the first measurement, 3.1x on the second. Fully local.">
+<meta property="og:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StarkEno — what will it cost, before you run it">
+<meta name="twitter:description" content="A cost simulator for coding agents that publishes how wrong it was: 9.15x under on the first measurement, 3.1x on the second. Fully local.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
+</head>
+<body>
+<div class="guscio">
+
+<nav class="lingua" aria-label="Language">
+  <a href="../" hreflang="it">Italiano</a>
+  <span class="attiva">English</span>
+</nav>
+
+<header>
+  <div class="marchio">
+    <span class="segno" aria-hidden="true"><i></i><i></i></span>
+    StarkEno
+  </div>
+  <h1>What will this agent run cost, <em>before you start it?</em></h1>
+  <p class="sottotitolo">
+    Every other tool answers afterwards. StarkEno tries to answer first — and publishes
+    how wrong it was.
+  </p>
+  <div class="installa">
+    <code>pip install starkeno</code>
+    <span class="fonte">Python 3.11+ · MIT · no account</span>
+  </div>
+  <div class="cta">
+    <a class="bottone primario" href="#try">Try it in three commands</a>
+    <a class="bottone secondario" href="https://github.com/X3n0-io/starkeno">Read the code</a>
+  </div>
+</header>
+
+<section id="measurements">
+  <h2>Two measurements, and the convenient hypothesis dies</h2>
+  <p>
+    A simulator that hides its own error is worth nothing. These are both comparisons
+    between the forecast and the real run, in full, in tokens:
+  </p>
+
+  <div class="confronti">
+    <figure class="confronto">
+      <div class="capo">
+        <span class="quale">Run 1 · Codex</span>
+        <span class="forma">7 nodes<br>linear, no retries</span>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">predicted · <code>maximum</code> scenario</span><span class="nu">331,500</span></div>
+        <div class="traccia"><div class="riempi stima" style="width:10.9%"></div></div>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">observed</span><span class="nu">3,035,535</span></div>
+        <div class="traccia"><div class="riempi reale" style="width:100%"></div></div>
+      </div>
+      <figcaption class="esito"><b>9.15×</b> <span>under its own worst case</span></figcaption>
+    </figure>
+
+    <figure class="confronto">
+      <div class="capo">
+        <span class="quale">Run 2 · Claude Code</span>
+        <span class="forma">~150 turns<br>loop with retries</span>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">predicted</span><span class="nu">11,098,500</span></div>
+        <div class="traccia"><div class="riempi stima" style="width:32.4%"></div></div>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">observed</span><span class="nu">34,303,668</span></div>
+        <div class="traccia"><div class="riempi reale" style="width:100%"></div></div>
+      </div>
+      <figcaption class="esito"><b>3.1×</b> <span>under — and 44× under the <code>typical</code> scenario</span></figcaption>
+    </figure>
+  </div>
+
+  <div class="verdetto">
+    <p class="titolo">9.15 and 3.1 are not the same number.</p>
+    <p>
+      The gap is <strong>not a multiplicative constant</strong>: the fix will not be one
+      coefficient, and the work ahead is finding out what it depends on. Two points are
+      enough to rule out the convenient hypothesis, not enough to draw a curve — and the
+      two runs differ in harness, shape, length and retries all at once, so they isolate
+      nothing.
+    </p>
+  </div>
+
+  <p>
+    The direction, at least, is structural rather than arithmetic. The simulator counts
+    context read back from cache only on retries, the way a single model call behaves. A
+    real agent has no memory between turns: it
+    <strong>resends its whole accumulated context every turn</strong>. In run 2 that
+    re-reading is <strong>97% of the spend</strong>, and across a normal week of work it
+    is 60%.
+  </p>
+
+  <div class="nota">
+    <p>
+      <strong>A random error is a dead end. A structural one is a coefficient.</strong>
+      That is why the wrong number is on the front page instead of at the bottom of a
+      backlog — and why more measurements are needed, from someone who is not the author.
+      Eight numbers are enough: no database, no transcripts.
+      <a href="https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md">How to send one →</a>
+    </p>
+  </div>
+</section>
+
+<section id="try">
+  <h2>Try it right now, in three commands</h2>
+  <p>
+    No plugin, no hooks, no server, no network, no account. The example Blueprint ships
+    inside the package, so these commands work the moment it is installed.
+  </p>
+<pre><code>pip install starkeno
+
+python -m starkeno preflight esempio  --output esempio.json
+python -m starkeno preflight draft    --input esempio.json --format yaml --output bozza.yaml
+python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 50 \
+                                      --format html --output report.html</code></pre>
+  <figure>
+    <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulatore.gif"
+         alt="The three commands running in a terminal" loading="lazy" decoding="async">
+    <figcaption>Real commands and real output, from a clean install.</figcaption>
+  </figure>
+  <figure>
+    <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png"
+         alt="Preflight report: four scenarios with tokens, LLM calls and latency; overall confidence and the provenance of every estimate"
+         loading="lazy" decoding="async">
+    <figcaption>This is the screen you will get: same Blueprint, same numbers.</figcaption>
+  </figure>
+</section>
+
+<section id="refuses">
+  <h2>Look at what it refuses to do</h2>
+  <p>That is the part that separates it from any other estimate.</p>
+  <div class="schede">
+    <div class="scheda">
+      <h3>It does not give you a number</h3>
+      <p>It gives four scenarios — <code>optimistic</code>, <code>typical</code>,
+         <code>prudent</code>, <code>maximum</code> — because a single estimate for
+         non-deterministic work is a fiction.</p>
+    </div>
+    <div class="scheda">
+      <h3>It declares its own confidence</h3>
+      <p>On the shipped example it is <code>low</code>, and it says so instead of letting
+         you infer it.</p>
+    </div>
+    <div class="scheda">
+      <h3>It says where every estimate came from</h3>
+      <p><code>declared</code> you said it, <code>default</code> it assumed it,
+         <code>inferred</code> it worked it out. An estimate of unknown provenance cannot
+         be checked.</p>
+    </div>
+    <div class="scheda">
+      <h3>It names what it could not price</h3>
+      <p>Instead of quietly using zero: <em>“missing prices in the worst case for…”</em>.
+         Absent money is absent, never zero.</p>
+    </div>
+  </div>
+</section>
+
+<section id="account">
+  <h2>And the bill for what you already spent</h2>
+  <p>
+    The finished, installable half: a stop hook re-reads the transcripts your agent
+    already writes and reconstructs what your way of working costs, broken down by
+    project, model, session, skill and MCP server. Claude Code and Codex in one account.
+  </p>
+  <table>
+    <tr><th>Column</th><th>Why it is there</th></tr>
+    <tr><td><strong>Work cost</strong></td><td>the only part that is actually the work</td></tr>
+    <tr><td><strong>Loading cost</strong></td><td>the price of preparing the work</td></tr>
+    <tr><td><strong>Re-reading cost</strong></td><td>paid again every turn, for the same material</td></tr>
+    <tr><td>Unknown outcomes</td><td>how much of the picture is guesswork</td></tr>
+    <tr><td>Unclassifiable rows</td><td>how much to distrust the rest</td></tr>
+  </table>
+  <p>The last two rows are the ones other tools do not show you.</p>
+  <figure>
+    <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/conto.png"
+         alt="StarkEno's local account: weighted total, work cost, loading cost and re-reading cost"
+         loading="lazy" decoding="async">
+    <figcaption>Example data, generated from a real transcript already scrubbed.</figcaption>
+  </figure>
+
+  <div class="nota onesta">
+    <p>
+      <strong>On this half, someone else does it better.</strong> <code>ccusage</code>
+      reads the same JSONL files, runs under <code>npx</code> with nothing to install, and
+      has thousands of people behind it. If all you need is the retrospective, use that.
+      StarkEno exists for the half nobody else attempts: <strong>saying the cost
+      beforehand</strong>, and then scoring it against the real one.
+    </p>
+  </div>
+</section>
+
+<section id="local">
+  <h2>Nothing leaves your machine</h2>
+  <p>
+    No network call, no account, no telemetry. The bill is an HTML file on your disk and
+    the database is local SQLite. The hooks exit <code>0</code> whatever happens: if
+    StarkEno breaks, your work does not — which is also why
+    <code>starkeno doctor</code> exists, because a silent StarkEno looks exactly like a
+    working one.
+  </p>
+  <p>
+    <strong>This page too.</strong> No external fonts, no CDN library, no analytics, no
+    cookies: the only requests it makes are the images, hosted on GitHub. A gate in the
+    publishing workflow fails the deploy if this page tries to contact anyone else.
+  </p>
+</section>
+
+<section id="status">
+  <h2>Where it stands, without hedging</h2>
+  <ul>
+    <li><strong>The account works</strong> and installs on Claude Code and Codex.</li>
+    <li><strong>The simulator runs</strong> from the command line, and you just tried it.</li>
+    <li><strong>The comparison between the two is not shipped</strong>: the MCP tools
+        exist but the plugin does not register them, and the server has to be mounted by
+        hand. The project does not ship what it has not measured.</li>
+    <li><strong>Preflight does not read prose yet</strong>: it analyses Blueprints that
+        are already structured.</li>
+    <li><strong>Two measurements, both by the author.</strong> A third is needed, and it
+        needs to come from someone else.</li>
+  </ul>
+  <div class="cta">
+    <a class="bottone primario" href="https://github.com/X3n0-io/starkeno">The project on GitHub</a>
+    <a class="bottone secondario" href="https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md">The gap, in full</a>
+  </div>
+</section>
+
+<footer>
+  <p>
+    © 2026 Simone Mansella · MIT ·
+    <a href="https://github.com/X3n0-io/starkeno">github.com/X3n0-io/starkeno</a> ·
+    <a href="https://pypi.org/project/starkeno/">PyPI</a> ·
+    <a href="../" hreflang="it">Italiano</a>
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

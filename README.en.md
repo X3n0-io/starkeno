@@ -1,7 +1,7 @@
 # StarkEno
 
 *Read this in [Italian](README.md) — Italian is the project's language, and
-this page is the translation.* · **[The site](https://x3n0-io.github.io/starkeno/)** (in Italian)
+this page is the translation.* · **[The site](https://x3n0-io.github.io/starkeno/en/)**
 
 **What will this agent run cost — before you run it?**
 

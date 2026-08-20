@@ -4,106 +4,125 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StarkEno — quanto costerà, prima di lanciarlo</title>
-<meta name="description" content="Simula quanto costerà un lavoro con Claude Code o Codex prima di lanciarlo, e tiene il conto locale di quanto è costato davvero. Tutto sulla tua macchina.">
-<style>
-  /* Nessuna richiesta a terzi: font di sistema, zero CDN, zero analytics.
-     Un sito che traccia chi lo legge smentirebbe la promessa del progetto. */
-  :root{
-    --fondo:#101216; --carta:#161a20; --bordo:#1a1e25;
-    --testo:#f3f4f6; --tenue:#b7beca; --debole:#8e98a8; --accento:#a9b7d0;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{
-    background:var(--fondo); color:var(--testo); line-height:1.6;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  .guscio{max-width:860px;margin:0 auto;padding:0 24px}
-  header{padding:88px 0 8px}
-  .marchio{color:var(--debole);font-size:14px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:28px}
-  h1{font-size:clamp(32px,5.2vw,54px);line-height:1.12;letter-spacing:-.02em;font-weight:700}
-  h1 em{font-style:normal;color:var(--accento)}
-  .sottotitolo{margin-top:22px;font-size:clamp(17px,2.2vw,20px);color:var(--tenue);max-width:62ch}
-  h2{font-size:clamp(23px,3.2vw,30px);letter-spacing:-.01em;margin-bottom:14px;font-weight:700}
-  section{padding:56px 0;border-top:1px solid var(--bordo)}
-  p{color:var(--tenue);max-width:68ch;margin-bottom:14px}
-  p strong{color:var(--testo);font-weight:600}
-  .misure{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:26px 0}
-  .box{background:var(--carta);border:1px solid var(--bordo);border-radius:12px;padding:18px 20px}
-  .box .et{color:var(--debole);font-size:14px;margin-bottom:6px}
-  .box .nu{font-size:27px;font-weight:700;font-variant-numeric:tabular-nums}
-  .box .no{color:var(--debole);font-size:13px;margin-top:6px}
-  pre{background:var(--carta);border:1px solid var(--bordo);border-radius:12px;
-      padding:18px 20px;overflow-x:auto;margin:18px 0}
-  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:var(--tenue)}
-  pre code{color:var(--testo);line-height:1.75}
-  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
-  .bottone{display:inline-block;padding:12px 22px;border-radius:10px;text-decoration:none;
-           font-weight:600;font-size:15px;border:1px solid var(--bordo)}
-  .primario{background:var(--testo);color:var(--fondo);border-color:var(--testo)}
-  .secondario{background:var(--carta);color:var(--testo)}
-  ul{color:var(--tenue);margin:0 0 14px 20px;max-width:68ch}
-  li{margin-bottom:9px}
-  li strong{color:var(--testo)}
-  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:15px}
-  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--bordo)}
-  th{color:var(--debole);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
-  td{color:var(--tenue)} td strong{color:var(--testo)}
-  figure{margin:24px 0}
-  img{width:100%;border-radius:12px;border:1px solid var(--bordo);display:block}
-  figcaption{color:var(--debole);font-size:13.5px;margin-top:10px}
-  .nota{background:var(--carta);border:1px solid var(--bordo);border-left:3px solid var(--accento);
-        border-radius:10px;padding:18px 20px;margin:22px 0}
-  .nota p:last-child{margin-bottom:0}
-  footer{padding:44px 0 72px;border-top:1px solid var(--bordo);color:var(--debole);font-size:14px}
-  footer a{color:var(--tenue)}
-  a{color:var(--accento)}
-</style>
+<meta name="description" content="Simula quanto costerà un lavoro con Claude Code o Codex prima di lanciarlo, e tiene il conto locale di quanto è costato davvero. Due misure, 9,15× e 3,1× di errore, pubblicate. Tutto sulla tua macchina.">
+<link rel="canonical" href="https://x3n0-io.github.io/starkeno/">
+<link rel="alternate" hreflang="it" href="https://x3n0-io.github.io/starkeno/">
+<link rel="alternate" hreflang="en" href="https://x3n0-io.github.io/starkeno/en/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="stile.css">
+<meta name="theme-color" content="#0d0f13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfaf8" media="(prefers-color-scheme: light)">
+
+<!-- Anteprima quando il link viene incollato in una comunità. L'immagine sta su GitHub:
+     nessun host nuovo, e chi apre la pagina non chiede niente a nessun altro. -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="it_IT">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:url" content="https://x3n0-io.github.io/starkeno/">
+<meta property="og:site_name" content="StarkEno">
+<meta property="og:title" content="StarkEno — quanto costerà, prima di lanciarlo">
+<meta property="og:description" content="Un simulatore di costo per agenti di coding che pubblica di quanto ha sbagliato: 9,15× sulla prima misura, 3,1× sulla seconda. Tutto locale.">
+<meta property="og:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StarkEno — quanto costerà, prima di lanciarlo">
+<meta name="twitter:description" content="Un simulatore di costo per agenti di coding che pubblica di quanto ha sbagliato: 9,15× sulla prima misura, 3,1× sulla seconda. Tutto locale.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/anteprima-social.png">
 </head>
 <body>
 <div class="guscio">
 
+<nav class="lingua" aria-label="Lingua">
+  <span class="attiva">Italiano</span>
+  <a href="en/" hreflang="en">English</a>
+</nav>
+
 <header>
-  <div class="marchio">StarkEno</div>
-  <h1>Quanto costerà questo lavoro dell'agente,<br><em>prima di lanciarlo?</em></h1>
+  <div class="marchio">
+    <span class="segno" aria-hidden="true"><i></i><i></i></span>
+    StarkEno
+  </div>
+  <h1>Quanto costerà questo lavoro dell'agente, <em>prima di lanciarlo?</em></h1>
   <p class="sottotitolo">
     Tutti gli altri strumenti rispondono dopo. StarkEno prova a rispondere prima — e
     pubblica di quanto ha sbagliato.
   </p>
+  <div class="installa">
+    <code>pip install starkeno</code>
+    <span class="fonte">Python 3.11+ · MIT · nessun account</span>
+  </div>
   <div class="cta">
     <a class="bottone primario" href="#prova">Provalo in tre comandi</a>
-    <a class="bottone secondario" href="https://github.com/X3n0-io/starkeno">Vedi su GitHub</a>
+    <a class="bottone secondario" href="https://github.com/X3n0-io/starkeno">Vedi il codice</a>
   </div>
 </header>
 
 <section id="misure">
-  <h2>Due misure, e un'ipotesi che se ne va</h2>
+  <h2>Due misure, e l'ipotesi comoda che se ne va</h2>
   <p>
     Un simulatore che nasconde il proprio errore non vale niente. Questi sono i due
-    confronti fra il preventivo e l'esecuzione vera, per intero:
+    confronti fra il preventivo e l'esecuzione vera, per intero, in token:
   </p>
-  <div class="misure">
-    <div class="box"><div class="et">misura 1 · Codex</div><div class="nu">9,15×</div><div class="no">7 nodi, lineare</div></div>
-    <div class="box"><div class="et">misura 2 · Claude Code</div><div class="nu">3,10×</div><div class="no">150 turni, con ciclo</div></div>
-    <div class="box"><div class="et">conclusione</div><div class="nu">non costante</div><div class="no">l'ipotesi semplice cade</div></div>
+
+  <div class="confronti">
+    <figure class="confronto">
+      <div class="capo">
+        <span class="quale">Misura 1 · Codex</span>
+        <span class="forma">7 nodi<br>lineare, senza ritentativi</span>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">previsto · scenario <code>maximum</code></span><span class="nu">331.500</span></div>
+        <div class="traccia"><div class="riempi stima" style="width:10.9%"></div></div>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">osservato</span><span class="nu">3.035.535</span></div>
+        <div class="traccia"><div class="riempi reale" style="width:100%"></div></div>
+      </div>
+      <figcaption class="esito"><b>9,15×</b> <span>sotto il suo stesso caso peggiore</span></figcaption>
+    </figure>
+
+    <figure class="confronto">
+      <div class="capo">
+        <span class="quale">Misura 2 · Claude Code</span>
+        <span class="forma">~150 turni<br>ciclo con ritentativi</span>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">previsto</span><span class="nu">11.098.500</span></div>
+        <div class="traccia"><div class="riempi stima" style="width:32.4%"></div></div>
+      </div>
+      <div class="barra">
+        <div class="riga"><span class="et">osservato</span><span class="nu">34.303.668</span></div>
+        <div class="traccia"><div class="riempi reale" style="width:100%"></div></div>
+      </div>
+      <figcaption class="esito"><b>3,1×</b> <span>sotto — e 44× sotto lo scenario <code>typical</code></span></figcaption>
+    </figure>
   </div>
+
+  <div class="verdetto">
+    <p class="titolo">9,15 e 3,1 non sono lo stesso numero.</p>
+    <p>
+      Lo scarto <strong>non è una costante moltiplicativa</strong>: la correzione non sarà
+      un coefficiente da applicare, e il lavoro davanti è capire da cosa dipende. Due punti
+      bastano a escludere l'ipotesi comoda, non a disegnare una curva — e le due misure
+      differiscono in harness, forma, lunghezza e ritentativi tutti insieme, quindi non
+      isolano niente.
+    </p>
+  </div>
+
   <p>
-    <strong>9,15 e 3,10 non sono lo stesso numero.</strong> Lo scarto non è una costante
-    moltiplicativa: la correzione non sarà un coefficiente, e il lavoro davanti è capire
-    da cosa dipende.
+    La causa della direzione, però, si conosce, ed è strutturale invece che aritmetica. Il
+    simulatore conta il contesto riletto solo sui ritentativi, come si comporterebbe una
+    singola chiamata a un modello. Un agente vero non ha memoria fra un turno e l'altro:
+    <strong>rispedisce tutto il contesto accumulato a ogni turno</strong>. Nella misura 2
+    quella rilettura è il <strong>97% della spesa</strong>, e su una settimana di lavoro
+    normale è il 60%.
   </p>
-  <p>
-    La causa però si conosce, ed è strutturale. Il simulatore conta il contesto riletto
-    solo sui ritentativi; un agente vero non ha memoria fra un turno e l'altro e
-    rispedisce tutto a ogni turno. Nella misura 2 quella rilettura è il
-    <strong>97% della spesa</strong>.
-  </p>
+
   <div class="nota">
     <p>
       <strong>Un errore casuale è un vicolo cieco. Uno strutturale è un coefficiente.</strong>
       È per questo che il numero sbagliato sta in prima pagina invece che in fondo a un
-      backlog — ed è la ragione per cui servono altre misure.
+      backlog — ed è la ragione per cui servono altre misure, fatte da qualcuno che non sia
+      l'autore. Bastano otto numeri: nessun database, nessun transcript.
       <a href="https://github.com/X3n0-io/starkeno/blob/main/docs/lo-scarto-9x.md">Come mandarne una →</a>
     </p>
   </div>
@@ -112,8 +131,9 @@
 <section id="prova">
   <h2>Provalo adesso, in tre comandi</h2>
   <p>
-    Niente plugin, niente hook, nessun server, nessuna rete. Il Blueprint d'esempio
-    viaggia dentro il pacchetto.
+    Niente plugin, niente hook, nessun server, nessuna rete, nessun account. Il Blueprint
+    d'esempio viaggia dentro il pacchetto, quindi questi comandi funzionano appena
+    installato.
   </p>
 <pre><code>pip install starkeno
 
@@ -123,12 +143,13 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
                                       --format html --output report.html</code></pre>
   <figure>
     <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulatore.gif"
-         alt="I tre comandi in esecuzione in un terminale">
+         alt="I tre comandi in esecuzione in un terminale" loading="lazy" decoding="async">
     <figcaption>Comandi e risposte veri, da un'installazione pulita.</figcaption>
   </figure>
   <figure>
     <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulazione.png"
-         alt="Report Preflight: quattro scenari con token, chiamate LLM e latenza; confidenza complessiva e provenienza di ogni stima">
+         alt="Report Preflight: quattro scenari con token, chiamate LLM e latenza; confidenza complessiva e provenienza di ogni stima"
+         loading="lazy" decoding="async">
     <figcaption>È la schermata che otterrai: stesso Blueprint, stessi numeri.</figcaption>
   </figure>
 </section>
@@ -136,35 +157,64 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
 <section id="rifiuta">
   <h2>Guarda cosa si rifiuta di fare</h2>
   <p>È la parte che lo distingue da una stima qualunque.</p>
-  <ul>
-    <li><strong>Non ti dà un numero.</strong> Dà quattro scenari — <code>optimistic</code>, <code>typical</code>, <code>prudent</code>, <code>maximum</code> — perché una stima singola su un lavoro non deterministico è una finzione.</li>
-    <li><strong>Dichiara la propria confidenza.</strong> Nell'esempio è <code>low</code>, e lo scrive.</li>
-    <li><strong>Dice da dove viene ogni stima</strong>: <code>declared</code>, <code>default</code>, <code>inferred</code>. Una stima di cui non conosci la provenienza non è verificabile.</li>
-    <li><strong>Nomina quello che non ha saputo valorizzare</strong> invece di metterci zero. Il denaro assente è assente, mai zero.</li>
-  </ul>
+  <div class="schede">
+    <div class="scheda">
+      <h3>Non ti dà un numero</h3>
+      <p>Dà quattro scenari — <code>optimistic</code>, <code>typical</code>,
+         <code>prudent</code>, <code>maximum</code> — perché una stima singola su un
+         lavoro non deterministico è una finzione.</p>
+    </div>
+    <div class="scheda">
+      <h3>Dichiara la propria confidenza</h3>
+      <p>Nell'esempio è <code>low</code>, e lo scrive invece di lasciartelo dedurre.</p>
+    </div>
+    <div class="scheda">
+      <h3>Dice da dove viene ogni stima</h3>
+      <p><code>declared</code> l'hai detto tu, <code>default</code> l'ha messo lui,
+         <code>inferred</code> l'ha dedotto. Una stima di provenienza ignota non è
+         verificabile.</p>
+    </div>
+    <div class="scheda">
+      <h3>Nomina quello che non sa valorizzare</h3>
+      <p>Invece di metterci zero: <em>«prezzi mancanti nel caso peggiore per…»</em>. Il
+         denaro assente è assente, mai zero.</p>
+    </div>
+  </div>
 </section>
 
 <section id="conto">
   <h2>E il conto di quello che hai già speso</h2>
   <p>
     La metà finita e installabile: un hook di fine turno rilegge i transcript che il tuo
-    agente già scrive e ricostruisce quanto costa il tuo modo di lavorare. Claude Code e
-    Codex nello stesso conto.
+    agente già scrive e ricostruisce quanto costa il tuo modo di lavorare, scomposto per
+    progetto, modello, sessione, skill e server MCP. Claude Code e Codex nello stesso
+    conto.
   </p>
   <table>
     <tr><th>Colonna</th><th>Perché è lì</th></tr>
-    <tr><td><strong>Costo di lavoro</strong></td><td>l'unica parte che è il lavoro</td></tr>
+    <tr><td><strong>Costo di lavoro</strong></td><td>l'unica parte che è davvero il lavoro</td></tr>
     <tr><td><strong>Costo di caricamento</strong></td><td>il prezzo di preparare il lavoro</td></tr>
     <tr><td><strong>Costo di rilettura</strong></td><td>ripagato a ogni turno, per lo stesso materiale</td></tr>
     <tr><td>Esiti ignoti</td><td>quanta parte del quadro è congettura</td></tr>
-    <tr><td>Righe non classificabili</td><td>quanto diffidare</td></tr>
+    <tr><td>Righe non classificabili</td><td>quanto diffidare del resto</td></tr>
   </table>
   <p>Le ultime due righe sono quelle che gli altri strumenti non ti mostrano.</p>
   <figure>
     <img src="https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/conto.png"
-         alt="Il conto locale di StarkEno: totale pesato, costo di lavoro, di caricamento e di rilettura">
+         alt="Il conto locale di StarkEno: totale pesato, costo di lavoro, di caricamento e di rilettura"
+         loading="lazy" decoding="async">
     <figcaption>Dati d'esempio, generati da un transcript vero già ripulito.</figcaption>
   </figure>
+
+  <div class="nota onesta">
+    <p>
+      <strong>Su questa metà, qualcun altro fa meglio.</strong> <code>ccusage</code> legge
+      gli stessi file JSONL, gira con <code>npx</code> senza installare niente, e ha alle
+      spalle migliaia di persone. Se ti serve solo il consuntivo, usa quello. StarkEno
+      esiste per la metà che nessun altro tenta: <strong>dire il costo prima</strong>, e
+      poi confrontarlo con quello vero.
+    </p>
+  </div>
 </section>
 
 <section id="locale">
@@ -178,7 +228,9 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
   </p>
   <p>
     <strong>Anche questa pagina.</strong> Nessun font esterno, nessuna libreria da CDN,
-    nessun analytics: le uniche richieste che fa sono le due immagini, ospitate su GitHub.
+    nessun analytics, nessun cookie: le uniche richieste che fa sono le immagini, ospitate
+    su GitHub. Un cancello nel workflow di pubblicazione fa fallire il deploy se questa
+    pagina prova a contattare qualcun altro.
   </p>
 </section>
 
@@ -187,9 +239,13 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
   <ul>
     <li><strong>Il conto funziona</strong> ed è installabile su Claude Code e Codex.</li>
     <li><strong>Il simulatore gira</strong> da riga di comando, e lo hai appena provato.</li>
-    <li><strong>Il confronto fra i due non è spedito</strong>: i tool MCP esistono ma il plugin non li registra, e il server va montato a mano. Il progetto non spedisce ciò che non ha misurato.</li>
-    <li><strong>Preflight non legge ancora la prosa</strong>: analizza Blueprint già strutturati.</li>
-    <li><strong>Due misure, fatte dall'autore.</strong> Serve la terza, e serve da qualcun altro.</li>
+    <li><strong>Il confronto fra i due non è spedito</strong>: i tool MCP esistono ma il
+        plugin non li registra, e il server va montato a mano. Il progetto non spedisce
+        ciò che non ha misurato.</li>
+    <li><strong>Preflight non legge ancora la prosa</strong>: analizza Blueprint già
+        strutturati.</li>
+    <li><strong>Due misure, fatte dall'autore.</strong> Serve la terza, e serve da
+        qualcun altro.</li>
   </ul>
   <div class="cta">
     <a class="bottone primario" href="https://github.com/X3n0-io/starkeno">Il progetto su GitHub</a>
@@ -201,7 +257,8 @@ python -m starkeno preflight analyze  --input bozza.yaml --confirmed --samples 5
   <p>
     © 2026 Simone Mansella · MIT ·
     <a href="https://github.com/X3n0-io/starkeno">github.com/X3n0-io/starkeno</a> ·
-    <a href="https://github.com/X3n0-io/starkeno/blob/main/README.en.md">English</a>
+    <a href="https://pypi.org/project/starkeno/">PyPI</a> ·
+    <a href="en/" hreflang="en">English</a>
   </p>
 </footer>
 

@@ -5,6 +5,30 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+### Added
+
+- **Il sito è anche in inglese**: <https://x3n0-io.github.io/starkeno/en/>. Le due pagine
+  condividono un unico foglio di stile e si rimandano a vicenda con `hreflang`; il README
+  inglese punta ora alla pagina inglese.
+- **Anteprima del link** (Open Graph e Twitter card) su entrambe le pagine: incollato in
+  una comunità, il link mostra titolo, descrizione e immagine invece di un URL nudo.
+- **Il confronto previsto/osservato è disegnato**, non solo raccontato: due barre per
+  misura, il freddo per la stima e il caldo per il costo vero, così lo scarto diverso fra
+  le due misure si vede prima di leggerlo.
+- Tema chiaro e scuro secondo le preferenze di sistema, e `prefers-reduced-motion`
+  rispettato.
+- `scripts/verifica_sito.py`, con diciotto test suoi, sostituisce il controllo in linea
+  dentro il workflow di Pages.
+
+### Changed
+
+- **Il cancello del sito distingue le sottorisorse dai collegamenti.** Prima cercava
+  `https?://` in tutto il testo: vietava di linkare PyPI e non guardava dentro `url()` di
+  un CSS né dentro `srcset`, che sono i posti da cui un font o un pixel di tracciamento
+  entrerebbe senza farsi notare. Ora quello che il browser scarica da solo deve stare su
+  un host ammesso, quello che apre una persona è permesso ed **elencato nel log**, e uno
+  script in linea fa fallire il deploy.
+
 ## [0.4.1] - 2026-08-20
 
 ### Changed

@@ -1,9 +1,9 @@
 # Pubblica `sito/` su GitHub Pages.
 #
-# Il sito e' una pagina sola, senza build e senza dipendenze: nessun generatore statico,
-# nessun npm, nessun font o script da CDN. Le uniche richieste che fa il visitatore sono
-# le due immagini ospitate su GitHub — un sito che traccia chi lo legge smentirebbe la
-# promessa che il progetto fa a chi lo installa.
+# Il sito e' due pagine — italiano e inglese — senza build e senza dipendenze: nessun
+# generatore statico, nessun npm, nessun font o script da CDN. Le uniche richieste che fa
+# il visitatore sono le immagini ospitate su GitHub, e un sito che traccia chi lo legge
+# smentirebbe la promessa che il progetto fa a chi lo installa.
 #
 # Il deploy passa da un workflow invece che dal ramo `gh-pages`: cosi' `main` resta
 # l'unica storia e non c'e' un secondo ramo da tenere allineato a mano.
@@ -13,7 +13,10 @@ name: Pages
 on:
   push:
     branches: [main]
-    paths: ["sito/**", ".github/workflows/pages.yml"]
+    paths:
+      - "sito/**"
+      - "scripts/verifica_sito.py"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,18 +38,11 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-      - name: Il sito non deve dipendere da terze parti
-        run: |
-          python - <<'PY'
-          import pathlib, re, sys
-          testo = pathlib.Path("sito/index.html").read_text(encoding="utf-8")
-          host = {m.split("/")[0] for m in re.findall(r"https?://([^\"')\s]+)", testo)}
-          ammessi = {"github.com", "raw.githubusercontent.com"}
-          estranei = sorted(host - ammessi)
-          if estranei:
-              sys.exit("il sito contatta host non ammessi: %r" % estranei)
-          print("host contattati:", sorted(host))
-          PY
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Il sito non deve far scaricare niente da terzi
+        run: python scripts/verifica_sito.py sito
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
