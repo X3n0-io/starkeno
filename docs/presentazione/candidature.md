@@ -42,19 +42,20 @@ tutte le porte sono chiuse, e per lo stesso motivo: un account senza storia.**
 
 | Comunità | Il cancello, alla lettera | Stato |
 |---|---|---|
-| **r/ClaudeAI** | regola 7: «Posts on the feed now require **OP karma > 50**» | **chiusa per ora** — il profilo da usare ha 27 karma su 25 contributi: ne mancano 24 |
+| **r/ClaudeAI** | regola 7: «Posts on the feed now require **OP karma > 50**» | **chiusa per ora** — il profilo loggato ha **27 karma** (25 da post, 2 da commenti): ne mancano 24 |
 | **Hacker News** | nessun karma richiesto per inviare | **serve l'accesso**: nel browser non risulta nessuna sessione |
 | **r/LocalLLaMA** | regola 3: vietata la copia «completely/primarily LLM generated»; regola 4: self-promo ≤ 10% del proprio contenuto | **aperta con cautele** (vedi sotto) |
 | **r/Python** | regola 1: «**No showcase posts**», per via dell'aumento di vetrine su contenuti AI | **chiusa ai post**: solo il thread mensile di showcase o il daily |
 | **Lobsters** | a invito, e per 70 giorni un utente nuovo non può inviare link da un dominio nuovo | chiusa |
 | **le liste awesome** | 14 giorni o 100 stelle · 10 stelle · 1000 stelle | vedi sezioni 6–8 |
 
-**Attenzione a quale profilo:** quello aperto nel browser è `Few_Guard7497`, che ha
-**1 punto di karma e nessun commento** — con quello il post sparisce ovunque. Il profilo
-da usare è l'altro, **27 karma su 25 contributi**: basta per r/LocalLLaMA, che non
-dichiara soglie, e resta **24 punti sotto** il cancello di r/ClaudeAI. Verifica di essere
-loggato con quello giusto prima di premere invio, perché è un errore che non si scopre
-finché il post non è già stato rimosso.
+**Il profilo, verificato il 20/08/2026 da `api/me.json`:** **27 di karma totale** — 25
+da post, 2 da commenti — account del 26/01/2025, email verificata. Non è un usa-e-getta,
+e per r/LocalLLaMA, che non dichiara soglie, va bene. Per r/ClaudeAI mancano **24 punti**.
+
+Nel browser era passato prima un secondo profilo con **1 solo punto e nessun commento**:
+con quello un post sparisce ovunque. Controlla con quale sei loggato prima di premere
+invio — è un errore che non si scopre finché il post non è già stato rimosso.
 
 **Il karma non si automatizza**: la regola 10 di r/ClaudeAI punisce la manipolazione dei
 voti con ban permanente immediato, e il sub ha installati Bot Bouncer, Evasion Guard e
@@ -67,8 +68,8 @@ come uno che ha aperto l'account per postare il proprio progetto.
 1. **Hacker News per primo**, appena c'è un account. È l'unico canale che non chiede
    niente a chi arriva nuovo, ed è quello che può produrre le stelle da cui dipendono le
    liste. Rovescia di nuovo il piano — e di nuovo per una regola letta, non per un'idea.
-2. **r/LocalLLaMA già adesso**, con i 27 karma del profilo giusto e la dichiarazione
-   d'uso dell'LLM che la regola 3 impone. **r/ClaudeAI** quando i punti sono oltre 50.
+2. **r/LocalLLaMA già adesso**, con i 27 karma verificati e la dichiarazione d'uso
+   dell'LLM che la regola 3 impone. **r/ClaudeAI** quando i punti superano i 50.
 3. **r/Python** solo dentro il thread mensile di showcase, col formato a tre sezioni
    della regola 11 (vedi sezione 2).
 4. **Le liste** quando i loro cancelli si aprono.
