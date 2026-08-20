@@ -321,6 +321,74 @@ another.
 
 ---
 
+## 2-bis. r/IA_Italia — la versione breve, in italiano
+
+Pubblico diverso da tutti gli altri: **7.848 iscritti, comunità italiana generalista**,
+dagli appassionati ai professionisti, e la sidebar dice esplicitamente che ci sono anche
+persone che si avvicinano all'IA per la prima volta. Quindi niente `optimistic/typical/
+prudent/maximum`, niente provenienza delle stime, niente MCP: quella roba qui non aggiunge
+credibilità, toglie lettori.
+
+**Quello che regge da solo è la storia**: ho provato a prevedere, ho sbagliato di nove
+volte, ho pubblicato l'errore. Funziona anche per chi non ha mai aperto un terminale.
+
+Il sub **richiede un flair sul post** (`link_flair_enabled`), e non pubblica regole
+nell'API: come su r/LocalLLaMA, può avere soglie di AutoModerator che non sono scritte da
+nessuna parte. Se sparisce, il motivo arriva in messaggio privato — vedi la sezione 1-bis.
+
+Titolo:
+
+```
+Ho provato a prevedere quanto costa far lavorare un agente AI. Ho sbagliato di 9 volte,
+e ho pubblicato l'errore.
+```
+
+Corpo:
+
+```
+Se usi Claude Code, Codex o simili sai già com'è: lanci un lavoro e scopri quanto è
+costato dopo. Strumenti che ti fanno il conto a posteriori ce ne sono, e sono buoni.
+
+Io volevo l'opposto — **quanto costerà, prima di premere invio.** Non l'ho trovato, così
+l'ho scritto. Si chiama StarkEno, gira tutto in locale, è gratis e open source.
+
+Poi ho fatto la cosa che quasi nessuno fa con le proprie stime: **le ho messe alla prova.**
+
+    previsto (nel caso peggiore):    331.500 token
+    speso davvero:                 3.035.535 token
+
+**Nove volte sotto.** E quel 331.500 non era la stima media: era già il suo scenario più
+pessimista.
+
+Alla seconda prova lo scarto era 3,1 volte. Due numeri diversi vogliono dire una cosa
+precisa: non è una costante, e non basta moltiplicare per dieci e dire di aver risolto.
+
+Il motivo però si conosce, ed è la parte che interessa a chiunque paghi a token:
+**un agente non ha memoria fra un turno e l'altro, quindi rispedisce tutto il contesto
+ogni volta.** Su una settimana di lavoro vero quella rilettura è stata il 60% della spesa.
+Io la contavo quasi zero.
+
+Il numero sbagliato l'ho lasciato in prima pagina, perché uno strumento di previsione che
+nasconde i propri errori non vale niente.
+
+Si prova in tre comandi, senza account e senza mandare niente a nessuno:
+
+    pip install starkeno
+
+Sito: https://x3n0-io.github.io/starkeno/
+Codice: https://github.com/X3n0-io/starkeno
+
+Se qualcuno se la sente di misurarlo sul proprio lavoro mi fa un favore enorme: servono
+otto numeri, non il database e non le conversazioni.
+```
+
+**Perché è costruito così:** apre con una situazione che il lettore riconosce, dà **un**
+numero invece di cinque, mette la sconfitta al centro invece che in fondo, e chiude con
+una richiesta piccola e concreta. Il taglio tecnico completo resta nella sezione 2, per i
+sub dove serve.
+
+---
+
 ## 3. Hacker News — Show HN, ma del repository
 
 **Correzione al piano precedente.** Diceva di mandare il pezzo sullo scarto con un titolo
