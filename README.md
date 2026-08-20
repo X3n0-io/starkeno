@@ -1,6 +1,6 @@
 # StarkEno
 
-*Read this in [English](README.en.md).*
+*Read this in [English](README.en.md).* · **[Il sito](https://x3n0-io.github.io/starkeno/)**
 
 **Quanto costerà questo lavoro dell'agente — prima di lanciarlo?**
 
@@ -57,6 +57,8 @@ python -m starkeno preflight esempio --output esempio.json
 python -m starkeno preflight draft --input esempio.json --format yaml --output bozza.yaml
 python -m starkeno preflight analyze --input bozza.yaml --confirmed --samples 50 --format html --output report.html
 ```
+
+![I tre comandi in esecuzione: esempio, draft, analyze](https://raw.githubusercontent.com/X3n0-io/starkeno/main/docs/immagini/simulatore.gif)
 
 È lo stesso Blueprint da cui è generata l'immagine qui sotto: vedrai quella schermata,
 non una simile. Aprilo e modificalo — è da lì che si parte per descrivere il proprio.

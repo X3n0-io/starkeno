@@ -12,6 +12,10 @@ Hai una sola prima impressione per lista, e un curatore che apre il repository e
 2. **Le liste** — traffico costante, zero rumore, nessun rischio di reputazione.
 3. **Hacker News** — una volta sola, e solo quando i primi due sono fatti.
 
+> Il sito è online: <https://x3n0-io.github.io/starkeno/>. Per un pubblico tecnico il
+> link giusto resta il repository o il pezzo sullo scarto; il sito serve a chi arriva da
+> un social e non aprirebbe mai un README.
+
 Non invertire 1 e 3.
 
 ---
@@ -81,8 +85,11 @@ It deliberately does not give you a number. It gives four scenarios, declares it
 confidence, and tags every estimate with where it came from: declared, default or
 inferred. Missing prices are named, never silently zeroed.
 
-Then I finally scored it against a real execution. Its own `maximum` scenario said
-331,500 tokens. The run cost 3,035,535. Nine times under its worst case.
+Then I scored it against real executions. Twice. Its own `maximum` scenario said
+331,500 tokens on the first; the run cost 3,035,535 -- nine times under its worst case.
+On the second, a long session, the gap was 3.1x. Two points are enough to kill the
+convenient hypothesis: the error is not a multiplicative constant, so the fix will not
+be one number.
 
 The cause was structural, not arithmetic. I counted context read back from cache only
 on retries, the way a single model call behaves. A real agent has no memory between

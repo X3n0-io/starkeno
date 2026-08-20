@@ -5,6 +5,15 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+### Added
+
+- **Il sito**, su GitHub Pages: <https://x3n0-io.github.io/starkeno/>. Una pagina sola,
+  senza build e senza richieste a terze parti — font di sistema, zero CDN, zero analytics.
+  Un cancello nel workflow fallisce il deploy se la pagina contatta un host estraneo.
+- **La GIF dei tre comandi** (`docs/immagini/simulatore.gif`), con comandi e risposte veri
+  da un'installazione pulita, in entrambi i README e nel sito.
+- `scripts/genera_gif_simulatore.py` la rigenera quando i comandi cambiano.
+
 ## [0.4.0] - 2026-08-19
 
 ### Added
