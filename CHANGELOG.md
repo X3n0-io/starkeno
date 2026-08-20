@@ -7,6 +7,10 @@ usa il versionamento semantico.
 
 ### Added
 
+- **I due README dichiarano che gli scenari non sono calibrati.** `optimistic`, `typical`,
+  `prudent` e `maximum` non portano una probabilità e non sono quantili misurati: adesso è
+  scritto sia dove gli scenari vengono presentati sia nell'elenco di quello che manca, in
+  italiano e in inglese.
 - **Il sito è anche in inglese**: <https://x3n0-io.github.io/starkeno/en/>. Le due pagine
   condividono un unico foglio di stile e si rimandano a vicenda con `hreflang`; il README
   inglese punta ora alla pagina inglese.

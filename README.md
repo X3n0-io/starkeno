@@ -80,6 +80,12 @@ Guarda **cosa non fa**, che è la parte che conta:
   mancanti nel caso peggiore per: synthetic-model»*. Il denaro assente è **assente**, mai
   zero.
 
+**Quei quattro scenari non portano una probabilità, ed è il limite più serio che ha.**
+Escono dalle assunzioni dichiarate nel Blueprint, non da quantili misurati su esecuzioni
+vere: nessuno può dire se `prudent` sia il P80 o il P30. Finché le coppie
+preventivo/consuntivo restano due, l'intervallo è un'ipotesi ordinata, non una previsione
+tarata.
+
 `--confirmed` è letterale e obbligatorio: quella conferma esplicita crea una revisione
 nuova, e solo allora partono lint e simulazione. Niente si muove per sbaglio.
 
@@ -614,6 +620,11 @@ nomina.
 - **La previsione è stata giudicata contro la realtà due volte**, entrambe dall'autore.
   Tutto il resto è fixture sintetiche. Finché non ce ne sono altre, tratta la metà
   predittiva come una domanda di ricerca aperta con un banco di prova funzionante.
+- **Gli scenari non sono calibrati.** `optimistic`, `typical`, `prudent` e `maximum` non
+  hanno una probabilità sopra: non sono quantili misurati, ma conseguenze delle assunzioni
+  dichiarate, quindi non esiste nessuna metrica che dica quanto siano tarati bene. Servono
+  molte più di due coppie preventivo/consuntivo; con quelle, una regressione sul logaritmo
+  dei token darebbe quantili veri, e da lì la probabilità di sforare una soglia data.
 - **La metà predittiva non è spedita.** I suoi tool MCP esistono e sono documentati qui
   sopra, ma il plugin non li registra, di proposito — vedi la nota in quella sezione.
 - **Preflight non legge la prosa.** Analizza Blueprint già strutturati. Descrivere un

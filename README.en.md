@@ -81,6 +81,12 @@ Look at **what it refuses to do** — that is the part that matters:
 - **It names what it could not price** instead of putting a zero there: *"Prezzi mancanti
   nel caso peggiore per: synthetic-model"*. Absent money is **absent**, never zero.
 
+**Those four scenarios carry no probability, and that is the most serious limit it has.**
+They come from the assumptions declared in the Blueprint, not from quantiles measured on
+real executions: nobody can say whether `prudent` is the P80 or the P30. While the
+estimate/actual pairs number two, the interval is a tidy hypothesis, not a calibrated
+forecast.
+
 `--confirmed` is literal and required: that explicit confirmation creates a new revision,
 and only then do lint and simulation run. Nothing moves by accident.
 
@@ -616,6 +622,11 @@ Stated plainly, because a README that hides its gaps costs more than one that na
 - **The forecast has been scored against reality twice**, both times by the author.
   Everything else is synthetic fixtures. Until there are more, treat the predictive half
   as an open research question with a working harness.
+- **The scenarios are not calibrated.** `optimistic`, `typical`, `prudent` and `maximum`
+  carry no probability: they are not measured quantiles but consequences of the declared
+  assumptions, so no metric says how well they are tuned. That needs many more than two
+  estimate/actual pairs; with those, a regression on the log of the token counts would
+  give real quantiles, and from them the probability of crossing a given threshold.
 - **The forecasting half is not shipped.** Its MCP tools exist and are documented above,
   but the plugin does not register them, on purpose — see the note in that section.
 - **Preflight does not read prose.** It analyses already-structured Blueprints. Describing
