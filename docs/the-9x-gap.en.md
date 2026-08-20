@@ -77,6 +77,11 @@ far larger.
 **One measurement cannot tell them apart.** Literally: a single point does not determine a
 slope.
 
+There are two measurements now, and that is enough to tilt the answer: 9.15x and 3.1x are
+not the same number, so hypothesis A is the less likely of the two — see
+[What two points say](#what-two-points-say). The larger half of the question stays open:
+**what** it depends on. Two points that differ in everything isolate nothing.
+
 ## How you can answer it
 
 What is needed is real executions of **different shapes**. One moves the project; five,

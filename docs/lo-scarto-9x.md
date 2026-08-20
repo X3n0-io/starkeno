@@ -78,6 +78,11 @@ lavoro è molto più grande.
 **Con una misura sola non si distinguono.** È letteralmente impossibile: un punto non
 determina una pendenza.
 
+Le misure ora sono due, e tanto basta a sbilanciare la risposta: 9,15x e 3,1x non sono lo
+stesso numero, quindi l'ipotesi A è la meno probabile delle due — vedi
+[Cosa dicono due punti](#cosa-dicono-due-punti). Resta aperta la metà più grande della
+domanda: **da cosa** dipende. Due punti che differiscono in tutto non isolano niente.
+
 ## Come puoi rispondere tu
 
 Servono esecuzioni vere, di **forme diverse**. Se ne fai una, il progetto avanza; se ne
