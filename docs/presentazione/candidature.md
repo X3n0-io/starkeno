@@ -8,7 +8,8 @@ piattaforme di terzi, e la voce deve essere la sua.
 Hai una sola prima impressione per lista, e un curatore che apre il repository e trova
 `pip install git+https://…` archivia la segnalazione senza rispondere.
 
-1. **PyPI** — vedi [releasing.md](../releasing.md). Toglie l'unica barriera vera.
+1. ~~**PyPI**~~ — **fatto il 20/08/2026**: [`pip install starkeno`](https://pypi.org/project/starkeno/).
+   Era l'unica barriera vera, e non c'è più.
 2. **Le liste** — traffico costante, zero rumore, nessun rischio di reputazione.
 3. **Hacker News** — una volta sola, e solo quando i primi due sono fatti.
 
@@ -70,11 +71,13 @@ Link: `https://github.com/X3n0-io/starkeno/blob/main/docs/the-9x-gap.en.md`
 Primo commento, da scrivere subito dopo aver postato:
 
 ```
+  pip install starkeno
+
 I build a local tool that reads the transcripts Claude Code and Codex already write
 and reconstructs what a session cost. That half works.
 
-The other half simulates a workflow before you run it. You can try it in two commands
-on a fixture that ships in the repo -- no plugin, no hooks, no MCP server:
+The other half simulates a workflow before you run it. You can try it in three commands
+after `pip install starkeno` -- no plugin, no hooks, no MCP server:
 
   python -m starkeno preflight draft --input tests/fixtures/preflight/medium.json \
       --format yaml --output bozza.yaml

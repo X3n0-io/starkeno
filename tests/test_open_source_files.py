@@ -132,7 +132,7 @@ def test_le_due_lingue_del_readme_danno_gli_stessi_comandi():
     it, en = _readme_it(), _readme_en()
 
     for comando in (
-        "pip install git+https://github.com/X3n0-io/starkeno.git",
+        "pip install starkeno",
         "claude plugin marketplace add X3n0-io/starkeno",
         "claude plugin install starkeno@starkeno-local",
         "starkeno doctor",

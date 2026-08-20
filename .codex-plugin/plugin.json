@@ -1,7 +1,7 @@
 {
   "name": "starkeno",
   "description": "Trova sprechi ed errori nel modo in cui lavori con Codex",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "hooks": "./hooks/hooks.json",
   "keywords": [
     "token",

@@ -137,7 +137,7 @@ Or do it yourself. **Two steps, and both are required** — the plugin is only a
 and without the package the hooks run, import nothing, and exit `0` in silence:
 
 ```bash
-pip install git+https://github.com/X3n0-io/starkeno.git
+pip install starkeno
 ```
 
 ```bash
@@ -214,7 +214,7 @@ import anything, and exit `0` in silence.
 
 1. Install the package. Requires Python 3.12–3.14 on `PATH`:
    ```bash
-   pip install git+https://github.com/X3n0-io/starkeno.git
+   pip install starkeno
    ```
    Verify with `starkeno --help`. If the command is not found, the user's `pip` and
    `python` are different installations — resolve that before continuing.
@@ -258,11 +258,10 @@ must never break your turn. The result is an agent that looks instrumented and c
 nothing, with no error anywhere. `starkeno doctor` is what tells you; run it after
 installing.
 
-You need Python 3.12, 3.13 or 3.14 on your `PATH`. There is no PyPI release yet, so the
-package comes straight from git:
+You need Python 3.12, 3.13 or 3.14 on your `PATH`. The package is on PyPI:
 
 ```bash
-pip install git+https://github.com/X3n0-io/starkeno.git
+pip install starkeno
 ```
 
 Or from a clone, if you want the source to hand:
@@ -620,9 +619,9 @@ Stated plainly, because a README that hides its gaps costs more than one that na
 - **Preflight does not read prose.** It analyses already-structured Blueprints. Describing
   a workflow in natural language and getting an estimate is the intended surface, not the
   current one.
-- **No pinned release.** There is no PyPI package. `pip install git+…` works, but it
-  installs whatever `main` happens to be at that moment: there is no tag to pin to, and
-  no way to say which version you are running beyond the one in the manifest.
+- ~~No pinned release.~~ **Published on PyPI** on 2026-08-20:
+  [`starkeno` 0.4.0](https://pypi.org/project/starkeno/), wheel and sdist, from a
+  workflow that holds no credentials at all.
 - **The bill reports, it does not forecast.** There is no spending cap and no alerting on
   one: the page tells you what a run cost, never that a run is about to cost too much.
 - ~~The skill is unproven on Codex.~~ **Verified on both** on 2026-08-19: asked a cost

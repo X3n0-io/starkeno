@@ -41,7 +41,7 @@ def test_manifest_version_matches_python_package():
         (RADICE / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
     )
 
-    assert manifest["version"] == starkeno.__version__ == "0.4.0"
+    assert manifest["version"] == starkeno.__version__ == "0.4.1"
 
 
 def test_repo_marketplace_exposes_the_root_plugin():

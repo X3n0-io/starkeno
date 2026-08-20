@@ -5,6 +5,16 @@ usa il versionamento semantico.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-20
+
+### Changed
+
+- **`pip install starkeno`**: l'installazione documentata non passa più da
+  `git+https://…`. La 0.4.0 è su [PyPI](https://pypi.org/project/starkeno/) con wheel e
+  sdist, pubblicata da un workflow che non custodisce nessuna credenziale.
+- Corrette due affermazioni diventate false: il README diceva «non c'è ancora un rilascio
+  su PyPI» e «nessun rilascio appuntabile».
+
 ### Added
 
 - **Il sito**, su GitHub Pages: <https://x3n0-io.github.io/starkeno/>. Una pagina sola,

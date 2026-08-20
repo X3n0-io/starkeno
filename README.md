@@ -129,7 +129,7 @@ manifest, e senza il pacchetto gli hook partono, non importano niente ed escono 
 silenzio:
 
 ```bash
-pip install git+https://github.com/X3n0-io/starkeno.git
+pip install starkeno
 ```
 
 ```bash
@@ -206,7 +206,7 @@ niente ed escono `0` in silenzio.
 
 1. Installa il pacchetto. Serve Python 3.12–3.14 nel `PATH`:
    ```bash
-   pip install git+https://github.com/X3n0-io/starkeno.git
+   pip install starkeno
    ```
    Verifica con `starkeno --help`. Se il comando non si trova, il `pip` e il `python`
    dell'utente sono installazioni diverse: risolvi quello prima di proseguire.
@@ -250,11 +250,10 @@ hook non deve mai rompere il tuo turno. Il risultato è un agente che sembra str
 non raccoglie niente, senza un errore da nessuna parte. È `starkeno doctor` che te lo dice:
 lancialo dopo l'installazione.
 
-Serve Python 3.12, 3.13 o 3.14 nel `PATH`. Non c'è ancora un rilascio su PyPI, quindi il
-pacchetto arriva direttamente da git:
+Serve Python 3.12, 3.13 o 3.14 nel `PATH`. Il pacchetto è su PyPI:
 
 ```bash
-pip install git+https://github.com/X3n0-io/starkeno.git
+pip install starkeno
 ```
 
 Oppure da un clone, se vuoi il sorgente sottomano:
@@ -616,9 +615,9 @@ nomina.
   sopra, ma il plugin non li registra, di proposito — vedi la nota in quella sezione.
 - **Preflight non legge la prosa.** Analizza Blueprint già strutturati. Descrivere un
   workflow a parole e ottenerne una stima è la superficie prevista, non quella attuale.
-- **Nessun rilascio appuntabile.** Non c'è un pacchetto PyPI. `pip install git+…` funziona,
-  ma installa quello che `main` è in quel momento: non c'è un tag a cui appuntarsi, né un
-  modo di dire quale versione stai eseguendo oltre a quella nel manifest.
+- ~~Nessun rilascio appuntabile.~~ **Pubblicato su PyPI** il 20/08/2026:
+  [`starkeno` 0.4.0](https://pypi.org/project/starkeno/), con wheel e sdist, da un
+  workflow che non custodisce nessuna credenziale.
 - **Il conto rendiconta, non prevede.** Non esiste un tetto di spesa né un avviso su di
   esso: la pagina ti dice quanto è costata un'esecuzione, mai che sta per costare troppo.
 - ~~La skill non è provata su Codex.~~ **Verificata su entrambi** il 19/08/2026: fatta una
