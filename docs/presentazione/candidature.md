@@ -85,6 +85,43 @@ successiva: tutte insieme sembrano spam a tre piattaforme contemporaneamente.
 
 ---
 
+## 1-bis. Il primo post è stato rimosso, e il motivo non era nelle regole
+
+**20/08/2026, r/LocalLLaMA: post rimosso in meno di un minuto.** Nessun commento sul
+post, nessun motivo pubblico, `removed_by_category: moderator` e sparito da `/new`. Il
+motivo è arrivato in messaggio privato da AutoModerator:
+
+> Your post was removed as you do not have sufficient karma on r/LocalLLaMa. We are doing
+> this in response to the large volume of spam we are unfortunately experiencing. Please
+> participate in the sub (through comments), gain the minimum of **5 karma** and then
+> re-post.
+
+**Il karma che conta è quello del singolo subreddit, non quello totale.** Il profilo ha
+27 punti globali e ne aveva **zero** dentro r/LocalLLaMA: la soglia è cinque, e si fanno
+con qualche commento utile. Nessuna delle regole pubbliche del sub lo dice — le ho lette
+tutte e cinque prima di postare.
+
+**La lezione, e vale per ogni sub che resta:** leggere `about/rules` non basta, perché
+AutoModerator applica soglie che lì non sono scritte. L'unico modo di scoprirle è
+sbatterci contro, quindi **il primo post in un sub nuovo va considerato un test**, non il
+colpo buono. Il test costa poco se il sub ti invita a ripostare, come qui; costa caro
+dove si passa una volta sola, che è il motivo per cui Hacker News non va per primo se lo
+si può evitare.
+
+**Conseguenze pratiche:**
+
+- **r/LocalLLaMA: cinque punti di karma dentro quel sub, poi si riposta lo stesso testo.**
+  Il bot lo dice esplicitamente, quindi non c'è niente di bruciato. Non cancellare il post
+  rimosso: non serve, e non blocca il nuovo.
+- **r/ClaudeAI, regola 7, va riletta con questa luce:** «OP karma > 50» quasi certamente
+  significa **50 dentro r/ClaudeAI**, non 50 globali. Se è così il cancello è molto più
+  alto di quanto sembrava, e la strada è la stessa: commentare dove si ha qualcosa da
+  dire, per settimane e non per ore.
+- **I commenti non sono un pedaggio.** Sono lo stesso lavoro del post: rispondere a
+  qualcuno che sta stimando male un costo è esattamente il pubblico che serve.
+
+---
+
 ## 2. Reddit — il corpo del post
 
 Reddit **non** va per primo, per il cancello del karma della sezione 1. Ma è l'unico
